@@ -22,6 +22,8 @@ CHAN_OPEN:
 co_bad: rst 8
         defb ERR_STRM
 m_stb_e:
+        include "basic.asm"
+secJ1_end:
 
         org $203C
 m_stb_s2:
@@ -36,6 +38,10 @@ PR_STRING:
         dec bc
         jr PR_STRING
 m_stb_e2:
+m_tkt_s:
+        include "gen/tokens.inc"
+m_tkt_e:
+secJ2_end:
 
         org $22AA
 m_stb_s3:

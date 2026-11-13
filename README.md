@@ -12,7 +12,7 @@ The boot message reads:
 OpticOS (c) 2026 Optica Technology
 ```
 
-Status: **Phase 2 complete** (maths package). Phase 1 brought boot, screen, keyboard, tape and the legacy loader: the ROM boots in Fuse and in the headless rig, and loads ordinary game tapes with `LOAD ""` from a real tape signal, with traps off. Phase 2 added clean-room floating point (+ − × ÷ ^, SIN COS TAN ATN ASN ACS EXP LN LOG SQR INT ABS SGN RND, STR$/VAL) and a direct-mode `PRINT` / `?` at the `]` prompt, so `PRINT "Hello, World!"` and `PRINT 2+2, SQR 2` work. The rest of OpticBASIC is Phases 3–4. The design is in [`docs/spec.md`](docs/spec.md). The reports are in [`docs/phase1/`](docs/phase1/README.md) and [`docs/phase2/`](docs/phase2/README.md), and the maths API is in [`docs/maths.md`](docs/maths.md).
+Status: **Phase 3 complete** (the OpticBASIC interpreter). Phase 1 brought boot, screen, keyboard, tape and the legacy loader: the ROM boots in Fuse and in the headless rig, and loads ordinary game tapes with `LOAD ""` from a real tape signal, with traps off. Phase 2 added clean-room floating point. Phase 3 adds the tokenised interpreter without line numbers: variables, strings, arrays, IF/ELSEIF/ELSE/ENDIF, WHILE, REPEAT, FOR, PROCs called by bare name, FNs, dynamic LOCAL, TRY/CATCH/ERROR and an indenting LIST. Programs are entered for now with `>` lines at the `]` prompt; the full-screen editor is Phase 4. The design is in [`docs/spec.md`](docs/spec.md). The reports are in [`docs/phase1/`](docs/phase1/README.md), [`docs/phase2/`](docs/phase2/README.md) and [`docs/phase3/`](docs/phase3/README.md), and the maths API is in [`docs/maths.md`](docs/maths.md).
 
 ## Building
 

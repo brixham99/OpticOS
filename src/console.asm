@@ -1,5 +1,6 @@
 ; console.asm - phase 1 minimal console: a one-line editor with a blinking
-; 4x8 cursor block after the "] " prompt.  Commands (cmd_tab): PRINT or ?, CLS, LOAD "".
+; 4x8 cursor block after the "] " prompt.  Lines go to con_line (basic.asm):
+; "> text" adds a program line, anything else runs at once.
 CON_LEN equ $5B4F
 m_con_s:
 console:
@@ -68,77 +69,13 @@ con_enter:
         ld (hl),0
         ld a,13
         call pr_out
-        ld hl,LINEBUF           ; one dispatch for every command
-        ld (CH_ADD),hl
-        call nxc
-        or a
-        jp z,con_new
-        ld de,cmd_tab
-cdt_l:   ld a,(de)
-        or a
-        jp z,err_syn
-        push hl
-        call cd_match
-        jr z,cdt_go
-        pop hl
-        inc de
-        inc de
-        jr cdt_l
-cdt_go:  pop af
-        ld (CH_ADD),hl
-        ex de,hl
-        ld e,(hl)
-        inc hl
-        ld d,(hl)
-        ex de,hl
-        call jphl
+        call con_line
         jp con_new
-cmd_cls: call nxc
-        or a
-        jp nz,err_syn
-        jp CLS
-cmd_load:
-        ld hl,(CH_ADD)
-        ld de,pat_qq
-        call con_match
-        jp z,lg_cmd_load
-        jp err_syn
 
 con_ok: ld a,ERR_OK
         ld (ERR_NR),a
-con_err:                        ; RST 8 lands here (via ERR_SP)
         call err_show
         jp console
-
-; con_match: HL = 0-terminated input, DE = bit-7-terminated pattern.
-; Spaces in the input are ignored, case-insensitive.  Z = match.
-con_match:
-        ld a,(hl)
-        cp ' '
-        jr nz,cm_1
-        inc hl
-        jr con_match
-cm_1:   cp 'a'
-        jr c,cm_2
-        cp 'z'+1
-        jr nc,cm_2
-        sub 32
-cm_2:   ld c,a
-        ld a,(de)
-        and $7F
-        cp c
-        ret nz
-        ld a,(de)
-        inc de
-        inc hl
-        rla
-        jr nc,con_match
-cm_e:   ld a,(hl)
-        inc hl
-        cp ' '
-        jr z,cm_e
-        or a
-        ret
 
 ; con_getkey: wait for a key with the cursor blinking every 16 frames
 con_getkey:
@@ -180,17 +117,4 @@ cs_2:   ld a,(hl)
         djnz cs_2
         ret
 
-cmd_tab: defm "PRIN"            ; word, handler (CH_ADD is after the word)
-        defb 'T'+$80
-        defw cmd_print
-        defb '?'+$80
-        defw cmd_print
-        defm "CL"
-        defb 'S'+$80
-        defw cmd_cls
-        defm "LOA"
-        defb 'D'+$80
-        defw cmd_load
-        defb 0
-pat_qq: defb '"','"'+$80
 m_con_e:

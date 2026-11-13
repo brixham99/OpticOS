@@ -1,6 +1,6 @@
 # OpticOS: design specification
 
-**Version 0.2, 13 November 2026.** The six design decisions in §12 were agreed the same day.
+**Version 0.3, 13 November 2026.** The six design decisions in §12 were agreed the same day. v0.3 rebalances the §8.2 budget after phase 3.
 Project, ROM and future repo name: **OpticOS**. Boot banner: `OpticOS (c) 2026 Optica Technology`.
 
 This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.
@@ -602,38 +602,39 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 
 ### 8.2 Budget
 
-| # | Module | Bytes |
-|---|---|---:|
-| 1 | Restarts, NMI, reset, RAM test, system-variable and channel init | 380 |
-| 2 | Boot banner `OpticOS (c) 2026 Optica Technology` (34 bytes of text, the last with bit 7 set) plus the call to print it | 40 |
-| 3 | Interrupt routine, keyboard scan, debounce and repeat, 3 × 40 key tables | 520 |
-| 4 | 64-column print: masked nibble path, pair fast path, INVERSE/OVER, control codes, AT/TAB, colours, scroll, cursor | 1,000 |
-| 5 | MODE 32 (pixel doubling, 8×8 CHARS path, 16-byte table) | 110 |
-| 6 | Block-graphics generator and 2-column UDG print | 60 |
-| 7 | **4-pixel font, 96 glyphs, 2 per byte** | 384 |
-| 8 | Tape low level: SA-BYTES, LD-BYTES, edge routines | 380 |
-| 9 | Tape commands: SAVE/LOAD/VERIFY/CAT, headers, CODE/SCREEN$/AUTO, signature | 520 |
-| 10 | Sound: BEEPER, BEEP pitch conversion, SOUND | 160 |
-| 11 | Graphics: pixel address, PLOT, DRAW/DRAW TO, CIRCLE, POINT, ATTR, SCREEN$ | 620 |
-| 12 | Float core (+ − × ÷, normalise, compare, conversions, small-int ops) | 1,100 |
-| 13 | Number ↔ string (VAL, STR$, PRINT formatting, hex and binary) | 550 |
-| 14 | Transcendentals, byte-code runner and coefficient tables (SIN COS TAN ATN ASN ACS EXP LN SQR ^ RND) | 950 |
-| 15 | Tokeniser, detokeniser and LIST auto-indent | 600 |
-| 16 | Keyword table (about 120 words, bit-7 terminated, with a first-letter index) | 600 |
-| 17 | Statement and function dispatch tables | 300 |
-| 18 | Expression evaluator (precedence, types, coercion, fast path) | 850 |
-| 19 | Interpreter core: prepass, control stack, IF/loops/PROC/FN/LOCAL/TRY/EXIT | 1,550 |
-| 20 | CASE / WHEN / OTHERWISE | 150 |
-| 21 | Variables and arrays (hash lookup, create, DIM, indexing, A%–Z%) | 500 |
-| 22 | Strings: heap, slicing, string functions, GC | 650 |
-| 23 | I/O and miscellaneous statements (PEEK/POKE/IN/OUT/CALL/USR/KEY/JOY/WAIT/DATA/READ …) | 450 |
-| 24 | Full-screen editor (64×24, wrap, find, clipboard, status bar) | 1,400 |
-| 25 | Direct mode and console | 250 |
-| 26 | Errors: RST 8 unwind and about 36 messages, compressed using keyword tokens | 450 |
-| 27 | Legacy loader shim (Sinclair BASIC subset) | 650 |
-| 28 | Fixed-address stubs and fragmentation loss around fixed points | 200 |
-| | **Total** | **15,374** |
-| | **Margin (of 16,384)** | **1,010 (6.2%)** |
+| # | Module | v0.2 budget | Built after phase 3 | v0.3 budget |
+|---|---|---:|---:|---:|
+| 1 | Restarts, NMI, reset, RAM test, system-variable and channel init | 380 | 292 | 300 |
+| 2 | Boot banner plus the call to print it | 40 | 61 | 65 |
+| 3 | Interrupt routine, keyboard scan, debounce and repeat, key tables | 520 | 355 | 420 |
+| 4 | 64-column print, control codes, AT/TAB, colours, scroll, cursor (INVERSE/OVER to come) | 1,000 | 578 | 800 |
+| 5 | MODE 32 | 110 | – | 110 |
+| 6 | Block-graphics generator and 2-column UDG print | 60 | – | 60 |
+| 7 | **4-pixel font, 96 glyphs, 2 per byte** | 384 | 384 | 384 |
+| 8 | Tape low level: SA-BYTES, LD-BYTES, edge routines | 380 | 310 | 330 |
+| 9 | Tape commands: SAVE/LOAD/VERIFY/CAT, headers (only LOAD "" so far) | 520 | 115 | 450 |
+| 10 | Sound: BEEPER, BEEP, SOUND | 160 | 82 | 160 |
+| 11 | Graphics: PLOT, DRAW, CIRCLE, POINT, ATTR, SCREEN$ | 620 | – | 620 |
+| 12 | Float core | 1,100 | 1,424 | 1,424 |
+| 13 | Number ↔ string, pr_dec / pr_hex | 550 | 788 | 800 |
+| 14 | Transcendentals, byte-code runner, coefficient tables | 950 | 1,320 | 1,320 |
+| 15–17 | Tokeniser, LIST auto-indent, keyword table, dispatch tables | 1,500 | 1,569 | 1,600 |
+| 18 | Expression evaluator and functions | 850 | 1,362 | 1,400 |
+| 19 | Interpreter core: run loop, statements, prepass, PROC/FN/LOCAL/TRY (EXIT etc. to come) | 1,550 | 2,286 | 2,450 |
+| 20 | CASE / WHEN / OTHERWISE | 150 | – | 150 |
+| 21–22 | Variables, arrays, string heap and GC, value and control stacks (INSTR etc. to come) | 1,150 | 1,288 | 1,400 |
+| 23 | I/O and miscellaneous statements (INPUT, DATA/READ, IN/OUT, CALL/USR, KEY, JOY …) | 450 | – | 450 |
+| 24 | Full-screen editor | 1,400 | – | 1,400 |
+| 25 | Direct mode and console | 250 | 221 | 250 |
+| 26 | Errors: RST 8 unwind and messages | 450 | 490 | 520 |
+| 27 | Legacy loader shim (Sinclair BASIC subset) | 650 | 838 | 850 |
+| 28 | Fixed-address stubs and fragmentation loss around fixed points | 200 | 78 | 200 |
+| | **Total** | **15,374** | **13,841** | **17,913** |
+| | **Margin (of 16,384)** | **1,010** | **2,543 free now** | **−1,529 (over)** |
+
+**Rebalance after phase 3 (v0.3).** The maths (items 12–14, +882 bytes) and the interpreter (items 15–22, +1,450 bytes) came out larger than the v0.2 estimates. As agreed, the size reduction is left to phase 5, and the budgets above now record what was built, with room kept for the features each module still lacks. The ROM built so far fits, with 2,543 bytes free (well above the 256-byte margin rule). The free space is in seven gaps between fixed addresses, the largest being 613 bytes, so later modules must be split to fit.
+
+**Warning: the full feature list no longer fits.** With the v0.3 budgets the finished ROM would need 17,913 bytes, which is 1,529 over 16,384, or about **1,785 bytes over** once the 256-byte margin is kept. Phase 5 therefore has to save about 1.8 KB, by shrinking the maths and interpreter, cutting features, or both. The likely sources are: the byte-code runner used more widely in the maths (about 300–400); the evaluator and statement code tightened, for example shared argument parsing and RST-based helpers (about 400–600); a smaller legacy shim (about 200); shorter error texts made from keyword tokens (about 150); and dropping or simplifying the MODE 32, CASE or SOUND items if that is still not enough.
 
 The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print logic costs about 100 bytes more than a plain 32-column printer, so the change of display gained roughly 200 bytes overall. Adding an 8×8 font at `$3D00` would bring the total to 16,142, leaving a margin of 242 (1.5%). That is too thin, so the font is left out for now (§12).
 

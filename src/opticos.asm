@@ -101,6 +101,7 @@ secH_end:
 CL_ALL: jp CLS
         include "console.asm"
         include "legacy.asm"
+        include "list.asm"
 secI_end:
 
 ; ---------------------------------------------------------------- $1601
@@ -110,6 +111,8 @@ secI_end:
         include "fptrans.asm"
         include "fpconv.asm"
         include "expr.asm"
+        include "vars.asm"
+        include "tokenise.asm"
 secK_end:
 
 ; ---------------------------------------------------------------- $3E80

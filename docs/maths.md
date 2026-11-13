@@ -36,7 +36,7 @@ PEEK/POKE arguments without conversion. The rig checks this on every result.
 |---|---|---|---|
 | FA, FB | `$5B80`, `$5B88` | 8 + 8 | accumulator and operand |
 | FT = T0…T5, T6 | `$5B90`…`$5BC0` | 7 × 8 | byte-code temporaries (T6 is used by POLY and RND, internal only) |
-| VSTK…VSTKE, VSP | `$5BC8`, `$5BFE` | 9 × 5, 2 | expression value stack, and its pointer |
+| VSP (value stack moved below RAMTOP in phase 3, see docs/phase3) | `$5BFE` | 2 | expression value stack pointer; the stack itself is VSB…VSLIM |
 | NBUF, NDIG, NDE, NCNT, NBP | `$5B62`… | 16 + 9 + 4 | fp_str output buffer and digit work area |
 | VDX, FSG, FRP | `$5B7D`, `$5B61`, `$5BFC` | | VAL decimal exponent, add/sub selector, right-operand pointer |
 | RNDS | `$5C93` | 4 | 32-bit xorshift state (SEED, `$5C76`, keeps the last RANDOMIZE value) |

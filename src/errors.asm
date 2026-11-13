@@ -1,6 +1,17 @@
 ; errors.asm - RST 8 handler and messages.
 ERR_SCREEN equ $04
+ERR_NOVAR  equ $02
+ERR_NOMEM  equ $03
 ERR_DIV0   equ $05
+ERR_TYPE   equ $07
+ERR_SUBS   equ $08
+ERR_STRUC  equ $09
+ERR_NOPRC  equ $0E
+ERR_NEXT   equ $0F
+ERR_ENDP   equ $10
+ERR_STOP   equ $11
+ERR_REDIM  equ $12
+ERR_STRL   equ $13
 ERR_OVFL   equ $06
 ERR_RANGE  equ $0A
 ERR_ARG    equ $0B
@@ -91,6 +102,39 @@ err_tab:
         defb ERR_SCREEN
         defm "Position off scree"
         defb 'n'+$80
+        defb ERR_NOVAR
+        defm "No such variabl"
+        defb 'e'+$80
+        defb ERR_NOMEM
+        defm "No roo"
+        defb 'm'+$80
+        defb ERR_TYPE
+        defm "Type mismatc"
+        defb 'h'+$80
+        defb ERR_SUBS
+        defm "Bad subscrip"
+        defb 't'+$80
+        defb ERR_STRUC
+        defm "Block structur"
+        defb 'e'+$80
+        defb ERR_NOPRC
+        defm "No such PROC or F"
+        defb 'N'+$80
+        defb ERR_NEXT
+        defm "NEXT but no FO"
+        defb 'R'+$80
+        defb ERR_ENDP
+        defm "Not in a PROC or F"
+        defb 'N'+$80
+        defb ERR_STOP
+        defm "Stoppe"
+        defb 'd'+$80
+        defb ERR_REDIM
+        defm "Array already mad"
+        defb 'e'+$80
+        defb ERR_STRL
+        defm "String over 25"
+        defb '5'+$80
         defb ERR_DIV0
         defm "Division by zer"
         defb 'o'+$80

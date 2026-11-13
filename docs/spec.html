@@ -4,7 +4,7 @@ table{border-collapse:collapse;margin:.6em 0;width:100%;font-size:8.8pt}td,th{bo
 pre{background:#f4f4f7;border:1px solid #dde;padding:6px;font-size:8.3pt;white-space:pre-wrap;page-break-inside:avoid}code{font-family:'DejaVu Sans Mono',monospace;font-size:92%}
 @page{size:A4;margin:16mm 14mm}</style></head><body>
 <h1>OpticOS: design specification</h1>
-<p><strong>Version 0.2, 13 November 2026.</strong> The six design decisions in §12 were agreed the same day.
+<p><strong>Version 0.3, 13 November 2026.</strong> The six design decisions in §12 were agreed the same day. v0.3 rebalances the §8.2 budget after phase 3.
 Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>OpticOS (c) 2026 Optica Technology</code>.</p>
 <p>This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.</p>
 <hr />
@@ -1017,7 +1017,9 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <th>#</th>
 <th>Module</th>
-<th style="text-align: right;">Bytes</th>
+<th style="text-align: right;">v0.2 budget</th>
+<th style="text-align: right;">Built after phase 3</th>
+<th style="text-align: right;">v0.3 budget</th>
 </tr>
 </thead>
 <tbody>
@@ -1025,154 +1027,195 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <td>1</td>
 <td>Restarts, NMI, reset, RAM test, system-variable and channel init</td>
 <td style="text-align: right;">380</td>
+<td style="text-align: right;">292</td>
+<td style="text-align: right;">300</td>
 </tr>
 <tr>
 <td>2</td>
-<td>Boot banner <code>OpticOS (c) 2026 Optica Technology</code> (34 bytes of text, the last with bit 7 set) plus the call to print it</td>
+<td>Boot banner plus the call to print it</td>
 <td style="text-align: right;">40</td>
+<td style="text-align: right;">61</td>
+<td style="text-align: right;">65</td>
 </tr>
 <tr>
 <td>3</td>
-<td>Interrupt routine, keyboard scan, debounce and repeat, 3 × 40 key tables</td>
+<td>Interrupt routine, keyboard scan, debounce and repeat, key tables</td>
 <td style="text-align: right;">520</td>
+<td style="text-align: right;">355</td>
+<td style="text-align: right;">420</td>
 </tr>
 <tr>
 <td>4</td>
-<td>64-column print: masked nibble path, pair fast path, INVERSE/OVER, control codes, AT/TAB, colours, scroll, cursor</td>
+<td>64-column print, control codes, AT/TAB, colours, scroll, cursor (INVERSE/OVER to come)</td>
 <td style="text-align: right;">1,000</td>
+<td style="text-align: right;">578</td>
+<td style="text-align: right;">800</td>
 </tr>
 <tr>
 <td>5</td>
-<td>MODE 32 (pixel doubling, 8×8 CHARS path, 16-byte table)</td>
+<td>MODE 32</td>
+<td style="text-align: right;">110</td>
+<td style="text-align: right;">–</td>
 <td style="text-align: right;">110</td>
 </tr>
 <tr>
 <td>6</td>
 <td>Block-graphics generator and 2-column UDG print</td>
 <td style="text-align: right;">60</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: right;">60</td>
 </tr>
 <tr>
 <td>7</td>
 <td><strong>4-pixel font, 96 glyphs, 2 per byte</strong></td>
+<td style="text-align: right;">384</td>
+<td style="text-align: right;">384</td>
 <td style="text-align: right;">384</td>
 </tr>
 <tr>
 <td>8</td>
 <td>Tape low level: SA-BYTES, LD-BYTES, edge routines</td>
 <td style="text-align: right;">380</td>
+<td style="text-align: right;">310</td>
+<td style="text-align: right;">330</td>
 </tr>
 <tr>
 <td>9</td>
-<td>Tape commands: SAVE/LOAD/VERIFY/CAT, headers, CODE/SCREEN$/AUTO, signature</td>
+<td>Tape commands: SAVE/LOAD/VERIFY/CAT, headers (only LOAD "" so far)</td>
 <td style="text-align: right;">520</td>
+<td style="text-align: right;">115</td>
+<td style="text-align: right;">450</td>
 </tr>
 <tr>
 <td>10</td>
-<td>Sound: BEEPER, BEEP pitch conversion, SOUND</td>
+<td>Sound: BEEPER, BEEP, SOUND</td>
+<td style="text-align: right;">160</td>
+<td style="text-align: right;">82</td>
 <td style="text-align: right;">160</td>
 </tr>
 <tr>
 <td>11</td>
-<td>Graphics: pixel address, PLOT, DRAW/DRAW TO, CIRCLE, POINT, ATTR, SCREEN$</td>
+<td>Graphics: PLOT, DRAW, CIRCLE, POINT, ATTR, SCREEN$</td>
+<td style="text-align: right;">620</td>
+<td style="text-align: right;">–</td>
 <td style="text-align: right;">620</td>
 </tr>
 <tr>
 <td>12</td>
-<td>Float core (+ − × ÷, normalise, compare, conversions, small-int ops)</td>
+<td>Float core</td>
 <td style="text-align: right;">1,100</td>
+<td style="text-align: right;">1,424</td>
+<td style="text-align: right;">1,424</td>
 </tr>
 <tr>
 <td>13</td>
-<td>Number ↔ string (VAL, STR$, PRINT formatting, hex and binary)</td>
+<td>Number ↔ string, pr_dec / pr_hex</td>
 <td style="text-align: right;">550</td>
+<td style="text-align: right;">788</td>
+<td style="text-align: right;">800</td>
 </tr>
 <tr>
 <td>14</td>
-<td>Transcendentals, byte-code runner and coefficient tables (SIN COS TAN ATN ASN ACS EXP LN SQR ^ RND)</td>
+<td>Transcendentals, byte-code runner, coefficient tables</td>
 <td style="text-align: right;">950</td>
+<td style="text-align: right;">1,320</td>
+<td style="text-align: right;">1,320</td>
 </tr>
 <tr>
-<td>15</td>
-<td>Tokeniser, detokeniser and LIST auto-indent</td>
-<td style="text-align: right;">600</td>
-</tr>
-<tr>
-<td>16</td>
-<td>Keyword table (about 120 words, bit-7 terminated, with a first-letter index)</td>
-<td style="text-align: right;">600</td>
-</tr>
-<tr>
-<td>17</td>
-<td>Statement and function dispatch tables</td>
-<td style="text-align: right;">300</td>
+<td>15–17</td>
+<td>Tokeniser, LIST auto-indent, keyword table, dispatch tables</td>
+<td style="text-align: right;">1,500</td>
+<td style="text-align: right;">1,569</td>
+<td style="text-align: right;">1,600</td>
 </tr>
 <tr>
 <td>18</td>
-<td>Expression evaluator (precedence, types, coercion, fast path)</td>
+<td>Expression evaluator and functions</td>
 <td style="text-align: right;">850</td>
+<td style="text-align: right;">1,362</td>
+<td style="text-align: right;">1,400</td>
 </tr>
 <tr>
 <td>19</td>
-<td>Interpreter core: prepass, control stack, IF/loops/PROC/FN/LOCAL/TRY/EXIT</td>
+<td>Interpreter core: run loop, statements, prepass, PROC/FN/LOCAL/TRY (EXIT etc. to come)</td>
 <td style="text-align: right;">1,550</td>
+<td style="text-align: right;">2,286</td>
+<td style="text-align: right;">2,450</td>
 </tr>
 <tr>
 <td>20</td>
 <td>CASE / WHEN / OTHERWISE</td>
 <td style="text-align: right;">150</td>
+<td style="text-align: right;">–</td>
+<td style="text-align: right;">150</td>
 </tr>
 <tr>
-<td>21</td>
-<td>Variables and arrays (hash lookup, create, DIM, indexing, A%–Z%)</td>
-<td style="text-align: right;">500</td>
-</tr>
-<tr>
-<td>22</td>
-<td>Strings: heap, slicing, string functions, GC</td>
-<td style="text-align: right;">650</td>
+<td>21–22</td>
+<td>Variables, arrays, string heap and GC, value and control stacks (INSTR etc. to come)</td>
+<td style="text-align: right;">1,150</td>
+<td style="text-align: right;">1,288</td>
+<td style="text-align: right;">1,400</td>
 </tr>
 <tr>
 <td>23</td>
-<td>I/O and miscellaneous statements (PEEK/POKE/IN/OUT/CALL/USR/KEY/JOY/WAIT/DATA/READ …)</td>
+<td>I/O and miscellaneous statements (INPUT, DATA/READ, IN/OUT, CALL/USR, KEY, JOY …)</td>
+<td style="text-align: right;">450</td>
+<td style="text-align: right;">–</td>
 <td style="text-align: right;">450</td>
 </tr>
 <tr>
 <td>24</td>
-<td>Full-screen editor (64×24, wrap, find, clipboard, status bar)</td>
+<td>Full-screen editor</td>
+<td style="text-align: right;">1,400</td>
+<td style="text-align: right;">–</td>
 <td style="text-align: right;">1,400</td>
 </tr>
 <tr>
 <td>25</td>
 <td>Direct mode and console</td>
 <td style="text-align: right;">250</td>
+<td style="text-align: right;">221</td>
+<td style="text-align: right;">250</td>
 </tr>
 <tr>
 <td>26</td>
-<td>Errors: RST 8 unwind and about 36 messages, compressed using keyword tokens</td>
+<td>Errors: RST 8 unwind and messages</td>
 <td style="text-align: right;">450</td>
+<td style="text-align: right;">490</td>
+<td style="text-align: right;">520</td>
 </tr>
 <tr>
 <td>27</td>
 <td>Legacy loader shim (Sinclair BASIC subset)</td>
 <td style="text-align: right;">650</td>
+<td style="text-align: right;">838</td>
+<td style="text-align: right;">850</td>
 </tr>
 <tr>
 <td>28</td>
 <td>Fixed-address stubs and fragmentation loss around fixed points</td>
+<td style="text-align: right;">200</td>
+<td style="text-align: right;">78</td>
 <td style="text-align: right;">200</td>
 </tr>
 <tr>
 <td></td>
 <td><strong>Total</strong></td>
 <td style="text-align: right;"><strong>15,374</strong></td>
+<td style="text-align: right;"><strong>13,841</strong></td>
+<td style="text-align: right;"><strong>17,913</strong></td>
 </tr>
 <tr>
 <td></td>
 <td><strong>Margin (of 16,384)</strong></td>
-<td style="text-align: right;"><strong>1,010 (6.2%)</strong></td>
+<td style="text-align: right;"><strong>1,010</strong></td>
+<td style="text-align: right;"><strong>2,543 free now</strong></td>
+<td style="text-align: right;"><strong>−1,529 (over)</strong></td>
 </tr>
 </tbody>
 </table>
+<p><strong>Rebalance after phase 3 (v0.3).</strong> The maths (items 12–14, +882 bytes) and the interpreter (items 15–22, +1,450 bytes) came out larger than the v0.2 estimates. As agreed, the size reduction is left to phase 5, and the budgets above now record what was built, with room kept for the features each module still lacks. The ROM built so far fits, with 2,543 bytes free (well above the 256-byte margin rule). The free space is in seven gaps between fixed addresses, the largest being 613 bytes, so later modules must be split to fit.</p>
+<p><strong>Warning: the full feature list no longer fits.</strong> With the v0.3 budgets the finished ROM would need 17,913 bytes, which is 1,529 over 16,384, or about <strong>1,785 bytes over</strong> once the 256-byte margin is kept. Phase 5 therefore has to save about 1.8 KB, by shrinking the maths and interpreter, cutting features, or both. The likely sources are: the byte-code runner used more widely in the maths (about 300–400); the evaluator and statement code tightened, for example shared argument parsing and RST-based helpers (about 400–600); a smaller legacy shim (about 200); shorter error texts made from keyword tokens (about 150); and dropping or simplifying the MODE 32, CASE or SOUND items if that is still not enough.</p>
 <p>The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print logic costs about 100 bytes more than a plain 32-column printer, so the change of display gained roughly 200 bytes overall. Adding an 8×8 font at <code>$3D00</code> would bring the total to 16,142, leaving a margin of 242 (1.5%). That is too thin, so the font is left out for now (§12).</p>
 <h3>8.3 Benchmarks</h3>
 <ul>
@@ -1504,4 +1547,5 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <li><strong><code>LOCAL</code> is dynamic, in the BBC style</strong>, not true lexical scope. Lexical scope would need per-PROC symbol tables, at about 300 bytes plus a slower lookup.</li>
 </ol>
 <p><em>End of specification v0.2.</em></p>
-</body></html>
+</body>
+</html>

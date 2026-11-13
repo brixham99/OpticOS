@@ -24,7 +24,7 @@ if rom[0x096F] != 0xC9: fail('no RET at $096F')
 # each section end must not pass the next fixed point
 LIMITS = [('m_isr_e', 0x0066), ('secB_end', 0x03B5), ('secC_end', 0x04C2),
           ('secD_end', 0x0556), ('secE_end', 0x05E3), ('secF_end', 0x096F), ('secG_end', 0x0D6B),
-          ('secH_end', 0x0DAF), ('secI_end', 0x1601), ('m_stb_e', 0x203C), ('m_stb_e2', 0x22AA),
+          ('secH_end', 0x0DAF), ('secI_end', 0x1601), ('secJ1_end', 0x203C), ('secJ2_end', 0x22AA),
           ('secK_end', 0x3E80)]
 for lab, lim in LIMITS:
     if sym[lab] > lim: fail('%s ends at %04X, past %04X' % (lab, sym[lab], lim))
@@ -48,7 +48,10 @@ MODS = [
   ('Float core (+ - * /, normalise, compare, conversions, small-int ops)', '12', 1100, r('m_fpc_s', 'm_fpc_e')),
   ('Number <-> string (STR$/PRINT formatting, VAL)', '13', 550, r('m_fpv_s', 'm_fpv_e')),
   ('Transcendentals, byte-code runner, coefficient tables', '14', 950, r('m_fpt_s', 'm_fpt_e') + r('m_fpk_s', 'm_fpk_e')),
-  ('Expression evaluator (phase 2 seed) and PRINT', '18', 850, r('m_exp_s', 'm_exp_e')),
+  ('Expression evaluator and functions', '18', 1300, r('m_exp_s', 'm_exp_e')),
+  ('Variables, arrays, string heap + GC, value and control stacks', '17', 1100, r('m_var_s', 'm_var_e')),
+  ('Tokeniser, keyword table, LIST', '15', 1150, r('m_tok_s', 'm_tok_e') + r('m_lst_s', 'm_lst_e') + r('m_tkt_s', 'm_tkt_e')),
+  ('Interpreter: run loop, statements, prepass, PROC/FN, TRY', '19', 1900, r('m_bas_s', 'm_bas_e')),
   ('Direct mode and console (command dispatch)', '25', 250, r('m_con_s', 'm_con_e')),
   ('Fixed-address stubs (CHAN-OPEN, PR-STRING, PIXEL-ADD, $096F)', '28', 200,
       r('m_stb_s', 'm_stb_e') + r('m_stb_s2', 'm_stb_e2') + r('m_stb_s3', 'm_stb_e3') + 1),

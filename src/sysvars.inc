@@ -64,7 +64,42 @@ FA       equ $5B80      ; unpacked accumulator: g m1 m2 m3 m4 exp sign (8)
 FB       equ $5B88      ; unpacked operand
 FT       equ $5B90      ; byte-code temporaries T0-T6, 8 bytes each
 T6       equ $5BC0      ; T6: polynomial argument / scratch
-VSTK     equ $5BC8      ; expression value stack, 9 x 5 bytes
-VSTKE    equ $5BF5
 FRP      equ $5BFC      ; saved right-operand pointer (2)
 VSP      equ $5BFE      ; value stack pointer (2)
+
+; ---- phase 3 interpreter workspace ($5BC8-$5BFB; the value stack itself
+; now lives below RAMTOP, see ws_init)
+CSB      equ $5BC8      ; control stack base (grows down from here)
+CSLIM    equ $5BCA      ; control stack limit
+VSB      equ $5BCC      ; value stack base (5-byte entries, grows up)
+VSLIM    equ $5BCE      ; value stack limit
+TKB      equ $5BD0      ; tokenised direct-mode line (256 bytes)
+HTOP     equ $5BD2      ; string heap top (exclusive)
+HP       equ $5BD4      ; string heap bottom (lowest block)
+VARSB    equ $5BD6      ; variables start (after the PROC/FN table)
+VEND     equ $5BD8      ; variables end
+PEND     equ $5BDA      ; program end (the $00 sentinel)
+CSP      equ $5BDC      ; control stack pointer
+CURLN    equ $5BDE      ; line being executed
+VID      equ $5BE0      ; identifier token being looked up
+VHD      equ $5BE2      ; its hash-chain head
+VTY      equ $5BE4      ; its type
+ERRV     equ $5BE5      ; ERR: number of the last error
+PPF      equ $5BE6      ; 1 = program changed, prepass needed
+LSTLV    equ $5BE7      ; LIST indent level
+LSTCH    equ $5BE8      ; LIST: last character printed
+BCN      equ $5BE9      ; bind: arguments left
+BAP      equ $5BEA      ; bind: next argument (2)
+BAF      equ $5BEC      ; bind: first argument (2)
+GS       equ $5BEE      ; GC: block start (2)
+GB       equ $5BF0      ; GC: back-pointer (2)
+GN       equ $5BF2      ; GC: new start (2)
+GD       equ $5BF4      ; GC: destination top (2)
+GL       equ $5BF6      ; GC: length
+GF       equ $5BF7      ; GC: scan mode
+WLEN     equ $5BF8      ; tokeniser: word length
+TMP      equ $5BFA      ; scratch (2)
+DIMB     equ $5B40      ; DIM sizes / tokeniser number (legacy area, 8 bytes)
+HEADS    equ $5CCB      ; 32 variable hash-chain heads
+STATIC   equ $5D0B      ; A%-Z%, 2 bytes each
+OPROG    equ $5D50      ; OpticBASIC program start

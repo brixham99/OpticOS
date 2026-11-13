@@ -292,7 +292,7 @@ CON = [('PRINT "Hello, World!"', ['Hello, World!']),
        ('print int -2.5;" ";abs -3;" ";sgn -9;" ";ln 10;" ";1e-5,1e9', ['-3 3 -1 2.30258509 0.00001      1E+9']),
        ('? "say ""hi""";', ['say "hi"']),
        ('? 1/0', ['Division by zero']), ('? 1E38*10', ['Overflow']),
-       ('? SQR -1', ['Bad argument']), ('? 2+', ['Syntax error']), ('foo', ['Syntax error'])]
+       ('? SQR -1', ['Bad argument']), ('? 2+', ['Syntax error']), ('foo', ['No such PROC or FN'])]
 con = {}
 s2 = Spectrum(ROM); s2.frame(80)
 def screen(sp): return [r.rstrip('\x7f').rstrip() for r in sp.text_rows(FONT)]
