@@ -33,8 +33,8 @@ if sym['GLYPHBUF'] & 0xFF > 0xF8: fail('GLYPHBUF crosses a page')
 def r(a, b): return sym[b] - sym[a]
 MODS = [
   ('Restarts, NMI, reset, RAM test, sysvars, channels', '1', 380,
-      r('RESET', 'm_rst_e') + r('NMI', 'm_nmi_e') + r('m_boot_s', 'm_boot_e') - (sym['chan_init'] - sym['banner'] + 6)),
-  ('Boot banner text + call', '2', 40, sym['chan_init'] - sym['banner'] + 6),
+      r('RESET', 'm_rst_e') + r('NMI', 'm_nmi_e') + r('m_boot_s', 'm_boot_e') - (sym['chan_init'] - sym['banner'] + 12)),
+  ('Boot banner + version text, calls', '2', 40, sym['chan_init'] - sym['banner'] + 12),
   ('Interrupt routine, keyboard scan, key tables', '3', 520, r('ISR', 'm_isr_e') + r('m_kbd_s', 'm_kbd_e')),
   ('64-column print, control codes, colours, scroll, CLS, RST 16', '4', 1000,
       r('m_prt_s', 'm_prt_e') + r('m_cls_s', 'm_cls_e') + 3),

@@ -1113,11 +1113,13 @@ BORDER_X, BORDER_Y = 32, 32  # 320x256 inclusive of the border
 FRAME_W, FRAME_H = SCREEN_W + 2 * BORDER_X, SCREEN_H + 2 * BORDER_Y
 
 BANNER = "OpticOS (c) 2026 Optica Technology"
-BANNER_ROW = 1
+BANNER_ROW = 2
 BANNER_COL = 0
+BANNER2 = "OpticBASIC v0.1"
+BANNER2_ROW = 3
 PROMPT = "] "          # OpticOS direct-mode prompt
-PROMPT_ROW = 3
-CURSOR_ROW = 3
+PROMPT_ROW = 5
+CURSOR_ROW = 5
 CURSOR_COL = 2
 
 # Row 0: colour bar in attribute paper colours only, 16 swatches of two
@@ -1148,6 +1150,8 @@ def render_screen() -> list[list[tuple[int, int, int]]]:
         blit_glyph(px, i, PROMPT_ROW, ch)
     for i, ch in enumerate(BANNER):
         blit_glyph(px, BANNER_COL + i, BANNER_ROW, ch)
+    for i, ch in enumerate(BANNER2):
+        blit_glyph(px, BANNER_COL + i, BANNER2_ROW, ch)
     blit_glyph(px, CURSOR_COL, CURSOR_ROW, "\x7f")
     return px
 

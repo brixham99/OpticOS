@@ -29,16 +29,19 @@ Build it with `make` or `./build.sh`, which runs `pasmo --bin src/opticos.asm` a
 
 ### Boot screen
 
-Row 0 is a 16-swatch colour bar made from attribute cells only: normal black to white, then BRIGHT black to white, each swatch two cells wide. Row 1 holds `OpticOS (c) 2026 Optica Technology`, row 2 is blank, and row 3 shows the `] ` prompt with the cursor at column 2. The rig checks that the ROM's screen matches `assets/opticos_boot.png` exactly.
+Row 0 is a 16-swatch colour bar made from attribute cells only: normal black to white, then BRIGHT black to white, each swatch two cells wide. Row 1 is blank, row 2 holds `OpticOS (c) 2026 Optica Technology`, row 3 holds `OpticBASIC v0.1`, row 4 is blank, and row 5 shows the `] ` prompt with the cursor at column 2. The rig checks that the ROM's screen matches `assets/opticos_boot.png` exactly.
 
 ## Test results (rig, `test_phase1.py --ref 48.rom`)
 
 | Test | Result | Detail |
 |---|---|---|
 | row 0 has no text (colour bar only) | PASS | '' |
-| boot banner text at row 1 | PASS | 'OpticOS (c) 2026 Optica Technology' |
-| row 2 blank, row 3 prompt "] " | PASS | ['', ']'] |
-| cursor position row 3 col 2 | PASS |  |
+| row 1 blank | PASS | '' |
+| boot banner text at row 2 | PASS | 'OpticOS (c) 2026 Optica Technology' |
+| OpticBASIC version at row 3 | PASS | 'OpticBASIC v0.1' |
+| row 4 blank, row 5 prompt "] " | PASS | ['', ']'] |
+| rows 6-23 empty | PASS |  |
+| cursor position row 5 col 2 | PASS |  |
 | RAM test found 48K (P_RAMT=$FFFF) | PASS | 0xffff |
 | RAMTOP default $FF57 | PASS | 0xff57 |
 | row 0 colour bar: 16 paper swatches x 2 cells | PASS | 00 09 12 1B 24 2D 36 3F 40 49 52 5B 64 6D 76 7F |
@@ -51,7 +54,7 @@ Row 0 is a 16-swatch colour bar made from attribute cells only: normal black to 
 | caps lock and delete | PASS | '] ABCx' |
 | RST 16 wraps at 64 columns and scrolls | PASS | cursor row 23 col 46 |
 | SA-BYTES output decodes to flag+data+parity | PASS | 1 blocks, 302 bytes |
-| SA-BYTES pulse timings within tolerance | PASS | pilot 2174, sync 677/729, bit0 862 (844..982), bit1 1723 (1704..1840) T |
+| SA-BYTES pulse timings within tolerance | PASS | pilot 2174, sync 678/734, bit0 862 (844..982), bit1 1723 (1704..1840) T |
 | SA-BYTES header pilot is 8063 half-pulses | PASS |  |
 | LD-BYTES loads a block at 100% speed | PASS |  |
 | LD-BYTES loads a block at 90% speed | PASS |  |
@@ -63,9 +66,9 @@ Row 0 is a 16-swatch colour bar made from attribute cells only: normal black to 
 | reference LD-BYTES loads an OpticOS-saved block | PASS |  |
 | OpticOS LD-BYTES loads a reference-saved block | PASS |  |
 | BEEPER period = 8*HL + 241 T (0.3%) | PASS | HL=100 1040/1041; HL=500 4240/4241; HL=1500 12262/12241 |
-| LOAD "" runs bounceball (EAR feed, no traps) | PASS | PC=806E after 58 s; ['Bytes: BallCode', 'Program: BounceBall'] |
+| LOAD "" runs bounceball (EAR feed, no traps) | PASS | PC=806E after 58 s; [] |
 | Bounce Ball responds to SPACE | PASS |  |
-| LOAD "" runs miremare (EAR feed, no traps) | PASS | PC=9837 after 212 s; ['Bytes: MIREMARE$', 'Program: MIRE MARE'] |
+| LOAD "" runs miremare (EAR feed, no traps) | PASS | PC=9B1E after 216 s; [] |
 | POKE 23739,111 hides the Bytes: line | PASS |  |
 
 Also passing: zexdoc 67/67, zexall 67/67, `check_layout.py` OK, and `similarity_check.py` OK (no run of 12 or more bytes shared with the Sinclair ROM outside the font and filler).
@@ -79,15 +82,15 @@ Also passing: zexdoc 67/67, zexall 67/67, `check_layout.py` OK, and `similarity_
 | `fuse_boot.png` | Boot screen in real Fuse |
 | `fuse_console.png` | Typing and a command reply in Fuse |
 | `fuse_bounceball.png`, `fuse_bounceball_play.png` | Bounce Ball loaded through OpticOS in Fuse (title, then in play) |
-| `fuse_miremare.png` | Mire Mare loaded through OpticOS in Fuse |
+| `fuse_miremare.png` | Mire Mare (with its own font) loaded through OpticOS in Fuse: the menu |
 | `rig_*.png` | The same in the headless rig, plus a 64-column wrap and scroll test |
 
 ## Byte usage against the spec budget (§8.2)
 
 | Spec item | Module | Bytes used | Phase budget | % |
 |---|---|---:|---:|---:|
-| 1 | Restarts, NMI, reset, RAM test, sysvars, channels | 278 | 380 | 73% |
-| 2 | Boot banner text + call | 40 | 40 | 100% |
+| 1 | Restarts, NMI, reset, RAM test, sysvars, channels | 283 | 380 | 74% |
+| 2 | Boot banner + version text, calls | 61 | 40 | 152% |
 | 3 | Interrupt routine, keyboard scan, key tables | 355 | 520 | 68% |
 | 4 | 64-column print, control codes, colours, scroll, CLS, RST 16 | 578 | 1000 | 58% |
 | 8 | Tape low level: SA-BYTES, LD-BYTES, edges, tape_ret | 310 | 380 | 82% |
@@ -99,15 +102,15 @@ Also passing: zexdoc 67/67, zexall 67/67, `check_layout.py` OK, and `similarity_
 | 25 | Direct mode and console (phase 1 minimal) | 335 | 250 | 134% |
 | 28 | Fixed-address stubs (CHAN-OPEN, PR-STRING, PIXEL-ADD, $096F) | 78 | 200 | 39% |
 | 7 | 4-pixel font | 384 | 384 | 100% |
-| | **Total (phase 1 modules)** | **3714** | **5484** | |
+| | **Total (phase 1 modules)** | **3740** | **5484** | |
 
-ROM: 16,384 bytes; 3714 bytes of code and data placed, 12670 free (zero-filled gaps).
+ROM: 16,384 bytes; 3740 bytes of code and data placed, 12644 free (zero-filled gaps).
 
-Only the modules that exist so far are listed. The legacy shim is **838 bytes against a 650 budget**. It interprets more than the bare minimum (PRINT, GO TO and RUN, VAL, multiplication). The spec's cut list already allows it to be slimmed by about 200 bytes, and its expression code can be shared with OpticBASIC in Phase 3. The console is over budget because it is a temporary Phase 1 console that Phase 3/4 direct mode replaces.
+Only the modules that exist so far are listed. The boot text is 61 bytes against 40 now that the boot screen also shows `OpticBASIC v0.1`. The legacy shim is **838 bytes against a 650 budget**. It interprets more than the bare minimum (PRINT, GO TO and RUN, VAL, multiplication). The spec's cut list already allows it to be slimmed by about 200 bytes, and its expression code can be shared with OpticBASIC in Phase 3. The console is over budget because it is a temporary Phase 1 console that Phase 3/4 direct mode replaces.
 
 ## Known limitations and deviations
 
-- **Mire Mare's text is unreadable under OpticOS.** At start-up the game builds its font from the Sinclair ROM's 8×8 character set at `$3D00` (`font_init`), and decision 1 left that font out. The game loads and plays, but its lettering comes out as garbage. There are two fixes: give Mire Mare its own embedded font (we own the source), or revisit decision 1 (+768 bytes).
+- **Mire Mare now displays correctly under OpticOS.** It used to build its font from the Sinclair ROM's 8×8 set at `$3D00`, which OpticOS leaves out (decision 1). Mire Mare now carries its own clean-room 8×8 font (768 bytes, in its repo), so `fuse_miremare.png` and `rig_miremare.png` show its menu readable on OpticOS with traps off. OpticOS still has no 8×8 font; other games that read `$3D00` will show garbage text.
 - MODE 32, block graphics (128–143) and UDG printing (144–164) are not in Phase 1. Codes of 128 and above print as `?` for now. The legacy shim doubles the column in `PRINT AT` instead of switching to MODE 32.
 - BEEPER uses AF′ and IX, as the original's contract allows. Long periods run about 0.2% slow because of the outer-loop overhead.
 - Some error texts are worded differently from Sinclair's (the clean-room gate flagged the traditional wording), for example "Tape: bad or missing block".

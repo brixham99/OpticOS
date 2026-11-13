@@ -18,7 +18,7 @@ SHOTS = os.path.join(ROOT, 'docs/phase1')
 REF = sys.argv[sys.argv.index('--ref') + 1] if '--ref' in sys.argv else None
 QUICK = '--quick' in sys.argv
 TAPES = {'bounceball': '/workspace/spectrum-ball/bounceball.tap',
-         'miremare': '/workspace/rel/miremare.tap'}
+         'miremare': '/workspace/mire-mare-repo/build/miremare.tap'}
 SYM = {}
 import re
 for line in open(os.path.join(ROOT, 'build/opticos.sym')):
@@ -41,9 +41,12 @@ def t_boot():
     s = booted()
     rows = T(s.text_rows(FONT))
     check('row 0 has no text (colour bar only)', rows[0] == '', repr(rows[0]))
-    check('boot banner text at row 1', rows[1] == 'OpticOS (c) 2026 Optica Technology', repr(rows[1]))
-    check('row 2 blank, row 3 prompt "] "', rows[2] == '' and rows[3] == ']', repr(rows[2:4]))
-    check('cursor position row 3 col 2', (s.peek(0x5C89), s.peek(0x5C88)) == (3, 2))
+    check('row 1 blank', rows[1] == '', repr(rows[1]))
+    check('boot banner text at row 2', rows[2] == 'OpticOS (c) 2026 Optica Technology', repr(rows[2]))
+    check('OpticBASIC version at row 3', rows[3] == 'OpticBASIC v0.1', repr(rows[3]))
+    check('row 4 blank, row 5 prompt "] "', rows[4] == '' and rows[5] == ']', repr(rows[4:6]))
+    check('rows 6-23 empty', all(r == '' for r in rows[6:]), '')
+    check('cursor position row 5 col 2', (s.peek(0x5C89), s.peek(0x5C88)) == (5, 2))
     check('RAM test found 48K (P_RAMT=$FFFF)', s.dpeek(0x5CB4) == 0xFFFF, hex(s.dpeek(0x5CB4)))
     check('RAMTOP default $FF57', s.dpeek(0x5CB2) == 0xFF57, hex(s.dpeek(0x5CB2)))
     bar = list(s.block(0x5800, 32))
@@ -71,15 +74,15 @@ def t_keys():
     assert len(line) <= 61
     s.type(line)
     rows = T(s.text_rows(FONT))
-    check('typed text echoes in 64 columns after "] "', rows[3] == '] ' + line, repr(rows[3]))
+    check('typed text echoes in 64 columns after "] "', rows[5] == '] ' + line, repr(rows[5]))
     s.type('\n')
     rows = T(s.text_rows(FONT))
-    check('unknown command reply, then a new prompt', rows[4].startswith('Phase 1 console') and rows[5] == ']',
-          repr(rows[4:6]))
+    check('unknown command reply, then a new prompt', rows[6].startswith('Phase 1 console') and rows[7] == ']',
+          repr(rows[6:8]))
     # caps lock and delete
     s.press(['^', '2']); s.type('abc'); s.press(['^', '2']); s.type('xy'); s.press(['^', '0'])
     rows = T(s.text_rows(FONT))
-    check('caps lock and delete', rows[5] == '] ABCx', repr(rows[5]))
+    check('caps lock and delete', rows[7] == '] ABCx', repr(rows[7]))
     # print 64-column wrap and scroll via RST 16 from machine code
     s = booted()
     text = bytes(range(32, 127)) * 20

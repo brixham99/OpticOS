@@ -83,9 +83,13 @@ bt_nb:  ld (hl),a
         inc b
         bit 4,b
         jr z,bt_bar
-        ld a,1                  ; banner on row 1, then a blank row 2
-        ld (S_POSN+1),a
+        ld a,2                  ; row 1 blank, banner and version on
+        ld (S_POSN+1),a         ; rows 2-3, row 4 blank, prompt on row 5
         ld hl,banner
+        call pr_msg
+        ld a,13
+        call pr_out
+        ld hl,banner2
         call pr_msg
         ld a,13
         call pr_out
@@ -95,6 +99,8 @@ bt_nb:  ld (hl),a
 
 banner: defm "OpticOS (c) 2026 Optica Technolog"
         defb 'y'+$80
+banner2: defm "OpticBASIC v0."
+        defb '1'+$80
 
 chan_init:                      ; Sinclair layout: out, in, letter
         defw PR_OUT, key_in
