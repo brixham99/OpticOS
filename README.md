@@ -1,5 +1,7 @@
 # OpticOS
 
+[![Downloads](https://img.shields.io/github/downloads/brixham99/OpticOS/total)](https://github.com/brixham99/OpticOS/releases) [![Latest release downloads](https://img.shields.io/github/downloads/brixham99/OpticOS/latest/total)](https://github.com/brixham99/OpticOS/releases/latest)
+
 ![OpticOS boot screen](assets/opticos_boot_3x.png)
 
 *A clean-room replacement 16K ROM for the 48K ZX Spectrum.*
