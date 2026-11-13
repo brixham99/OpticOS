@@ -1,0 +1,11 @@
+# Spectrum ROM images are never committed. Supply your own 48.rom if a
+# test rig needs one as a behavioural reference.
+roms/
+*.rom
+
+# Build outputs
+build/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
