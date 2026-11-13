@@ -54,6 +54,12 @@ st_tab:
         defw st_dpoke
         defw st_call
         defw st_swap
+        defw st_case
+        defw st_when
+        defw st_otherwise
+        defw st_endcase
+        defw st_exit
+        defw st_clear
 fnu_tab:
         defw fp_sqr
         defw fp_sin
@@ -93,5 +99,6 @@ fno_tab:
         defw f_in
         defw f_usr
         defw f_dpeek
-        defw f_joy
-lk_tab: defb T_IF,T_ELSEIF,T_ELSE,T_WHILE,T_WEND,T_UNTIL,T_TRY,T_CATCH,T_DEF,0
+        defw f_key
+        defw f_free
+lk_tab: defb T_IF,T_ELSEIF,T_ELSE,T_WHILE,T_WEND,T_UNTIL,T_TRY,T_CATCH,T_DEF,T_CASE,T_WHEN,T_OTHERWISE,0

@@ -25,7 +25,11 @@ err_next: rst 8
 ; ---------------------------------------------------- workspace
 ; Below RAMTOP: machine stack 512, control stack 768, value stack 320,
 ; tokenised direct line 256, then the string heap grows down.
-ws_init: ld hl,(RAMTOP)
+ws_init: call ws_lay
+        ld de,OPROG
+        jr ws_ld
+; ws_lay: lay out the stacks, direct line and heap below RAMTOP
+ws_lay: ld hl,(RAMTOP)
         ld de,-512
         add hl,de
         ld (CSB),hl
@@ -40,7 +44,7 @@ ws_init: ld hl,(RAMTOP)
         add hl,de
         ld (TKB),hl
         ld (HTOP),hl
-        ld de,OPROG
+        ret
 ; ws_ld: clear A%-Z% and the editor variables; the program ends at DE
 ws_ld:  ld hl,STATIC
         ld b,CON_LEN+1-STATIC

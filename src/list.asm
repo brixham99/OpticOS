@@ -65,7 +65,7 @@ ln_open: inc hl
         ld a,b
         push hl
         ld hl,lo_tab
-        ld c,4
+        ld c,7
 lo_l:   cp (hl)
         jr z,lo_y
         inc hl
@@ -87,11 +87,11 @@ lo_x:   call ln_has
         ret z
         inc a
         ret
-lo_tab: defb T_WHILE,T_REPEAT,T_TRY,T_ELSEIF
-lc_tab: defb T_ELSE,T_CATCH,T_ELSEIF,T_ENDIF,T_WEND,T_UNTIL,T_NEXT,T_ENDPROC,T_ENDFN,T_ENDTRY
+lo_tab: defb T_WHILE,T_REPEAT,T_TRY,T_CASE,T_ELSEIF  ; and the first two of lc_tab
+lc_tab: defb T_WHEN,T_OTHERWISE,T_ENDCASE,T_ELSE,T_CATCH,T_ELSEIF,T_ENDIF,T_WEND,T_UNTIL,T_NEXT,T_ENDPROC,T_ENDFN,T_ENDTRY
 ; ln_close: B = first token -> Z if the line closes (or splits) a block
 ln_close: ld hl,lc_tab
-        ld c,10
+        ld c,13
 lc_l:   ld a,b
         cp (hl)
         ret z

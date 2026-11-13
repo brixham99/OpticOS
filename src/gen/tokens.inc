@@ -53,59 +53,67 @@ T_OUT        equ $B2
 T_DPOKE      equ $B3
 T_CALL       equ $B4
 T_SWAP       equ $B5
-T_THEN       equ $B6
-T_TO         equ $B7
-T_STEP       equ $B8
-T_PROC       equ $B9
-T_FN         equ $BA
-T_AND        equ $BB
-T_OR         equ $BC
-T_XOR        equ $BD
-T_NOT        equ $BE
-T_DIV        equ $BF
-T_MOD        equ $C0
-T_AT         equ $C1
-T_TAB        equ $C2
-T_CODE       equ $C3
-T_SQR        equ $C4
-T_SIN        equ $C5
-T_COS        equ $C6
-T_TAN        equ $C7
-T_ATN        equ $C8
-T_EXP        equ $C9
-T_LN         equ $CA
-T_LOG        equ $CB
-T_INT        equ $CC
-T_ABS        equ $CD
-T_SGN        equ $CE
-T_PI         equ $CF
-T_RND        equ $D0
-T_LEN        equ $D1
-T_LEFTS      equ $D2
-T_RIGHTS     equ $D3
-T_MIDS       equ $D4
-T_CHRS       equ $D5
-T_ASC        equ $D6
-T_STRS       equ $D7
-T_VAL        equ $D8
-T_PEEK       equ $D9
-T_ERR        equ $DA
-T_TRUE       equ $DB
-T_FALSE      equ $DC
-T_INKEYS     equ $DD
-T_FRAMES     equ $DE
-T_MAX        equ $DF
-T_MIN        equ $E0
-T_INSTR      equ $E1
-T_STRINGS    equ $E2
-T_HEXS       equ $E3
-T_UPPERS     equ $E4
-T_ERRS       equ $E5
-T_IN         equ $E6
-T_USR        equ $E7
-T_DPEEK      equ $E8
-T_JOY        equ $E9
-T_NSTMT    equ 54
+T_CASE       equ $B6
+T_WHEN       equ $B7
+T_OTHERWISE  equ $B8
+T_ENDCASE    equ $B9
+T_EXIT       equ $BA
+T_CLEAR      equ $BB
+T_THEN       equ $BC
+T_TO         equ $BD
+T_STEP       equ $BE
+T_PROC       equ $BF
+T_FN         equ $C0
+T_AND        equ $C1
+T_OR         equ $C2
+T_XOR        equ $C3
+T_NOT        equ $C4
+T_DIV        equ $C5
+T_MOD        equ $C6
+T_AT         equ $C7
+T_TAB        equ $C8
+T_CODE       equ $C9
+T_OF         equ $CA
+T_SQR        equ $CB
+T_SIN        equ $CC
+T_COS        equ $CD
+T_TAN        equ $CE
+T_ATN        equ $CF
+T_EXP        equ $D0
+T_LN         equ $D1
+T_LOG        equ $D2
+T_INT        equ $D3
+T_ABS        equ $D4
+T_SGN        equ $D5
+T_PI         equ $D6
+T_RND        equ $D7
+T_LEN        equ $D8
+T_LEFTS      equ $D9
+T_RIGHTS     equ $DA
+T_MIDS       equ $DB
+T_CHRS       equ $DC
+T_ASC        equ $DD
+T_STRS       equ $DE
+T_VAL        equ $DF
+T_PEEK       equ $E0
+T_ERR        equ $E1
+T_TRUE       equ $E2
+T_FALSE      equ $E3
+T_INKEYS     equ $E4
+T_FRAMES     equ $E5
+T_MAX        equ $E6
+T_MIN        equ $E7
+T_INSTR      equ $E8
+T_STRINGS    equ $E9
+T_HEXS       equ $EA
+T_UPPERS     equ $EB
+T_ERRS       equ $EC
+T_IN         equ $ED
+T_USR        equ $EE
+T_DPEEK      equ $EF
+T_KEY        equ $F0
+T_FREE       equ $F1
+T_NSTMT    equ 60
 T_LE       equ $08
 T_GE       equ $09
 T_NE       equ $0A
@@ -166,6 +174,12 @@ kw_tab:
         defb 'D','P','O','K','E'+$80
         defb 'C','A','L','L'+$80
         defb 'S','W','A','P'+$80
+        defb 'C','A','S','E'+$80
+        defb 'W','H','E','N'+$80
+        defb 'O','T','H','E','R','W','I','S','E'+$80
+        defb 'E','N','D','C','A','S','E'+$80
+        defb 'E','X','I','T'+$80
+        defb 'C','L','E','A','R'+$80
         defb 'T','H','E','N'+$80
         defb 'T','O'+$80
         defb 'S','T','E','P'+$80
@@ -180,6 +194,7 @@ kw_tab:
         defb 'A','T'+$80
         defb 'T','A','B'+$80
         defb 'C','O','D','E'+$80
+        defb 'O','F'+$80
         defb 'S','Q','R'+$80
         defb 'S','I','N'+$80
         defb 'C','O','S'+$80
@@ -217,5 +232,6 @@ kw_tab:
         defb 'I','N'+$80
         defb 'U','S','R'+$80
         defb 'D','P','E','E','K'+$80
-        defb 'J','O','Y'+$80
+        defb 'K','E','Y'+$80
+        defb 'F','R','E','E'+$80
         defb 0

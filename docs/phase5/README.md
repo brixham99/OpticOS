@@ -146,3 +146,70 @@ With the cuts, the remaining features (CASE, EXIT, `ERROR n, msg$`, CLEAR, RUN/R
 ## Not done yet
 
 CASE / WHEN / OTHERWISE, EXIT, `ERROR n, msg$`, CLEAR, `RUN name`, `RESTORE name`, `SAVE … AUTO name`, `SCREEN$` tape forms, CAT, `KEY(k$)`, FREE, array parameters, CALL register arguments.
+
+# Phase 5c: the last features
+
+Nathan's decision for phase 5c (spec §12, decision 13): drop array parameters by reference, `CALL` register arguments, `CAT` and the OpticBASIC `SCREEN$` tape forms (legacy loaders keep `LOAD "" SCREEN$`), and drop `JOY` (use `IN 31`). `BORDER` stays. Then do the remaining maths squeezes and build the rest. The feature list is now complete, and the ROM keeps the 256-byte margin.
+
+## What was added
+
+| Feature | As built |
+|---|---|
+| `CASE expr OF` / `WHEN v [, v …]` / `OTHERWISE` / `ENDCASE` | Numbers or strings. The first matching WHEN runs, otherwise OTHERWISE. The prepass links CASE → WHEN → … → ENDCASE through the IF/ELSEIF/ENDIF logic, by mapping the four tokens onto it. At run time a WHEN or OTHERWISE reached at the end of a branch jumps to ENDCASE through the links. The selector stays on the value stack only while the values are compared. LIST indents the branches. |
+| `EXIT WHILE` / `EXIT REPEAT` / `EXIT FOR` | Continues after the matching WEND, UNTIL or NEXT statement. It finds that statement by counting the loop keywords forwards (each closing token is its opening token + 1), so it also works for one-line loops. EXIT FOR drops the FOR frame. |
+| `ERROR n [, msg$]` | ERR = n. msg$ (up to 28 characters) is kept in `EMBUF` and becomes ERR$ and the error report (`msg$, line L`). A ROM error or a plain `ERROR n` clears it. |
+| `CLEAR [n]` | Forgets the variables, open loops and PROC calls. `CLEAR n` moves RAMTOP, so the stacks, the direct line and the heap move with it. It needs n − 1,856 above the variables ("No room" otherwise). In a program, execution carries on; typed directly, the rest of the line is not run. |
+| `FREE` | A function: the bytes between the variables and the string heap. |
+| `KEY(k$)` | TRUE while the key for the first character is held (letters, digits, space). It reads the keyboard matrix directly, so `KEY("q") AND KEY("p")` works. |
+| `RUN name` | The prepass, then a call of that PROC (without parameters). At its end OpticOS returns to the prompt. |
+| `RESTORE name` | READ continues from the first DATA line after that PROC's DEF. |
+| `SAVE "x" AUTO name` | Header parameter 1 holds the DEF line's offset in the program (`$8000` = no auto-start). After LOAD, OpticOS runs `RUN name`. |
+
+## Squeezes and bytes
+
+| Change | Bytes |
+|---|---:|
+| Maths squeezes: COS from SIN (cos r = 2(½ − sin²(r/2)), one polynomial fewer), EXP with 8 coefficients (was 9), a shorter VAL digit loop | −39 |
+| **RST `$28` enters the maths byte-code** (every `call fu_run` becomes `rst $28`), and the "Calculator not supported" message goes | −99 |
+| New modules (measured): CASE 81, EXIT 68, ERROR n, msg$ 64, PROC-name lookup 24, CLEAR 62, KEY 63, FREE 14 | +376 |
+| Everything else, net: ten new keywords and their dispatch, the hooks in ERR$, the error report, RESTORE, SAVE/LOAD, RUN, the prepass and LIST, the shared `cmp2` compare, less `JOY` | +168 |
+| Fix: line numbers in error reports | +2 |
+
+ROM: **16,101 placed, 283 free** (was 15,693 / 691). The new code is in seven pieces packed into the gaps (`case.asm`, `clear.asm` in J2; `flow.asm`, `error2.asm`, `misc2.asm` in K; `keyfn.asm` in I). POKE, WAIT and RANDOMIZE moved out of `basic.asm` to make room.
+
+**Accuracy cost of the maths squeezes** (`test_maths.py --n 3000`, 0 failures in both runs):
+
+| | Before (phase 2 figures) | After (5c) |
+|---|---:|---:|
+| SIN max ulp | 1.07 | 1.81 |
+| COS max ulp | 1.08 | 1.57 |
+| TAN max ulp | 2.71 | 3.27 |
+| EXP max ulp | 0.78 | 0.94 |
+| VAL max ulp | 1.97 | 2.05 |
+| RND (3,000 values) | mean 0.4954, χ² 11.25 | mean 0.4954, χ² 11.25, repeatable |
+
+The maths squeezes came to 39 bytes, not the 130 estimated: the VAL loop and the EXP terms gave less than hoped. The RST `$28` change made up the difference.
+
+## Deviations and things to confirm
+
+- **RST `$28` (spec decision 14, to confirm).** Decision 5 had RST `$28` raise "Calculator not supported". It now enters OpticOS's maths byte-code. Sinclair calculator code fails on OpticOS either way, but now without the message. Undoing this costs about 99 bytes, which would leave about 185 free, below the margin, and then something else would have to go (for example `ERROR n, msg$`, about 64 bytes plus its hooks, or `CLEAR n`).
+- **Program start moved** from `$5DD0` to `$5DF0`. The 32 bytes below it hold the ERROR message (28) and the tape signature (4). Programs saved by earlier builds still load, because the loader works from the header length, but token values changed with the new keywords, so older saved programs list wrongly.
+- `FREE` is a function (`PRINT FREE`), not a command. `RUN name` and `SAVE … AUTO name` take a PROC with no parameters. EXIT FOR should not be used from inside a TRY within the loop.
+- An unclosed CASE is reported at its last WHEN line, as an unclosed IF is at its last ELSEIF.
+- **Bug fixed:** error reports gave "line 2" for any error after line 2: the line counter called `nxl`, which changes DE. Earlier tests never raised an error below line 2.
+
+## Tests
+
+| Suite | Result |
+|---|---|
+| `tools/rig/test_phase5.py` | 72/72 (30 new): CASE with lists, expressions, OTHERWISE, no match, strings, nesting, type mismatch, missing ENDCASE, LIST indent; EXIT WHILE, EXIT REPEAT (nested), EXIT FOR (one-line loop, then the rest of the NEXT line); ERROR n, ERROR n, msg$ (report, ERR/ERR$ in CATCH, cleared by a ROM error and by a plain ERROR n, 28-character limit); error line numbers past line 2; FREE; CLEAR, CLEAR n (RAMTOP, FREE, too low, in a program); KEY (held, not held, two at once, space, digit, empty); RUN name, unknown name; RESTORE name; SAVE AUTO (header offset, loads and runs, program intact); **BORDER in OpticBASIC and in the legacy shim** (a generated `10 BORDER 2` Sinclair tape) |
+| Phase 1 (with the reference ROM), 3, 4 | 35/35 (Bounce Ball and Mire Mare load through `LOAD ""`), 49/49 (the old RST `$28` test now checks the byte-code entry), 13/13 |
+| `test_maths.py --n 3000` | 0 failures (figures above) |
+| zexall, layout, 12-byte similarity check | OK |
+
+## Before a v1.0
+
+- A user manual: OpticBASIC reference, editor keys, tape, and the differences from Sinclair BASIC.
+- An example tape: a few OpticBASIC programs (game, graphics, CASE/TRY demo) saved with `SAVE … AUTO`.
+- A check on a real 48K Spectrum and a real TV: tape loading from audio, timing, the 64-column font's legibility on a CRT, and the start-up chime.
+- Nathan to confirm decision 14 (RST `$28`).

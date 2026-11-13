@@ -96,7 +96,7 @@ si_pc:  ld hl,(CH_ADD)
         ld (VID),hl
         call sym_find
         jr nc,proc_call
-        rst 8
+err_noprc: rst 8
         defb ERR_NOPRC
 st_let: rst $18
         cp 1
@@ -379,7 +379,12 @@ pp_l:   ld a,(hl)
         inc hl
         ld a,(hl)
         dec hl
-        cp T_IF
+        cp T_CASE               ; CASE WHEN OTHERWISE ENDCASE nest and link
+        jr c,pp_m               ; as IF ELSEIF ELSEIF ENDIF
+        cp T_ENDCASE+1
+        jr nc,pp_m
+        sub T_CASE-T_IF
+pp_m:   cp T_IF
         jr z,pp_if
         cp T_WHILE
         jr z,pp_push
@@ -689,6 +694,8 @@ se_l:   call lk_chk
         dec hl
         cp T_ENDIF
         jp z,go_after
+        cp T_ENDCASE
+        jp z,go_after
         inc hl
         inc hl
         inc hl
@@ -697,7 +704,10 @@ se_l:   call lk_chk
         ld d,(hl)
         ex de,hl
         jr se_l
-st_endif: ret
+st_endif:
+st_endcase: ret
+st_when equ st_else
+st_otherwise equ st_else
 st_while: call rd_link
         push de
         call ev_expr
@@ -946,8 +956,6 @@ st_catch: call cs_pop           ; finished the TRY part: drop its frame
 st_endtry: ret
 err_struc: rst 8
         defb ERR_STRUC
-st_error: call ev_u8
-        ld a,e
 err_a:  ld (ERR_NR),a
         ld sp,(ERR_SP)
         ret
@@ -1040,6 +1048,9 @@ st_run: ld a,1                  ; prepass always (it clears the variables)
         ld (PPF),a
         call prepass
         call stk_reset
+        rst $18
+        cp 1
+        jp z,si_pc              ; RUN name: call that PROC
         ld hl,OPROG
         jp go_line
 st_list: ld hl,OPROG            ; the whole program, marker included
@@ -1079,37 +1090,6 @@ st_over: ld c,21
         ld a,(ATTR_P)
         ld (ATTR_T),a
         ret
-st_poke: rst $30
-        push de
-        call argn
-        pop hl
-        ld (hl),e
-        ret
-st_wait: rst $30
-sw_l:   ld a,d
-        or e
-        ret z
-        ei
-        halt
-        ld a,$7F
-        in a,($FE)
-        rra
-        jr c,sw_n
-        ld a,$FE
-        in a,($FE)
-        rra
-        jr c,sw_n
-        rst 8
-        defb ERR_BREAK
-sw_n:   dec de
-        jr sw_l
-st_randomize:
-        ld de,0
-        rst $18
-        call is_end
-        jr z,sr_go
-        rst $30
-sr_go:  jp fp_randomize
 
 ; ---------------------------------------------------- program lines (editor)
 ; p_ins: insert the tokenised line at TKB before line HL -> HL = it
@@ -1304,7 +1284,9 @@ ce_rep: ld sp,(RAMTOP)
         ld bc,1
 cr_l:   call cphd
         jr nc,cr_p
+        push de                 ; nxl changes DE
         call nxl
+        pop de
         inc bc
         jr cr_l
 cr_p:   push bc

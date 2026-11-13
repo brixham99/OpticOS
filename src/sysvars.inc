@@ -111,4 +111,6 @@ DATAP    equ $5D47      ; READ: next DATA item (2), 0 = from the start
 LG_VF    equ $5B4E      ; tape: 1 = VERIFY (reset after each block)      ; input line: length
 EBUF     equ $5D50      ; input line buffer (128 bytes, 126 characters)
 EMAX     equ 126
-OPROG    equ $5DD0      ; OpticBASIC program start
+EMSGN    equ $5D49      ; ERROR n, msg$: the n whose message is in EMBUF, $FF none
+EMBUF    equ $5DD0      ; ERROR n, msg$: the message, bit-7 terminated (28)
+OPROG    equ $5DF0      ; OpticBASIC program start (the tape signature is at OPROG-4)

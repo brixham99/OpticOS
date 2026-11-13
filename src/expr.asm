@@ -280,15 +280,7 @@ op_le:  ld c,3
         jr op_c
 op_ge:  ld c,6
 op_c:   push bc
-        call ev_2
-        call ty2
-        or a
-        push hl
-        jr nz,oc_s
-        call fp_cmp
-        jr oc_r
-oc_s:   call s_cmp
-oc_r:   pop hl
+        call cmp2
         pop bc
         inc a                   ; 0 1 2 for < = >
         ld b,a
@@ -302,6 +294,19 @@ oc_m:   rlca
         dec de
 oc_w:   call fp_set_int
         jp ev_pop
+; cmp2: compare the two top entries (numbers or strings) -> A = $FF, 0, 1
+; for <, =, >; HL = the lower entry
+cmp2:   call ev_2
+        push hl
+        call ty2
+        or a
+        jr nz,c2_s
+        call fp_cmp
+        pop hl
+        ret
+c2_s:   call s_cmp
+        pop hl
+        ret
 ; s_cmp: HL, DE = string entries -> A = $FF, 0, 1 for <, =, >
 s_cmp:  inc hl
         inc hl
@@ -484,7 +489,7 @@ ep_3:   cp T_FN
         ld de,fnu_tab
         jr ep_j
 ep_o:   sub T_PI-T_SQR
-        cp T_JOY-T_PI+1
+        cp T_FREE-T_PI+1
         jp nc,err_syn
         push af
         rst $20

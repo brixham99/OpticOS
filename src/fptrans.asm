@@ -13,7 +13,7 @@ END_    equ $E0                 ; back to Z80 code after this byte
 NEG_    equ $E1                 ; FA = -FA
         include "gen/kequ.inc"  ; src 0-6 = T0-T6, 6+ = constants
 m_fpt_s:
-; fu_run: call fu_run, then byte-code, then END_; Z80 code carries on
+; fu_run: rst $28 , then byte-code, then END_; Z80 code carries on
 ; after the END_ byte.
 fu_run: pop hl
 fr_lp:  ld a,(hl)
@@ -175,7 +175,7 @@ fp_rnd: push hl
 
 ; ---------------------------------------------------- SIN COS TAN
 ; fs_red: FA = x -> FA = x - q*pi/2 (two-part pi/2), A = q AND 3
-fs_red: call fu_run
+fs_red: rst $28
         defb ST_+0, MUL_+K_TWOPI, END_
         call fu_fix
         jp c,err_arg            ; |x| above about 102900
@@ -187,7 +187,7 @@ fsr_1:  and 3
         push af
         ld hl,FA
         call fu_from16
-        call fu_run
+        rst $28
         defb ST_+1, MUL_+K_PI2H, ST_+2, LD_+0, SUB_+2, ST_+0
         defb LD_+1, MUL_+K_PI2L, ST_+2, LD_+0, SUB_+2, END_
         pop af
@@ -209,31 +209,34 @@ fs_k:   pop af
         and 2
         ret z
         jr fu_neg
-fs_sinr: call fu_run            ; sin r = r * S(r*r)
+fs_sinr: rst $28                 ; sin r = r * S(r*r)
         defb ST_+0, MUL_+0, POLY_+5
         include "gen/poly_sin.inc"
         defb MUL_+0, END_
         ret
-fs_cosr: call fu_run            ; cos r = C(r*r)
-        defb ST_+0, MUL_+0, POLY_+6
-        include "gen/poly_cos.inc"
-        defb END_
+fs_cosr: rst $28                ; cos r = 2 (1/2 - sin^2(r/2))
+        defb MUL_+K_HALF, END_
+        call fs_sinr
+        rst $28
+        defb ST_+0, MUL_+0, NEG_, ADD_+K_HALF, END_
+        ld hl,FA+5              ; x 2, exactly
+        inc (hl)
         ret
 fu_tan: call fs_red
         push af
-        call fu_run
+        rst $28
         defb ST_+3, END_
         call fs_sinr
-        call fu_run
+        rst $28
         defb ST_+4, LD_+3, END_
         call fs_cosr
         pop af
         rra
         jr c,ft_odd
-        call fu_run             ; sin r / cos r
+        rst $28                 ; sin r / cos r
         defb ST_+5, LD_+4, DIV_+5, END_
         ret
-ft_odd: call fu_run             ; -cos r / sin r
+ft_odd: rst $28                 ; -cos r / sin r
         defb DIV_+4, NEG_, END_
         ret
 fu_neg: ld a,(FA+6)
@@ -251,28 +254,28 @@ fu_atn: ld hl,FA+6
         push af                 ; A = 1 if |x| > 1
         dec a
         jr nz,fa_1
-        call fu_run             ; x = 1/x
+        rst $28                 ; x = 1/x
         defb ST_+3, LD_+K_ONE, DIV_+3, END_
 fa_1:   ld a,K_TAN15
         call fu_cmpk
         dec a
         push af                 ; Z if x > tan(pi/12)
         jr nz,fa_2
-        call fu_run             ; x = (x*sqr 3 - 1) / (x + sqr 3)
+        rst $28                 ; x = (x*sqr 3 - 1) / (x + sqr 3)
         defb ST_+3, MUL_+K_SQ3, SUB_+K_ONE, ST_+4, LD_+3, ADD_+K_SQ3, ST_+5
         defb LD_+4, DIV_+5, END_
-fa_2:   call fu_run             ; atn t = t * A(t*t)
+fa_2:   rst $28                 ; atn t = t * A(t*t)
         defb ST_+0, MUL_+0, POLY_+6
         include "gen/poly_atn.inc"
         defb MUL_+0, END_
         pop af
         jr nz,fa_3
-        call fu_run
+        rst $28
         defb ADD_+K_PI6, END_
 fa_3:   pop af
         dec a
         jr nz,fa_4
-        call fu_run
+        rst $28
         defb NEG_, ADD_+K_PI2, END_
 fa_4:   pop af
         ld (FA+6),a
@@ -296,7 +299,7 @@ fu_sqr: ld a,(FA+5)
 fq_1:   push af
         ld a,b
         ld (FA+5),a
-        call fu_run
+        rst $28
         defb ST_+0, MUL_+K_SQA, ADD_+K_SQB, ST_+1
         defb LD_+0, DIV_+1, ADD_+1, MUL_+K_HALF, ST_+1
         defb LD_+0, DIV_+1, ADD_+1, MUL_+K_HALF, ST_+1
@@ -310,7 +313,7 @@ fq_1:   push af
 
 ; ---------------------------------------------------- EXP LN LOG
 ; EXP x = 2^n * e^f, n = nearest x/ln 2, f = x - n*ln 2 (two-part ln 2)
-fu_exp: call fu_run
+fu_exp: rst $28
         defb ST_+0, MUL_+K_LOG2E, END_
         call fu_fix
         jr c,fe_big
@@ -321,9 +324,9 @@ fu_exp: call fu_run
         push bc
         ld hl,FA
         call fu_from16
-        call fu_run
+        rst $28
         defb ST_+1, MUL_+K_LN2H, ST_+2, LD_+0, SUB_+2, ST_+0
-        defb LD_+1, MUL_+K_LN2L, ST_+2, LD_+0, SUB_+2, POLY_+9
+        defb LD_+1, MUL_+K_LN2L, ST_+2, LD_+0, SUB_+2, POLY_+8
         include "gen/poly_exp.inc"
         defb END_
         pop bc
@@ -363,7 +366,7 @@ fu_ln:  ld a,(FA+6)
         dec e
 fl_1:   ld (FA+5),a
         push de
-        call fu_run
+        rst $28
         defb ST_+0, SUB_+K_ONE, ST_+1, LD_+0, ADD_+K_ONE, ST_+2, LD_+1, DIV_+2
         defb ST_+0, MUL_+0, POLY_+5
         include "gen/poly_ln.inc"
@@ -379,11 +382,11 @@ fl_2:   ld e,a
         ld d,0
         ld hl,FA
         call fu_from16
-        call fu_run
+        rst $28
         defb ST_+1, MUL_+K_LN2L, ADD_+3, ST_+3, LD_+1, MUL_+K_LN2H, ADD_+3, END_
         ret
 fu_log: call fu_ln
-        call fu_run
+        rst $28
         defb MUL_+K_LN10I, END_
         ret
 
@@ -471,7 +474,7 @@ fp_pow: ld a,(de)
         push de
         ld de,FA
         call fu_unpack
-        call fu_run
+        rst $28
         defb ST_+0, LD_+K_ONE, ST_+1, END_
         pop de
 fpw_l:  ld a,d
@@ -481,23 +484,23 @@ fpw_l:  ld a,d
         rr e
         jr nc,fpw_s
         push de
-        call fu_run
+        rst $28
         defb LD_+1, MUL_+0, ST_+1, END_
         pop de
 fpw_s:  ld a,d
         or e
         jr z,fpw_d
         push de
-        call fu_run
+        rst $28
         defb LD_+0, MUL_+0, ST_+0, END_
         pop de
         jr fpw_l
-fpw_d:  call fu_run
+fpw_d:  rst $28
         defb LD_+1, END_
         pop af
         or a
         jr z,fpw_st
-        call fu_run
+        rst $28
         defb ST_+1, LD_+K_ONE, DIV_+1, END_
 fpw_st: pop hl
         jp fp_stA
@@ -511,7 +514,7 @@ fpw_f:  push hl
         or a
         jr z,fpw_0
         call fu_ln
-        call fu_run
+        rst $28
         defb MUL_+5, END_
         call fu_exp
         jr fpw_st

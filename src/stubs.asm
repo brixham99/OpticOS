@@ -42,6 +42,8 @@ m_stb_e2:
 m_tkt_s:
         include "gen/tokens.inc"
 m_tkt_e:
+        include "case.asm"
+        include "clear.asm"
 secJ2_end:
 
         org $22AA

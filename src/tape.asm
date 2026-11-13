@@ -54,6 +54,16 @@ st_save:
         rst $18
         cp T_CODE
         jr z,ss_c
+        ld bc,$8000             ; param 1: no auto-start
+        cp T_AUTO
+        jr nz,ss_p
+        rst $20                 ; AUTO name: param 1 = its DEF line - OPROG
+        call pfind
+        ld de,-OPROG
+        add hl,de
+        ld b,h
+        ld c,l
+ss_p:   push bc
         call tp_sig             ; a program: signature, lines, sentinel
         ld hl,(PEND)
         ld de,OPROG-5
@@ -61,7 +71,7 @@ st_save:
         sbc hl,de
         ld (HDRBUF+15),hl       ; param 2: program length
         ld de,OPROG-4
-        ld bc,$8000             ; param 1: no auto-start
+        pop bc
         xor a
         jr ss_go
 ss_c:   rst $20
@@ -142,5 +152,17 @@ ob_load:
         lddr
         pop de
         call ws_ld
-        jp console
+        ld hl,(HDRBUF+13)       ; SAVE ... AUTO: RUN that PROC
+        bit 7,h
+        jp nz,console
+        ld de,OPROG+5           ; the name after DEF [PROC]
+        add hl,de
+        ld a,(hl)
+        cp T_PROC
+        jr nz,ol_1
+        inc hl
+ol_1:   ld (CH_ADD),hl
+        ld hl,0
+        ld (CURLN),hl
+        jp st_run
 m_tp_e:

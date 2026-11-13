@@ -79,6 +79,10 @@ f_errs: call ev_push
         or a
         jr z,fe_0
         ld c,a
+        ld hl,EMSGN             ; ERROR n, msg$: its own message
+        cp (hl)
+        ld hl,EMBUF
+        jr z,fe_f
         ld hl,err_tab
 fe_l:   ld a,(hl)
         inc hl
@@ -132,9 +136,6 @@ f_dpeek: call una_int
         inc hl
         ld d,(hl)
         jp push_u
-f_joy:  in a,($1F)
-        and $1F
-        jp push_a
 una_int: call ev_una
         jp pop_int
 m_sf2_e:

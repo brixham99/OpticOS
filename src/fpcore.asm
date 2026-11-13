@@ -313,7 +313,7 @@ fi_m2:  ld d,a
         ld a,(FA+6)
         or a
         ret z
-        call fu_run
+        rst $28
         defb SUB_+K_ONE, END_
         ret
 fi_sm:  ld a,(FA+6)

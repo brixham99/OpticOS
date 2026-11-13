@@ -54,7 +54,7 @@ fs_fl:  ld de,FA
 fs_a1:  ld a,K_E9
         call fu_cmpk
         jp m,fs_a2
-        call fu_run
+        rst $28
         defb DIV_+K_TEN, END_
         ld hl,NDE
         inc (hl)
@@ -62,7 +62,7 @@ fs_a1:  ld a,K_E9
 fs_a2:  ld a,K_E8
         call fu_cmpk
         jp p,fs_a3
-        call fu_run
+        rst $28
         defb MUL_+K_TEN, END_
         ld hl,NDE
         dec (hl)
@@ -258,7 +258,7 @@ fsc_ch: push af                 ; scale by 10^(+-32) first, then the rest
         jr fu_scl
 fsc_go: or a                    ; S = direction
         push af
-        call fu_run
+        rst $28
         defb ST_+3, LD_+K_TEN, ST_+4, LD_+K_ONE, ST_+5, END_
         pop af
         push af
@@ -268,25 +268,25 @@ fsc_1:  ld b,a
 fsc_l:  srl b
         jr nc,fsc_2
         push bc
-        call fu_run
+        rst $28
         defb LD_+5, MUL_+4, ST_+5, END_
         pop bc
 fsc_2:  ld a,b
         or a
         jr z,fsc_d
         push bc
-        call fu_run
+        rst $28
         defb LD_+4, MUL_+4, ST_+4, END_
         pop bc
         jr fsc_l
-fsc_d:  call fu_run
+fsc_d:  rst $28
         defb LD_+3, END_
         pop af
         jp m,fsc_v
-        call fu_run
+        rst $28
         defb MUL_+5, END_
         ret
-fsc_v:  call fu_run
+fsc_v:  rst $28
         defb DIV_+5, END_
         ret
 
@@ -312,15 +312,21 @@ vl_d:   sub '0'
         jr nc,vl_ne
         set 0,c
         push hl
-        push bc
-        ld b,a
+        ld hl,VDX               ; 10^VDX: -1 for each digit after the point,
+        bit 1,c                 ; +1 for each digit not kept
+        jr z,vl_k
+        dec (hl)
+vl_k:   ld b,a
         ld a,(FA+5)
         cp 164
-        jr nc,vl_skp            ; 11 digits kept, the rest only counted
-        push bc
-        call fu_run
+        jr c,vl_ad              ; 11 digits kept, the rest only counted
+        inc (hl)
+        jr vl_nx
+vl_ad:  push bc
+        rst $28
         defb MUL_+K_TEN, END_
         pop bc
+        push bc
         ld e,b
         ld d,0
         ld c,d
@@ -328,20 +334,7 @@ vl_d:   sub '0'
         call fu_from16
         call fu_add
         pop bc
-        push bc
-        bit 1,c
-        jr z,vl_nx
-        ld hl,VDX
-        dec (hl)
-        jr vl_nx
-vl_skp: pop bc
-        push bc
-        bit 1,c
-        jr nz,vl_nx
-        ld hl,VDX
-        inc (hl)
-vl_nx:  pop bc
-        pop hl
+vl_nx:  pop hl
         inc hl
         jr vl_lp
 vl_ne:  bit 0,c

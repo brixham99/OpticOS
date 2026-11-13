@@ -99,9 +99,16 @@ rd_s:   ld (DATAP),hl
         pop de
         ld (CH_ADD),de
         ret
-st_restore:
+st_restore:                     ; RESTORE [name]: from the start, or from
+        rst $18                 ; the line after that PROC's DEF
+        cp 1
         ld hl,0
-        ld (DATAP),hl
+        jr nz,sr_s
+        call pfind
+        call nxl
+        dec hl                  ; the $0D ending the DEF line
+        dec hl
+sr_s:   ld (DATAP),hl
         ret
 st_data equ st_rem
 m_in_e:

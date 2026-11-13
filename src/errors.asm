@@ -26,6 +26,8 @@ ERR_OK     equ $FF
 m_err_s:
 err_rst:                        ; RST 8: the byte after the RST is the code
         pop hl
+        ld a,$FF                ; a ROM error has no message of its own
+        ld (EMSGN),a
         ld a,(hl)
         ld (ERR_NR),a
         ld sp,(ERR_SP)
@@ -39,6 +41,10 @@ err_show:
         call nz,pr_out
         ld a,(ERR_NR)
         ld c,a
+        ld hl,EMSGN
+        cp (hl)
+        ld hl,EMBUF
+        jp z,pr_msg
         ld hl,err_tab
 es_lp:  ld a,(hl)
         inc hl
@@ -151,9 +157,6 @@ err_tab:
         defb ERR_SYN
         defm "Syntax erro"
         defb 'r'+$80
-        defb ERR_CALC
-        defm "Calculator not supporte"
-        defb 'd'+$80
         defb ERR_LEG
         defm "Legacy BASIC: unsupported statemen"
         defb 't'+$80

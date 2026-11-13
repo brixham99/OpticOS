@@ -77,7 +77,7 @@ from the original operands, so the fast path never changes a result.
 `fu_fix` (FA → DE = |nearest|, C = sign, CF if ≥ 65535.5), `fu_scl` (FA ×= 10^A),
 and `fu_sin`, `fu_cos`, `fu_tan`, `fu_atn`, `fu_asn`, `fu_acs`, `fu_sqr`, `fu_exp`, `fu_ln`, `fu_log` and `fu_rnd` on FA.
 
-### Byte-code (`call fu_run`, the bytes, then `END_`; Z80 code carries on after END_)
+### Byte-code (`rst $28` since v0.8, formerly `call fu_run`, then the bytes, then `END_`; Z80 code carries on after END_)
 
 | Code | Op | Meaning |
 |---|---|---|
@@ -108,19 +108,17 @@ A handler starts with CH_ADD just past the keyword.
 | + − | align exponents through the guard byte, add or subtract the 40-bit mantissas, normalise, round to nearest (ties away) |
 | × | 32×40-bit shift-and-add into a 40-bit result, one byte of the multiplier at a time |
 | ÷ | restoring division, 40 quotient bits |
-| SIN COS | q = round(x·2/π); r = x − q·(π/2)hi − q·(π/2)lo; sin r = r·S(r²) (5 terms), cos r = C(r²) (6); quadrant from q |
+| SIN COS | q = round(x·2/π); r = x − q·(π/2)hi − q·(π/2)lo; sin r = r·S(r²) (5 terms); cos r = 2·(½ − sin²(r/2)) (v0.8: from the same polynomial, the ×2 exact on the exponent; worst case 1.81 ulp, was 1.07); quadrant from q |
 | TAN | sin r / cos r on the reduced argument (−cos/sin in odd quadrants) |
 | ATN | \|x\| > 1 → π/2 − ATN(1/x); t > tan 15° → π/6 + ATN((t√3 − 1)/(t + √3)); then t·A(t²) (6 terms) |
-| ASN | 2·ATN(x / (1 + √((1−x)(1+x)))) |
-| ACS | x ≥ 0: 2·ATN √((1−x)/(1+x)); x < 0: π/2 − ASN x |
 | SQR | halve the exponent; linear seed; three Newton steps |
-| EXP | n = round(x·log2 e); f = x − n·(ln 2)hi − n·(ln 2)lo; e^f by a 9-term polynomial; exponent += n |
+| EXP | n = round(x·log2 e); f = x − n·(ln 2)hi − n·(ln 2)lo; e^f by an 8-term polynomial (9 until v0.8); exponent += n |
 | LN | m ∈ [0.707, 1.414); s = (m−1)/(m+1); s·P(s²) (5 terms) + e·ln 2 in two parts |
 | LOG | LN x × (1/ln 10) |
 | x^y | integer y: repeated squaring (y < 0 → 1/x^\|y\|, 0^0 = 1); otherwise EXP(y·LN x) |
 | RND | 32-bit xorshift (13, 17, 5); value = state / 2^32 |
 | STR$/PRINT | estimate the decimal exponent from the binary one; scale to [1E8, 1E9) with 10^k built by squaring (in steps of 10^32 when \|k\| > 31); round to an integer; 9 digits; strip zeros; fixed for 1E-5 ≤ \|x\| < 1E9, otherwise `d.dddE±n` |
-| VAL | digits accumulate as 10·a + d (11 kept, the rest only counted); decimal point and `E±n` adjust one exponent; one fu_scl at the end |
+| VAL | digits accumulate as 10·a + d (11 kept, the rest only counted); the decimal exponent takes −1 for each digit after the point and +1 for each digit not kept, plus `E±n`; one fu_scl at the end |
 
 ## 5. Errors
 

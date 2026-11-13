@@ -59,10 +59,9 @@ def lnc(z): return 2 * mp.atanh(mp.sqrt(z)) / mp.sqrt(z) if z else mp.mpf(2)
 S = (mp.sqrt(2) - 1) / (mp.sqrt(2) + 1)
 POLYS = [   # name, function, interval, number of coefficients
     ('sin', sinc, [0, (mp.pi / 4) ** 2], 5),
-    ('cos', lambda z: mp.cos(mp.sqrt(z)), [0, (mp.pi / 4) ** 2], 6),
     ('atn', atnc, [0, mp.tan(mp.pi / 12) ** 2], 6),
     ('ln', lnc, [0, (S * mp.mpf('1.0001')) ** 2], 5),
-    ('exp', mp.exp, [-LN2 / 2 * mp.mpf('1.0001'), LN2 / 2 * mp.mpf('1.0001')], 9),
+    ('exp', mp.exp, [-LN2 / 2 * mp.mpf('1.0001'), LN2 / 2 * mp.mpf('1.0001')], 8),
 ]
 
 def db(b): return '        defb ' + ','.join('$%02X' % x for x in b)

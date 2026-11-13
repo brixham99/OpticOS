@@ -72,12 +72,12 @@ for name, prog, cmd, want in T:
     ok = got == want; res[name] = ok
     print('%-28s %s' % (name, 'ok' if ok else 'FAIL %r -> %r' % (want, got)))
     if not ok: fails.append(name)
-# RST $28 in machine code gives a clean error
-s = b.s; b.line('CLS'); s.load(0x7000, b'\xef\x00')
-s.setregs(PC=0x7000); s.run_until(SYM['cg_lp'], 5_000_000)
-rows = [r for r in b.screen() if r not in ('', ']')]
-ok = rows[-1:] == ['Calculator not supported']; res['RST $28 clean error'] = ok
-print('%-28s %s' % ('RST $28 clean error', 'ok' if ok else 'FAIL %r' % rows))
+# RST $28 runs OpticOS's maths byte-code (v0.8): END_ at once returns after it
+s = b.s; b.line('CLS'); s.load(0x7000, b'\xef\xe0\x3e\x2a\xc9')    # rst $28: END_: ld a,42: ret
+r = s.call(0x7000, ret=0x7100, SP=0x7200, limit=1_000_000)
+s.setregs(PC=SYM['console'])
+ok = r['PC'] == 0x7100 and (r['AF'] >> 8) == 42; res['RST $28 runs byte-code'] = ok
+print('%-28s %s' % ('RST $28 runs byte-code', 'ok' if ok else 'FAIL %r' % r))
 if not ok: fails.append('RST $28')
 # a long-running loop: time per iteration
 b.line('NEW'); b.enter(['FOR i=1 TO 1000: a=a+i: NEXT', 'PRINT a'])

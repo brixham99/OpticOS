@@ -1,6 +1,6 @@
 # OpticOS: design specification
 
-**Version 0.7, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. **v0.6** (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). **v0.7** (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7).
+**Version 0.8, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. **v0.6** (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). **v0.7** (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). **v0.8** (phase 5c) records the last cuts as decision 13 (array parameters by reference, `CALL` register arguments, `CAT`, the OpticBASIC `SCREEN$` tape forms, `JOY`), builds CASE, EXIT, `ERROR n, msg$`, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2).
 Project, ROM and future repo name: **OpticOS**. Boot banner: `OpticOS (c) 2026 Optica Technology`.
 
 This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.
@@ -45,7 +45,7 @@ This document covers design and planning only. The Z80 snippets in it are there 
 | CPU | Z80A at 3.5 MHz. 69,888 T-states per frame on the 48K. Contended memory at `$4000–$7FFF`. |
 | ULA port `$FE` (any even port) | Writing sets the border (bits 0–2), MIC (bit 3) and EAR/beeper (bit 4). Reading gives keyboard half-rows (high byte selects the row, bits 0–4 active low) and EAR in (bit 6). |
 | Keyboard matrix | 8 half-rows × 5 keys. Row-select bytes are `$FE, $FD, $FB, $F7, $EF, $DF, $BF, $7F` (CAPS–V, A–G, Q–T, 1–5, 0–6, P–Y, ENTER–H, SPACE–B). |
-| Kempston | Port `$1F`, active high: bit 0 right, 1 left, 2 down, 3 up, 4 fire. Read by the `JOY` function only. It is never auto-detected, because a floating bus reads `$FF`. |
+| Kempston | Port `$1F`, active high: bit 0 right, 1 left, 2 down, 3 up, 4 fire. Read with `IN 31` (the `JOY` function was dropped in v0.8, decision 13). It is never auto-detected, because a floating bus reads `$FF`. |
 | IM 1 | Set at boot. The 50 Hz frame interrupt arrives at `$0038`. |
 | NMI | `$0066`. If `NMIADD` (`$5CB0`) is non-zero, jump to it. Otherwise `RETN`. |
 | Screen and graphics | `CLS`, `PRINT` / `?` with `;` `,` `'` `AT` `TAB`, `INK`, `PAPER`, `FLASH`, `BRIGHT`, `INVERSE`, `OVER` (as statements and inside PRINT, where INK, PAPER, FLASH and BRIGHT last until the statement ends; INVERSE and OVER stay set), `BORDER`, `INPUT`, `PLOT x,y`, `DRAW dx,dy`, `DRAW TO x,y` (256×192, origin bottom left; OVER flips and INVERSE clears pixels; each plotted cell takes the current colours) | — |
@@ -89,7 +89,7 @@ Each one is either the real routine or a 3-byte `JP` stub at the original addres
 | `$0008` | ERROR (RST 8) | Next byte is the error code | Some games and Interface 1 | 0 |
 | `$0010` | PRINT-A (RST 16) | Print A to the current channel | Very common in loaders and type-in code | 0 |
 | `$0018`/`$0020` | GET/NEXT-CHAR | OpticOS's own interpreter fetch. Not guaranteed. | Vector slots | 0 |
-| `$0028` | RST 40 | **Not** the Sinclair calculator. Raises error "Calculator not supported". | | 0 |
+| `$0028` | RST 40 | **Not** the Sinclair calculator: since v0.8 it enters OpticOS's own maths byte-code (`fu_run`, docs/maths.md), so the 37 calls to it are one byte each. Sinclair calculator code cannot run on OpticOS either way. | | 0 |
 | `$0030` | RST 48 | Workspace allocate (OpticOS's own) | | 0 |
 | `$0038` | IM 1 ISR | FRAMES and keyboard | Universal | in ISR |
 | `$0066` | NMI | As §2 (the Sinclair bug is fixed) | | 4 |
@@ -193,7 +193,7 @@ name [args]   or   name(args)              ' call a PROC (bare name)
 END   STOP   REM   '
 ```
 
-Parameters are passed by value. Arrays are passed by reference using `a()`. Scoping is **dynamic, BBC-style**: `LOCAL` and parameters save the old value on the control stack and restore it at `ENDPROC`, `ENDFN` or error unwind. Recursion is supported.
+Parameters are passed by value. (Passing arrays by reference with `a()` was dropped in v0.8, decision 13; arrays are global, so a PROC can use one by name.) Scoping is **dynamic, BBC-style**: `LOCAL` and parameters save the old value on the control stack and restore it at `ENDPROC`, `ENDFN` or error unwind. Recursion is supported.
 
 **Control flow**
 
@@ -219,9 +219,11 @@ TRY … CATCH … ENDTRY
 ERROR n [, msg$]                           ' raise an error
 ```
 
+`CASE` compares the selector with each `WHEN` value in turn (numbers or strings; a mismatch of type is an error), runs the first branch that matches, or `OTHERWISE`, and continues after `ENDCASE`. CASE, WHEN, OTHERWISE and ENDCASE must each start a line, as the other block keywords do (a WHEN branch can follow on the same line after `:`). `EXIT WHILE`, `EXIT REPEAT` and `EXIT FOR` continue after the matching WEND, UNTIL or NEXT statement. `ERROR n, msg$` gives ERR = n, ERR$ = msg$ and an error report of `msg$, line L`.
+
 **Data**
 
-`[LET] v = expr`, `DIM`, `SWAP a, b`, `DATA`, `READ`, `RESTORE [procname]` (v0.7: the first DATA after that DEF; not built yet), `CLEAR [ramtop]`, `RANDOMIZE [n]`
+`[LET] v = expr`, `DIM`, `SWAP a, b`, `DATA`, `READ`, `RESTORE [procname]` (from the first DATA line after that DEF), `CLEAR [ramtop]` (forgets the variables, open loops and PROC calls, so use it at the top level; `CLEAR n` also moves RAMTOP to n, with the stacks, direct line and heap below it, and needs n − 1,856 above the variables; typed directly, the rest of the line is not run), `RANDOMIZE [n]`
 
 **Screen and text**
 
@@ -245,25 +247,24 @@ Columns in `AT` and `TAB` are **0–63**. Rows are 0–23. Row 23 is available t
 
 **Machine and I/O**
 
-`POKE a,b`, `DPOKE a,w`, `OUT port,b`, `CALL addr [,a%,bc%,de%,hl%]` and `WAIT n`. `WAIT n` halts for n frames.
+`POKE a,b`, `DPOKE a,w`, `OUT port,b`, `CALL addr` and `WAIT n`. (Register arguments for CALL were dropped in v0.8, decision 13: POKE them, or use USR.) `WAIT n` halts for n frames.
 
 **Tape**
 
 ```
-SAVE "name"                    ' program (+ AUTO to autostart)
-SAVE "name" AUTO procname      ' v0.7: runs that PROC after loading (not built yet)
+SAVE "name"                    ' program
+SAVE "name" AUTO procname      ' runs that PROC (no parameters) after loading
 SAVE "name" CODE start, len
-SAVE "name" SCREEN$
 LOAD "name" | LOAD ""          ' program (OpticOS or legacy)
-LOAD "" CODE [start [, len]]
-LOAD "" SCREEN$
+LOAD "" CODE [start]
 VERIFY …                       ' same forms as LOAD
-CAT                            ' list tape headers until BREAK
+' v0.8, decision 13: SAVE/LOAD/VERIFY "" SCREEN$ and CAT were dropped from
+' OpticBASIC (SCREEN$ is CODE 16384,6912); legacy loaders keep LOAD "" SCREEN$
 ```
 
 **Direct-mode commands**
 
-`RUN [procname]` (v0.7: calls it after the prepass; not built yet), `LIST`, `NEW`, `AUTO`, `EDIT` (key), `FREE`. (`CONT` and `FIND` were dropped in v0.7, decision 10.) Any statement can also be typed in direct mode.
+`RUN [procname]` (with a name: the prepass, then a call of that PROC; at its end OpticOS returns to the prompt), `LIST`, `NEW`, `AUTO`, `EDIT` (key). `FREE` is a function: `PRINT FREE`. (`CONT` and `FIND` were dropped in v0.7, decision 10.) Any statement can also be typed in direct mode.
 
 ### 4.5 Functions
 
@@ -271,8 +272,8 @@ CAT                            ' list tape headers until BREAK
 |---|---|
 | Maths | `ABS SGN INT SQR EXP LN LOG SIN COS TAN ATN PI RND RND(n) MAX(a,b) MIN(a,b)` (ASN and ACS were dropped in v0.6 to save ROM; use `ATN(x/SQR(1-x*x))`) |
 | String | `LEN LEFT$ RIGHT$ MID$ CHR$ ASC STR$ VAL INSTR(a$,b$[,start]) STRING$(n,s$) HEX$(n) UPPER$` |
-| Input | `INKEY$`, `KEY(k$)` (true while that key is held, with no repeat, which suits games), `JOY` (Kempston) |
-| Machine | `PEEK DPEEK IN(port) USR(addr)` (returns BC, as Sinclair does), `FRAMES`, `FREE` |
+| Input | `INKEY$`, `KEY(k$)` (true while the key for the first character of k$ is held: letters, digits and space; read straight from the matrix, so several keys can be tested at once, which suits games). `JOY` was dropped in v0.8; use `IN 31` for a Kempston joystick. |
+| Machine | `PEEK DPEEK IN(port) USR(addr)` (returns BC, as Sinclair does), `FRAMES`, `FREE` (bytes between the variables and the string heap) |
 | Errors | `ERR`, `ERR$` (`ERRLINE`, `ERRPROC$`, `POINT`, `ATTR` and `SCREEN$(r,c)` were dropped in v0.7, decision 10) |
 
 ### 4.6 Error handling
@@ -344,14 +345,14 @@ Everything in §4.1–§4.7 is the target language. This table shows what the RO
 
 | Area | Built | Not yet |
 |---|---|---|
-| Structure | `DEF name(params)` … `ENDPROC`, `DEF name(params)` … `RETURN v` … `ENDFN`, one-line `DEF name(p) = expr` (the words `PROC` and `FN` after `DEF` are optional, and `FN` is optional in a call), dynamic `LOCAL`, recursion, bare-name PROC calls, `END`, `STOP`, `REM`, `'` | passing arrays by reference |
-| Control flow | one-line and block `IF` / `ELSEIF` / `ELSE` / `ENDIF`, `WHILE` / `WEND`, `REPEAT` / `UNTIL`, `FOR` … `NEXT [v]`, `TRY` / `CATCH` / `ENDTRY`, `ERROR n` | `CASE`, `EXIT`, `ERROR n, msg$` |
-| Data | `LET` or bare assignment, `DIM` (up to 3 dimensions, base 0), `RANDOMIZE`, `DATA` / `READ` / `RESTORE` (a DATA statement must start its line; items are any expressions; RUN restores), `SWAP a, b` (numbers, integers, strings or elements of the same type) | `CLEAR`, `RESTORE procname` |
-| Screen | `CLS`, `PRINT` / `?` with `;` `,` `'` `AT` `TAB`, `INK`, `PAPER`, `BORDER`, `INPUT` | `FLASH` / `BRIGHT` / `INVERSE` / `OVER`, colours inside PRINT, `MODE 32` from BASIC, `UDG`, graphics |
-| Sound and machine | `POKE`, `DPOKE`, `WAIT`, `BEEP dur, pitch` (pitch from about −24 to 69), `OUT port, b`, `CALL addr` | `CALL` with register arguments |
-| Tape | `SAVE "name"`, `SAVE "name" CODE start, length`, `LOAD "name"` / `LOAD ""` (OpticOS or legacy program), `LOAD "name" CODE [start]`, `VERIFY` with the same forms | `SAVE … AUTO procname`, `SCREEN$` forms, `CAT` |
-| Direct mode | `RUN`, `LIST`, `NEW`, `AUTO`, `EDIT` key, any statement | `RUN procname`, `FREE` |
-| Functions | `ABS SGN INT SQR EXP LN LOG SIN COS TAN ATN PI RND RND(n) MAX MIN LEN LEFT$ RIGHT$ MID$ CHR$ ASC STR$ VAL PEEK ERR TRUE FALSE INKEY$ FRAMES INSTR(a$,b$[,start]) STRING$(n,s$) HEX$(n) UPPER$(s$) ERR$ IN(port) USR(addr) DPEEK(addr) JOY` | `KEY(k$)`, `FREE` |
+| Structure | `DEF name(params)` … `ENDPROC`, `DEF name(params)` … `RETURN v` … `ENDFN`, one-line `DEF name(p) = expr` (the words `PROC` and `FN` after `DEF` are optional, and `FN` is optional in a call), dynamic `LOCAL`, recursion, bare-name PROC calls, `END`, `STOP`, `REM`, `'` | – (arrays by reference dropped, decision 13) |
+| Control flow | one-line and block `IF` / `ELSEIF` / `ELSE` / `ENDIF`, `WHILE` / `WEND`, `REPEAT` / `UNTIL`, `FOR` … `NEXT [v]`, `TRY` / `CATCH` / `ENDTRY`, `ERROR n`, `CASE` / `WHEN` / `OTHERWISE` / `ENDCASE`, `EXIT WHILE` / `REPEAT` / `FOR`, `ERROR n [, msg$]` | – |
+| Data | `LET` or bare assignment, `DIM` (up to 3 dimensions, base 0), `RANDOMIZE`, `DATA` / `READ` / `RESTORE` (a DATA statement must start its line; items are any expressions; RUN restores), `SWAP a, b` (numbers, integers, strings or elements of the same type), `RESTORE procname`, `CLEAR [ramtop]` | – |
+| Screen | `CLS`, `PRINT` / `?` with `;` `,` `'` `AT` `TAB`, `INK`, `PAPER`, `BORDER`, `INPUT` | – |
+| Sound and machine | `POKE`, `DPOKE`, `WAIT`, `BEEP dur, pitch` (pitch from about −24 to 69), `OUT port, b`, `CALL addr` | – (`CALL` register arguments dropped, decision 13) |
+| Tape | `SAVE "name"`, `SAVE "name" CODE start, length`, `LOAD "name"` / `LOAD ""` (OpticOS or legacy program), `LOAD "name" CODE [start]`, `VERIFY` with the same forms, `SAVE "name" AUTO procname` | – (OpticBASIC `SCREEN$` forms and `CAT` dropped, decision 13) |
+| Direct mode | `RUN`, `LIST`, `NEW`, `AUTO`, `EDIT` key, any statement, `RUN procname` | – |
+| Functions | `ABS SGN INT SQR EXP LN LOG SIN COS TAN ATN PI RND RND(n) MAX MIN LEN LEFT$ RIGHT$ MID$ CHR$ ASC STR$ VAL PEEK ERR TRUE FALSE INKEY$ FRAMES INSTR(a$,b$[,start]) STRING$(n,s$) HEX$(n) UPPER$(s$) ERR$ IN(port) USR(addr) DPEEK(addr) KEY(k$) FREE` | – |
 
 Differences from the text above, as built:
 
@@ -370,7 +371,7 @@ Differences from the text above, as built:
 ```
 
 - `len` (1 byte, 3–255) appears at **both ends** of the line. Walking forward is `ptr += len` and walking backward is `ptr -= (ptr-1)^`. Both are O(1), so the editor never needs line numbers. The overhead is 3 bytes per line, against Sinclair's 5 (number, length and ENTER).
-- The program starts at `$5DD0` (PROG) and ends with a `$00` sentinel.
+- The program starts at `$5DF0` (PROG; `$5DD0` until v0.8, when 32 bytes went to `ERROR n, msg$`) and ends with a `$00` sentinel.
 - **Indentation is not stored.** The tokeniser strips leading spaces. LIST and the editor recompute indentation from the block keywords, at 2 spaces per level, while they display. The program always looks tidy and no bytes are wasted.
 - Spaces inside a line are kept only where they are needed to separate words, so that LIST shows a canonical spacing.
 
@@ -403,7 +404,9 @@ $5C00-$5CB5  system variables (compatible subset at Sinclair addresses, §9)
 $5CB6-$5CCA  channel table (K, S, R; Sinclair layout, so 23739 = channel S output, low byte)
 $5CCB-$5D4F  OpticOS extended system variables: 32 hash heads (64), A%-Z% (52), editor state (7) …
 $5D50-$5DCF  input line (126 characters + terminator)
-$5DD0        PROG     -> program lines … $00, then the DEF table
+$5DD0-$5DEB  EMBUF: the message of the last ERROR n, msg$ (28 characters)
+$5DEC-$5DEF  the tape signature "OB" 1 0, written just before a program is saved
+$5DF0        PROG     -> program lines … $00, then the DEF table
              VARS     -> variable records (grow up)
              (free)
              STRHEAP  <- string heap (grows down from STKBOT)
@@ -624,35 +627,38 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 
 ### 8.2 Budget
 
-| # | Module | v0.2 budget | Built after phase 5b | v0.7 budget |
-|---|---|---:|---:|---:|
-| 1 | Restarts (now holding GET-CHAR, NEXT-CHAR and an integer-expression helper), NMI, reset, RAM test, system-variable and channel init | 380 | 297 | 297 |
-| 2 | Boot banner plus the call to print it, and the call to the start-up chime | 40 | 64 | 64 |
-| 3 | Interrupt routine, keyboard scan, debounce and repeat, key tables | 520 | 355 | 355 |
-| 4 | 64-column print, control codes, AT/TAB, colours, scroll, cursor | 1,000 | 578 | 578 |
-| 5 | MODE 32 (dropped, decision 8) | 110 | – | 0 |
-| 6 | Block graphics and UDG print (dropped, decision 8) | 60 | – | 0 |
-| 7 | **4-pixel font, 96 glyphs, 2 per byte** | 384 | 384 | 384 |
-| 8 | Tape low level: SA-BYTES, LD-BYTES, edge routines | 380 | 310 | 310 |
-| 9 | Tape commands: SAVE/LOAD/VERIFY with CODE (built); SAVE AUTO, SCREEN$, CAT to come | 520 | 379 | 489 |
-| 10 | Sound and machine statements: BEEPER, BEEP, start-up chime, OUT, DPOKE, CALL, SWAP (SOUND dropped) | 160 | 298 | 298 |
-| 11 | Graphics: PLOT, DRAW, DRAW TO (CIRCLE, POINT, ATTR, SCREEN$ dropped) | 620 | 238 | 238 |
-| 12 | Float core | 1,100 | 1,424 | 1,424 |
-| 13 | Number ↔ string, pr_dec / pr_hex | 550 | 788 | 788 |
-| 14 | Transcendentals, byte-code runner, coefficient tables | 950 | 1,222 | 1,222 |
-| 15–17 | Tokeniser, LIST auto-indent, keyword table, dispatch tables (about 11 keywords still to add) | 1,500 | 1,740 | 1,822 |
-| 18 | Expression evaluator and functions, including INSTR, STRING$, HEX$, UPPER$, ERR$, IN, USR, DPEEK, JOY (KEY, FREE to come) | 850 | 1,712 | 1,772 |
-| 19 | Interpreter core (EXIT, ERROR n,msg$, CLEAR, RUN/RESTORE procname, array parameters, CALL registers to come) | 1,550 | 2,196 | 2,505 |
-| 20 | CASE / WHEN / OTHERWISE | 150 | – | 150 |
-| 21–22 | Variables, arrays, string heap and GC, value and control stacks | 1,150 | 1,275 | 1,275 |
-| 23 | INPUT, DATA/READ/RESTORE | 450 | 200 | 200 |
-| 24 | Line editor | 1,400 | 581 | 581 |
-| 25 | Direct mode and console | 250 | 227 | 227 |
-| 26 | Errors: RST 8 unwind and messages | 450 | 502 | 522 |
-| 27 | Legacy loader shim (kept whole, decision 11) | 650 | 845 | 845 |
-| 28 | Fixed-address stubs | 200 | 78 | 78 |
-| | **Total** | **15,374** | **15,693** | **16,425** |
-| | **Margin (of 16,384)** | **1,010** | **691 free now** | **−41 (over)** |
+| # | Module | Bytes, as built (v0.8, phase 5 complete) |
+|---|---|---:|
+| 1 | Restarts, NMI, reset, RAM test, sysvars, channels | 300 |
+| 2 | Boot banner + version text, calls | 61 |
+| 3 | Interrupt routine, keyboard scan, key tables | 355 |
+| 4 | 64-column print, control codes, colours, scroll, CLS, RST 16 | 578 |
+| 8 | Tape low level: SA-BYTES, LD-BYTES, edges, tape_ret | 310 |
+| 10 | Sound: BEEPER | 82 |
+| 26 | Errors: RST 8 handler and messages | 492 |
+| 9 | Tape commands: SAVE / LOAD / VERIFY, CODE, headers, name match | 422 |
+| 27 | Legacy loader shim (interpreter, expressions, PRINT) | 845 |
+| 13 | Number output for the legacy shim and console (pr_dec, pr_hex) | 50 |
+| 12 | Float core (+ - * /, normalise, compare, conversions, small-int ops) | 1,422 |
+| 13 | Number <-> string (STR$/PRINT formatting, VAL) | 709 |
+| 14 | Transcendentals, byte-code runner, coefficient tables | 1,148 |
+| 18 | Expression evaluator and functions | 1,330 |
+| 17 | Variables, arrays, string heap + GC, value and control stacks | 1,281 |
+| 15 | Tokeniser, keyword table, LIST | 1,800 |
+| 19 | Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,363 |
+| 19-20 | CASE, EXIT, ERROR n [,msg$], CLEAR [n], PROC-name lookup | 299 |
+| 25 | Direct mode and console: input line with insert/delete/cursor | 422 |
+| 24 | Line editor: marker, LIST around it, cursor up/down, EDIT | 268 |
+| 25 | INPUT, DATA / READ / RESTORE | 183 |
+| 11 | Graphics: PLOT, DRAW, DRAW TO | 238 |
+| 10 | BEEP, OUT, DPOKE, CALL, SWAP; start-up chime | 216 |
+| 18 | String and machine functions: INSTR STRING$ HEX$ UPPER$ ERR$ IN USR DPEEK KEY FREE | 465 |
+| 28 | Fixed-address stubs (CHAN-OPEN, PR-STRING, PIXEL-ADD, $096F) | 78 |
+| 7 | 4-pixel font | 384 |
+| | **Total** (v0.2 budget: 15,374) | **16,101** |
+| | **Free (of 16,384)** | **283** (margin rule: at least 256) |
+
+The ROM builds its own version of this table (`build/bytes.md`, from `tools/check_layout.py`). The free bytes are spread over twelve gaps between the fixed addresses (the largest is 62 bytes).
 
 **Rebalance after phase 3 (v0.3).** The maths (items 12–14, +882 bytes) and the interpreter (items 15–22, +1,450 bytes) came out larger than the v0.2 estimates. As agreed, the size reduction is left to phase 5, and the budgets above now record what was built, with room kept for the features each module still lacks. The ROM built so far fits, with 2,543 bytes free (well above the 256-byte margin rule). The free space is in seven gaps between fixed addresses, the largest being 613 bytes, so later modules must be split to fit.
 
@@ -662,7 +668,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 
 **Rebalance in phase 5b (v0.7).** Nathan's cuts (decisions 8–11) remove MODE 32, UDG printing, CIRCLE, LABEL/GOTO, SOUND, SCREEN$(r,c), ATTR, POINT, FIND, CONT, ERRLINE and ERRPROC$ from the plan. The squeezes so far saved 222 bytes: GET-CHAR, NEXT-CHAR and an "integer expression" helper moved into the free restarts `$18`, `$20` and `$30`, so about 80 three-byte `CALL`s became one-byte `RST`s (186); RND keeps its state in registers (21); a shared "number 0–255" helper (15). Graphics, colours, BEEP, the string and machine functions and SWAP were then built in 820 bytes plus their keywords. The start-up chime (§6.7) adds 23 bytes. One planned squeeze was tried and rejected: sending small integers through the float path in STR$ saves 36 bytes but makes printing an integer about 15 times slower (about 80,000 T-states).
 
-**Warning: the remainder is about 300 bytes short.** With the v0.7 budgets the finished ROM would need 16,425 bytes, 41 over 16,384, or about **297 bytes over** once the 256-byte margin is kept (the v0.6 projection was about 1,180 over). It can be closed by dropping array parameters by reference (about 80), `CALL` register arguments (30), `CAT` (45) and the `SCREEN$` tape forms (25), about 180 in total, plus the remaining maths squeezes (COS from SIN, fewer EXP terms, a smaller VAL digit loop; about 130, each needing the full mpmath run).
+**Rebalance in phase 5c (v0.8): the feature list is complete.** Decision 13 drops array parameters by reference, `CALL` register arguments, `CAT`, the OpticBASIC `SCREEN$` tape forms and `JOY` (12 bytes back). The last maths squeezes save 39 bytes: COS from SIN (cos r = 2(½ − sin²(r/2)), one polynomial fewer), EXP with 8 coefficients instead of 9, and a shorter VAL digit loop. They cost some accuracy in SIN and COS (worst case 1.81 ulp, was 1.07; see docs/maths.md). The largest saving was not in the plan: RST `$28`, which raised "Calculator not supported", now enters the maths byte-code runner, so its 37 calls take one byte instead of three, and the message went too (about 99 bytes). CASE, EXIT, `ERROR n, msg$`, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO were then built in about 500 bytes with their keywords. The ROM has 283 bytes free, so the 256-byte margin is kept. Fixing a line-number bug in error reports cost 2 bytes.
 
 The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print logic costs about 100 bytes more than a plain 32-column printer, so the change of display gained roughly 200 bytes overall. Adding an 8×8 font at `$3D00` would bring the total to 16,142, leaving a margin of 242 (1.5%). That is too thin, so the font is left out for now (§12).
 
@@ -785,13 +791,13 @@ The total is about **12–14 sessions**, which is larger than Mire Mare. Phase 1
 
 ## 12. Decisions (agreed 13 Nov 2026)
 
-Nathan agreed the first six recommendations on 13 November 2026; decisions 7–12 were made later the same day.
+Nathan agreed the first six recommendations on 13 November 2026; decisions 7–12 were made later the same day, and decision 13 for phase 5c.
 
 1. **No 8×8 font at `$3D00` for now.** Ship the 4-pixel font only and get MODE 32 by pixel doubling. Revisit in Phase 5 if the margin allows. Without it, games that draw text from the ROM font show garbage.
 2. **Include the legacy loader shim (about 650 bytes).** Without it, almost no commercial tape, including Bounce Ball and Mire Mare, loads with `LOAD ""`.
 3. **Error handling is `TRY`/`CATCH`/`ENDTRY` plus `ERROR n`.** It is structured, it fits the no-line-number style, and it costs about the same as `ON ERROR`.
 4. **Procedures are called by bare name** (`move`, not `PROC move`). They look modern, the prepass resolves them, and the cost is a small lookup on the first identifier of a statement.
-5. **Do not emulate the RST `$28` calculator.** It would cost 600 bytes or more, and few games use it. RST `$28` raises a clean error instead.
+5. **Do not emulate the RST `$28` calculator.** It would cost 600 bytes or more, and few games use it. RST `$28` raises a clean error instead. (v0.8, decision 14: RST `$28` now enters OpticOS's own maths byte-code, so the clean error is gone; to be confirmed.)
 6. **`LOCAL` is dynamic, in the BBC style**, not true lexical scope. Lexical scope would need per-PROC symbol tables, at about 300 bytes plus a slower lookup.
 7. **No full-screen editor** (Nathan, later on 13 Nov 2026, for phase 4). Use the ZX BASIC pattern instead: a current-line marker moved with the cursor keys over a LIST, and EDIT to bring that line into the input line (§6.5).
 8. **Dropped: `MODE 32` and UDG printing, `CIRCLE`** (Nathan, 13 Nov 2026, phase 5). The ROM is 64 columns only. The legacy shim prints at 64 columns and doubles `PRINT AT` columns (§3.3).
@@ -800,4 +806,7 @@ Nathan agreed the first six recommendations on 13 November 2026; decisions 7–1
 11. **The legacy loader shim stays whole**, with no trim. Bounce Ball and Mire Mare must keep loading with `LOAD ""` (the phase 1 tests check both).
 12. **Both squeezes are accepted**: the remaining maths items, checked with the full 3,000-case run and the RND statistics, and shared argument parsing and RST helpers in the interpreter (§8.2).
 
-*End of specification v0.7.*
+13. **Dropped in phase 5c (Nathan, 13 Nov 2026): array parameters by reference, `CALL` register arguments, `CAT`, and the OpticBASIC `SCREEN$` tape forms** (`SCREEN$` is `CODE 16384,6912`; the legacy shim keeps `LOAD "" SCREEN$` for loaders). **`JOY` is dropped too** (read a Kempston joystick with `IN 31`). **`BORDER` stays**, in OpticBASIC and in the legacy shim, and both are tested. As built: `FREE` is a function, not a command (`PRINT FREE`); `SAVE … AUTO` and `RUN name` take a PROC without parameters; `ERROR n, msg$` keeps up to 28 characters; `EXIT` finds its WEND, UNTIL or NEXT by counting loop keywords forwards, and `EXIT FOR` drops the FOR frame, so it should not be used from inside a TRY block within the loop.
+14. **Proposed, to be confirmed by Nathan: RST `$28` enters the OpticOS maths byte-code** (it was "Calculator not supported", decision 5). The interpreter's 37 calls become one byte each, saving about 99 bytes with the message. Without this the ROM would have about 185 bytes free, below the 256-byte margin. Machine code that calls the Sinclair calculator fails on OpticOS either way, but it no longer stops with an error message.
+
+*End of specification v0.8.*

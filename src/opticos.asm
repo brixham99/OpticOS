@@ -38,8 +38,8 @@ skip1:  ld hl,(CH_ADD)          ; NEXT-CHAR: step over a one-byte token
         ret
 ; ---------------------------------------------------------------- $0028
         org $0028
-RST40:  rst 8                   ; the Sinclair calculator is not provided
-        defb ERR_CALC
+RST40:  jp fu_run                ; OpticOS's own maths byte-code (fptrans.asm);
+                                ; the Sinclair calculator is not provided
 ; ---------------------------------------------------------------- $0030
         org $0030
 RST48:
@@ -116,6 +116,7 @@ CL_ALL: jp CLS
         include "console.asm"
         include "legacy.asm"
         include "list.asm"
+        include "keyfn.asm"
 secI_end:
 
 ; ---------------------------------------------------------------- $1601
@@ -128,6 +129,9 @@ secI_end:
         include "vars.asm"
         include "tokenise.asm"
         include "strfn2.asm"
+        include "flow.asm"
+        include "error2.asm"
+        include "misc2.asm"
 m_tkd_s:
         include "gen/tokdisp.inc"
 m_tkd_e:
