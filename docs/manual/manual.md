@@ -748,3 +748,13 @@ INCLUDE tree.bas
 ```
 
 It takes about 25 seconds, and prints how long it took.
+
+## The Union Flag
+
+The flag fills the top 16 character rows. The blue field and the central cross are printed as whole colour cells with PAPER; the white diagonals are drawn as short horizontal runs with PLOT and DRAW; and the thin red diagonals are made by clearing pixels with INVERSE 1 over red paper, so the red shows through while the white stays. Because each 8×8 colour cell holds no more than two colours, there is no colour clash. Remember that a colour cell is two of OpticBASIC's 64 text columns wide.
+
+```
+INCLUDE flag.bas
+```
+
+<figure><img src="img/run_flag.png"><figcaption>The finished flag. It takes about 18 seconds and prints how long it took.</figcaption></figure>
