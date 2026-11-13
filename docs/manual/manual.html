@@ -60,7 +60,7 @@ figcaption { font-style: italic; font-size: 8pt; color: #444; margin-top: 1mm; }
   <div class="t2">OPTICBASIC USER MANUAL</div>
   <div class="shot"><img src="img/boot.png" alt="The OpticOS start-up screen"></div>
   <div class="t3">FOR THE 48K ZX SPECTRUM</div>
-  <div class="t4">ROM v1.0 and later &nbsp;&bull;&nbsp; Manual edition 2, November 2026 &nbsp;&bull;&nbsp; &copy; 2026 Optica Technology Design</div>
+  <div class="t4">ROM v1.0.1 &nbsp;&bull;&nbsp; Manual edition 2, November 2026 &nbsp;&bull;&nbsp; &copy; 2026 Optica Technology Design</div>
 </section>
 <section class="toc"><h1>Contents</h1><ol><li><a href="#c1"><span>1</span><em>Introduction</em><b>3</b></a></li>
 <li><a href="#c2"><span>2</span><em>Getting started</em><b>5</b></a></li>
@@ -84,7 +84,7 @@ figcaption { font-style: italic; font-size: 8pt; color: #444; margin-top: 1mm; }
 <h2>What you need</h2>
 <ul>
 <li>A 48K ZX Spectrum, or an emulator. OpticOS also starts on a 16K machine, with less room for programs.</li>
-<li>The ROM file <code>opticos.rom</code> (16,384 bytes). In Fuse, start with <code>fuse --machine 48 --rom-48 opticos.rom --no-traps</code> to load from the real tape signal, as on a real Spectrum, or leave the tape traps on to load <code>.tap</code> files at once (this needs a ROM built after v1.0; v1.0 itself needs <code>--no-traps</code>). On real hardware the ROM goes in an EPROM in place of the original; this has not yet been tried.</li>
+<li>The ROM file <code>opticos.rom</code> (16,384 bytes). In Fuse, start with <code>fuse --machine 48 --rom-48 opticos.rom --no-traps</code> to load from the real tape signal, as on a real Spectrum, or leave the tape traps on to load <code>.tap</code> files at once (this needs ROM v1.0.1 or later; v1.0 itself needs <code>--no-traps</code>). On real hardware the ROM goes in an EPROM in place of the original; this has not yet been tried.</li>
 </ul>
 <h2>How this manual is laid out</h2>
 <p>Chapters 2 to 4 cover starting up, the keyboard and screen, and typing in and editing programs. Chapter 5 describes the language, and chapter 6 is an A–Z reference of every keyword and function. Then come errors, tape, graphics and sound, machine code, and the memory map. Chapter 12 lists the limits and the differences from Sinclair BASIC, and chapter 13 has worked examples.</p>
@@ -592,7 +592,7 @@ ENDTRY
 </tbody>
 </table>
 <h1 id="c8"><span class="num">8</span>Tape</h1>
-<p>OpticOS uses the standard Spectrum tape signal and headers, so its tapes can be read by other tools, and tape images (<code>.tap</code> and <code>.tzx</code>) work in emulators. Emulators that load <code>.tap</code> files instantly do it by trapping the ROM's tape routines. ROMs built after v1.0 keep the layout these traps expect, and have been tested with Fuse's traps on; The Spectrum from Retro Games has not yet been retested. With v1.0, turn the traps off in Fuse (<code>--no-traps</code>); on The Spectrum, v1.0 crashes when loading a <code>.tap</code>, so try the <code>.tzx</code> tape, which The Spectrum's manual says it plays in real time.</p>
+<p>OpticOS uses the standard Spectrum tape signal and headers, so its tapes can be read by other tools, and tape images (<code>.tap</code> and <code>.tzx</code>) work in emulators. Emulators that load <code>.tap</code> files instantly do it by trapping the ROM's tape routines. ROMs from v1.0.1 on keep the layout these traps expect, and have been tested with Fuse's traps on; The Spectrum from Retro Games has not yet been retested. With v1.0, turn the traps off in Fuse (<code>--no-traps</code>); on The Spectrum, v1.0 crashes when loading a <code>.tap</code>, so try the <code>.tzx</code> tape, which The Spectrum's manual says it plays in real time.</p>
 <table>
 <thead>
 <tr>

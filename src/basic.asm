@@ -964,7 +964,7 @@ st_try: call rd_link
         ld (hl),d
         ret
 st_catch: call cs_pop           ; finished the TRY part: drop its frame
-        jp c,err_struc
+        jr c,err_struc
         cp F_TRY
         jr nz,st_catch
         call rd_link

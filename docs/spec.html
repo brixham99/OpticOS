@@ -4,7 +4,7 @@ table{border-collapse:collapse;margin:.6em 0;width:100%;font-size:8.8pt}td,th{bo
 pre{background:#f4f4f7;border:1px solid #dde;padding:6px;font-size:8.3pt;white-space:pre-wrap;page-break-inside:avoid}code{font-family:'DejaVu Sans Mono',monospace;font-size:92%}
 @page{size:A4;margin:16mm 14mm}</style></head><body>
 <h1>OpticOS: design specification</h1>
-<p><strong>Version 0.13, 13 November 2026.</strong> The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. <strong>v0.6</strong> (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). <strong>v0.7</strong> (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). <strong>v0.8</strong> (phase 5c) records the last cuts as decision 13 (array parameters by reference, <code>CALL</code> register arguments, <code>CAT</code>, the OpticBASIC <code>SCREEN$</code> tape forms, <code>JOY</code>), builds CASE, EXIT, <code>ERROR n, msg$</code>, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2). <strong>v0.9</strong> removes the last UDG mentions (§4.7, §5.4, §6.1, §9), records <code>TAB(c)</code> as built, lengthens the boot banner to <code>OpticOS (c) 2026 Optica Technology Design</code>, records the measured nesting limits (§4.8), corrects §6.1 (codes 128–255 print as <code>?</code>; no block graphics) and points to the user manual (<code>docs/manual</code>). <strong>v0.10</strong> fixes PROG (<code>DPEEK 23635</code> now gives the program start, 24048), makes <code>ERROR n</code> without a message report <code>Error n</code>, enlarges the stacks below RAMTOP on 48K machines (decision 15), and completes the company name, Optica Technology Design. <strong>v0.11</strong> halves the 48K stacks (decision 15) and adds the example tape (<code>examples/</code>). <strong>v0.12</strong> (after the v1.0 release) makes the tape routines safe under emulators that trap them (§3.1). <strong>v0.13</strong> makes colour 8 (transparent) work for PLOT and DRAW as well as PRINT (§6.4), adds error 21, "Keyword as name", for a DEF whose name is a keyword (§7.2), and adds <code>flag</code> to the example tape.
+<p><strong>Version 0.14, 13 November 2026.</strong> The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. <strong>v0.6</strong> (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). <strong>v0.7</strong> (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). <strong>v0.8</strong> (phase 5c) records the last cuts as decision 13 (array parameters by reference, <code>CALL</code> register arguments, <code>CAT</code>, the OpticBASIC <code>SCREEN$</code> tape forms, <code>JOY</code>), builds CASE, EXIT, <code>ERROR n, msg$</code>, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2). <strong>v0.9</strong> removes the last UDG mentions (§4.7, §5.4, §6.1, §9), records <code>TAB(c)</code> as built, lengthens the boot banner to <code>OpticOS (c) 2026 Optica Technology Design</code>, records the measured nesting limits (§4.8), corrects §6.1 (codes 128–255 print as <code>?</code>; no block graphics) and points to the user manual (<code>docs/manual</code>). <strong>v0.10</strong> fixes PROG (<code>DPEEK 23635</code> now gives the program start, 24048), makes <code>ERROR n</code> without a message report <code>Error n</code>, enlarges the stacks below RAMTOP on 48K machines (decision 15), and completes the company name, Optica Technology Design. <strong>v0.11</strong> halves the 48K stacks (decision 15) and adds the example tape (<code>examples/</code>). <strong>v0.12</strong> (after the v1.0 release) makes the tape routines safe under emulators that trap them (§3.1). <strong>v0.13</strong> makes colour 8 (transparent) work for PLOT and DRAW as well as PRINT (§6.4), adds error 21, "Keyword as name", for a DEF whose name is a keyword (§7.2), and adds <code>flag</code> to the example tape. <strong>v0.14</strong> (ROM v1.0.1) changes the boot version line to <code>OpticBASIC v1.0.1</code> and records the margin rule agreed by Nathan: at least 221 bytes free (it was 256); two error jumps became relative jumps to pay for the 2 longer banner bytes.
 Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>OpticOS (c) 2026 Optica Technology Design</code>.</p>
 <p>This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.</p>
 <hr />
@@ -927,7 +927,7 @@ row:  ld   a,(de)      ;  7
 </tr>
 <tr>
 <td>3</td>
-<td><code>OpticBASIC v1.0</code>, the name and version of the BASIC</td>
+<td><code>OpticBASIC v1.0.1</code>, the name and version of the BASIC</td>
 </tr>
 <tr>
 <td>4</td>
@@ -1128,7 +1128,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <td>2</td>
 <td>Boot banner + version text, calls</td>
-<td style="text-align: right;">68</td>
+<td style="text-align: right;">70</td>
 </tr>
 <tr>
 <td>3</td>
@@ -1138,12 +1138,12 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <td>4</td>
 <td>64-column print, control codes, colours, scroll, CLS, RST 16</td>
-<td style="text-align: right;">578</td>
+<td style="text-align: right;">581</td>
 </tr>
 <tr>
 <td>8</td>
 <td>Tape low level: SA-BYTES, LD-BYTES, edges, tape_ret</td>
-<td style="text-align: right;">310</td>
+<td style="text-align: right;">317</td>
 </tr>
 <tr>
 <td>10</td>
@@ -1153,12 +1153,12 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <td>26</td>
 <td>Errors: RST 8 handler and messages</td>
-<td style="text-align: right;">475</td>
+<td style="text-align: right;">491</td>
 </tr>
 <tr>
 <td>9</td>
 <td>Tape commands: SAVE / LOAD / VERIFY, CODE, headers, name match</td>
-<td style="text-align: right;">422</td>
+<td style="text-align: right;">418</td>
 </tr>
 <tr>
 <td>27</td>
@@ -1188,7 +1188,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <td>18</td>
 <td>Expression evaluator and functions</td>
-<td style="text-align: right;">1,330</td>
+<td style="text-align: right;">1,329</td>
 </tr>
 <tr>
 <td>17</td>
@@ -1203,7 +1203,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <td>19</td>
 <td>Interpreter: run loop, statements, prepass, PROC/FN, TRY</td>
-<td style="text-align: right;">2,369</td>
+<td style="text-align: right;">2,391</td>
 </tr>
 <tr>
 <td>19-20</td>
@@ -1228,7 +1228,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <td>11</td>
 <td>Graphics: PLOT, DRAW, DRAW TO</td>
-<td style="text-align: right;">238</td>
+<td style="text-align: right;">236</td>
 </tr>
 <tr>
 <td>10</td>
@@ -1258,7 +1258,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <td></td>
 <td><strong>Free (of 16,384)</strong></td>
-<td style="text-align: right;"><strong>221</strong> (margin rule: at least 256; 261 before v0.13's colour-8 and keyword-name fixes, 264 before the trap-safe tape layout, 283 before the longer boot banner)</td>
+<td style="text-align: right;"><strong>221</strong> (margin rule: at least 221 since v1.0.1, agreed by Nathan; it was 256 before. 261 before v0.13's colour-8 and keyword-name fixes, 264 before the trap-safe tape layout, 283 before the longer boot banner)</td>
 </tr>
 </tbody>
 </table>
@@ -1478,7 +1478,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <ol>
 <li>The image is exactly 16,384 bytes, and the fixed symbols sit at their addresses (checked from the symbol file).</li>
 <li><code>similarity_check.py</code> passes against <code>48.rom</code> (§1.3). The ROM is never copied into <code>build/</code>, and <code>.gitignore</code> covers <code>roms/</code>, <code>*.rom</code> from outside and <code>build/</code>.</li>
-<li>A size report per module against the budget table. The build fails if margin drops below 256 bytes.</li>
+<li>A size report per module against the budget table. The margin rule is at least 221 bytes free (256 until v1.0.1).</li>
 </ol>
 <h3>10.3 Test suites</h3>
 <table>
@@ -1611,6 +1611,6 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <li><strong>Agreed (Nathan, 13 Nov 2026): RST <code>$28</code> enters the OpticOS maths byte-code</strong> (it was "Calculator not supported", decision 5). The interpreter's 37 calls become one byte each, saving about 99 bytes with the message. Without this the ROM would have about 185 bytes free, below the 256-byte margin. Machine code that calls the Sinclair calculator fails on OpticOS either way, but it no longer stops with an error message.</li>
 <li><strong>Agreed (Nathan, 13 Nov 2026, v0.10; halved in v0.11): larger stacks on 48K.</strong> The workspace below RAMTOP is 4,864 bytes on a 48K machine (machine stack 2,048, control stack 2,048, value stack 512, direct line 256), up from 1,856, so recursion goes about four to five times deeper than before v0.10 (§4.8). It costs RAM, not ROM: FREE on a fresh 48K machine is 36,447 bytes (39,455 before v0.10; v0.10's 9,216-byte workspace left 32,095, and Nathan asked for the sizes to be halved). A 16K machine keeps a 2,048-byte workspace (512 / 768 / 512 / 256), because a large one would not fit. The sizes are in a 4-byte table for each RAM size (<code>ws_t48</code>, <code>ws_t16</code> in <code>src/vars.asm</code>, in 256-byte pages, so the value stack is 512, not half of 768), which CLEAR also uses for its check.</li>
 </ol>
-<p><em>End of specification v0.13.</em></p>
+<p><em>End of specification v0.14.</em></p>
 </body>
 </html>

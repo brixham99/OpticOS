@@ -369,7 +369,7 @@ s_cat:  call ev_2
         or a
         jr z,sk_r               ; "" + b
         add a,c
-        jp c,err_strl
+        jr c,err_strl
         push af
         ld de,0
         call s_alloc

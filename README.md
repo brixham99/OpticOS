@@ -96,42 +96,43 @@ When a program stops with an error, the failing line becomes the current line, s
 ```
 make                # or ./build.sh: assembles build/opticos.rom (16,384 bytes) with pasmo and checks the layout
 make check          # headless rig tests (add REF=/path/to/48.rom for the reference comparisons)
+fuse-sdl --machine 48 --rom-48 build/opticos.rom                     # .tap files load at once (tape traps on)
 fuse-sdl --machine 48 --rom-48 build/opticos.rom --no-traps --no-detect-loader --no-accelerate-loader
 ```
 
-Fuse needs `--no-traps` so that its tape traps don't bypass the OpticOS tape routines. The two loader flags make tapes load in real time, which is how the tests run. `build/` is gitignored. You need `pasmo` 0.5.3, `gcc` and Python 3 with Pillow.
+Since v1.0.1 the ROM keeps the tape layout that emulator traps expect, so Fuse's tape traps work and `.tap` files load at once; v1.0 itself needs `--no-traps`. The second line turns the traps and loader acceleration off, so tapes load from the real signal in real time, as on a Spectrum; the tests run both ways. `build/` is gitignored. You need `pasmo` 0.5.3, `gcc` and Python 3 with Pillow.
 
 ## ROM byte usage (Phase 5 complete)
 
-16,120 of 16,384 bytes are placed, leaving **264 free** (the rule is to keep at least 256 spare). By module, as `tools/check_layout.py` reports them:
+16,163 of 16,384 bytes are placed, leaving **221 free** (the margin rule is to keep at least 221 spare; it was 256 until v1.0.1). By module, as `tools/check_layout.py` reports them:
 
 | Part | Bytes |
 |---|---:|
-| Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,369 |
+| Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,391 |
 | Tokeniser, keyword table, LIST | 1,800 |
 | Float core (+ - * /, normalise, compare, conversions, small-int ops) | 1,422 |
-| Expression evaluator and functions | 1,330 |
+| Expression evaluator and functions | 1,329 |
 | Variables, arrays, string heap + GC, value and control stacks | 1,301 |
 | Transcendentals, byte-code runner, coefficient tables | 1,148 |
 | Legacy loader shim (interpreter, expressions, PRINT) | 845 |
 | Number <-> string (STR$/PRINT formatting, VAL) | 709 |
-| 64-column print, control codes, colours, scroll, CLS, RST 16 | 578 |
-| Errors: RST 8 handler and messages | 475 |
+| 64-column print, control codes, colours, scroll, CLS, RST 16 | 581 |
+| Errors: RST 8 handler and messages | 491 |
 | String and machine functions: INSTR STRING$ HEX$ UPPER$ ERR$ IN USR DPEEK KEY FREE | 465 |
-| Tape commands: SAVE / LOAD / VERIFY, CODE, headers, name match | 422 |
 | Direct mode and console: input line with insert/delete/cursor | 422 |
+| Tape commands: SAVE / LOAD / VERIFY, CODE, headers, name match | 418 |
 | 4-pixel font | 384 |
 | Interrupt routine, keyboard scan, key tables | 355 |
-| Tape low level: SA-BYTES, LD-BYTES, edges, tape_ret | 310 |
-| Restarts, NMI, reset, RAM test, sysvars, channels | 300 |
+| Tape low level: SA-BYTES, LD-BYTES, edges, tape_ret | 317 |
 | CASE, EXIT, ERROR n [,msg$], CLEAR [n], PROC-name lookup | 302 |
+| Restarts, NMI, reset, RAM test, sysvars, channels | 300 |
 | Line editor: marker, LIST around it, cursor up/down, EDIT | 268 |
-| Graphics: PLOT, DRAW, DRAW TO | 238 |
+| Graphics: PLOT, DRAW, DRAW TO | 236 |
 | BEEP, OUT, DPOKE, CALL, SWAP; start-up chime | 216 |
 | INPUT, DATA / READ / RESTORE | 183 |
 | Sound: BEEPER | 82 |
 | Fixed-address stubs (CHAN-OPEN, PR-STRING, PIXEL-ADD, $096F) | 78 |
-| Boot banner + version text, calls | 68 |
+| Boot banner + version text, calls | 70 |
 | Number output for the legacy shim and console (pr_dec, pr_hex) | 50 |
 
 The free bytes are spread over twelve gaps between the ROM's fixed addresses, the largest 62 bytes.
@@ -140,7 +141,7 @@ The free bytes are spread over twelve gaps between the ROM's fixed addresses, th
 
 The mock-up above matches the ROM's real boot screen pixel for pixel (the rig checks this). It is a faithful ZX Spectrum frame: 256×192 pixels of bitmap, with a 32-pixel black border, giving a 320×256 image (and a 3× nearest-neighbour upscale here so the text is readable). Paper is black, ink is white, bright is off.
 
-Row 0 is a colour bar made from attribute cells only: 16 swatches, each two cells wide, showing black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Row 1 is blank. Row 2 holds the banner, `OpticOS (c) 2026 Optica Technology Design`, and row 3 the BASIC's name and version, `OpticBASIC v1.0`. Row 4 is blank. Row 5 shows the OpticOS prompt `] ` with the cursor block (character 127) at column 2. `]` is the direct-mode prompt everywhere. Everything below the bar is white on black. The font has no copyright glyph — a © is illegible at 3 pixels wide — so the banner uses ASCII `(c)`, as the specification requires.
+Row 0 is a colour bar made from attribute cells only: 16 swatches, each two cells wide, showing black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Row 1 is blank. Row 2 holds the banner, `OpticOS (c) 2026 Optica Technology Design`, and row 3 the BASIC's name and version, `OpticBASIC v1.0.1`. Row 4 is blank. Row 5 shows the OpticOS prompt `] ` with the cursor block (character 127) at column 2. `]` is the direct-mode prompt everywhere. Everything below the bar is white on black. The font has no copyright glyph — a © is illegible at 3 pixels wide — so the banner uses ASCII `(c)`, as the specification requires.
 
 The native 1× frame is [`assets/opticos_boot.png`](assets/opticos_boot.png).
 

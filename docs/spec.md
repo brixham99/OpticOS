@@ -1,6 +1,6 @@
 # OpticOS: design specification
 
-**Version 0.13, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. **v0.6** (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). **v0.7** (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). **v0.8** (phase 5c) records the last cuts as decision 13 (array parameters by reference, `CALL` register arguments, `CAT`, the OpticBASIC `SCREEN$` tape forms, `JOY`), builds CASE, EXIT, `ERROR n, msg$`, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2). **v0.9** removes the last UDG mentions (§4.7, §5.4, §6.1, §9), records `TAB(c)` as built, lengthens the boot banner to `OpticOS (c) 2026 Optica Technology Design`, records the measured nesting limits (§4.8), corrects §6.1 (codes 128–255 print as `?`; no block graphics) and points to the user manual (`docs/manual`). **v0.10** fixes PROG (`DPEEK 23635` now gives the program start, 24048), makes `ERROR n` without a message report `Error n`, enlarges the stacks below RAMTOP on 48K machines (decision 15), and completes the company name, Optica Technology Design. **v0.11** halves the 48K stacks (decision 15) and adds the example tape (`examples/`). **v0.12** (after the v1.0 release) makes the tape routines safe under emulators that trap them (§3.1). **v0.13** makes colour 8 (transparent) work for PLOT and DRAW as well as PRINT (§6.4), adds error 21, "Keyword as name", for a DEF whose name is a keyword (§7.2), and adds `flag` to the example tape.
+**Version 0.14, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. **v0.6** (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). **v0.7** (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). **v0.8** (phase 5c) records the last cuts as decision 13 (array parameters by reference, `CALL` register arguments, `CAT`, the OpticBASIC `SCREEN$` tape forms, `JOY`), builds CASE, EXIT, `ERROR n, msg$`, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2). **v0.9** removes the last UDG mentions (§4.7, §5.4, §6.1, §9), records `TAB(c)` as built, lengthens the boot banner to `OpticOS (c) 2026 Optica Technology Design`, records the measured nesting limits (§4.8), corrects §6.1 (codes 128–255 print as `?`; no block graphics) and points to the user manual (`docs/manual`). **v0.10** fixes PROG (`DPEEK 23635` now gives the program start, 24048), makes `ERROR n` without a message report `Error n`, enlarges the stacks below RAMTOP on 48K machines (decision 15), and completes the company name, Optica Technology Design. **v0.11** halves the 48K stacks (decision 15) and adds the example tape (`examples/`). **v0.12** (after the v1.0 release) makes the tape routines safe under emulators that trap them (§3.1). **v0.13** makes colour 8 (transparent) work for PLOT and DRAW as well as PRINT (§6.4), adds error 21, "Keyword as name", for a DEF whose name is a keyword (§7.2), and adds `flag` to the example tape. **v0.14** (ROM v1.0.1) changes the boot version line to `OpticBASIC v1.0.1` and records the margin rule agreed by Nathan: at least 221 bytes free (it was 256); two error jumps became relative jumps to pay for the 2 longer banner bytes.
 Project, ROM and future repo name: **OpticOS**. Boot banner: `OpticOS (c) 2026 Optica Technology Design`.
 
 This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.
@@ -523,7 +523,7 @@ The cold-start screen (layout agreed with Nathan, 13 November 2026) is:
 | 0 | **Colour bar.** Attribute cells only, with no pixels set. There are 16 swatches, each 2 attribute cells wide, across all 32 columns: black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Bright black is included so the layout stays even. Each cell's ink equals its paper. |
 | 1 | Blank |
 | 2 | `OpticOS (c) 2026 Optica Technology Design`, white on black |
-| 3 | `OpticBASIC v1.0`, the name and version of the BASIC |
+| 3 | `OpticBASIC v1.0.1`, the name and version of the BASIC |
 | 4 | Blank |
 | 5 | The prompt `] `, with the cursor at column 2 |
 
@@ -644,33 +644,33 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 | # | Module | Bytes, as built (v0.8, phase 5 complete) |
 |---|---|---:|
 | 1 | Restarts, NMI, reset, RAM test, sysvars, channels | 300 |
-| 2 | Boot banner + version text, calls | 68 |
+| 2 | Boot banner + version text, calls | 70 |
 | 3 | Interrupt routine, keyboard scan, key tables | 355 |
-| 4 | 64-column print, control codes, colours, scroll, CLS, RST 16 | 578 |
-| 8 | Tape low level: SA-BYTES, LD-BYTES, edges, tape_ret | 310 |
+| 4 | 64-column print, control codes, colours, scroll, CLS, RST 16 | 581 |
+| 8 | Tape low level: SA-BYTES, LD-BYTES, edges, tape_ret | 317 |
 | 10 | Sound: BEEPER | 82 |
-| 26 | Errors: RST 8 handler and messages | 475 |
-| 9 | Tape commands: SAVE / LOAD / VERIFY, CODE, headers, name match | 422 |
+| 26 | Errors: RST 8 handler and messages | 491 |
+| 9 | Tape commands: SAVE / LOAD / VERIFY, CODE, headers, name match | 418 |
 | 27 | Legacy loader shim (interpreter, expressions, PRINT) | 845 |
 | 13 | Number output for the legacy shim and console (pr_dec, pr_hex) | 50 |
 | 12 | Float core (+ - * /, normalise, compare, conversions, small-int ops) | 1,422 |
 | 13 | Number <-> string (STR$/PRINT formatting, VAL) | 709 |
 | 14 | Transcendentals, byte-code runner, coefficient tables | 1,148 |
-| 18 | Expression evaluator and functions | 1,330 |
+| 18 | Expression evaluator and functions | 1,329 |
 | 17 | Variables, arrays, string heap + GC, value and control stacks | 1,301 |
 | 15 | Tokeniser, keyword table, LIST | 1,800 |
-| 19 | Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,369 |
+| 19 | Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,391 |
 | 19-20 | CASE, EXIT, ERROR n [,msg$], CLEAR [n], PROC-name lookup | 302 |
 | 25 | Direct mode and console: input line with insert/delete/cursor | 422 |
 | 24 | Line editor: marker, LIST around it, cursor up/down, EDIT | 268 |
 | 25 | INPUT, DATA / READ / RESTORE | 183 |
-| 11 | Graphics: PLOT, DRAW, DRAW TO | 238 |
+| 11 | Graphics: PLOT, DRAW, DRAW TO | 236 |
 | 10 | BEEP, OUT, DPOKE, CALL, SWAP; start-up chime | 216 |
 | 18 | String and machine functions: INSTR STRING$ HEX$ UPPER$ ERR$ IN USR DPEEK KEY FREE | 465 |
 | 28 | Fixed-address stubs (CHAN-OPEN, PR-STRING, PIXEL-ADD, $096F) | 78 |
 | 7 | 4-pixel font | 384 |
 | | **Total** (v0.2 budget: 15,374) | **16,163** |
-| | **Free (of 16,384)** | **221** (margin rule: at least 256; 261 before v0.13's colour-8 and keyword-name fixes, 264 before the trap-safe tape layout, 283 before the longer boot banner) |
+| | **Free (of 16,384)** | **221** (margin rule: at least 221 since v1.0.1, agreed by Nathan; it was 256 before. 261 before v0.13's colour-8 and keyword-name fixes, 264 before the trap-safe tape layout, 283 before the longer boot banner) |
 
 The ROM builds its own version of this table (`build/bytes.md`, from `tools/check_layout.py`). The free bytes are spread over twelve gaps between the fixed addresses (the largest is 62 bytes).
 
@@ -766,7 +766,7 @@ A magic byte and checksum on this area lets OpticOS detect corruption by machine
 
 1. The image is exactly 16,384 bytes, and the fixed symbols sit at their addresses (checked from the symbol file).
 2. `similarity_check.py` passes against `48.rom` (§1.3). The ROM is never copied into `build/`, and `.gitignore` covers `roms/`, `*.rom` from outside and `build/`.
-3. A size report per module against the budget table. The build fails if margin drops below 256 bytes.
+3. A size report per module against the budget table. The margin rule is at least 221 bytes free (256 until v1.0.1).
 
 ### 10.3 Test suites
 
@@ -824,4 +824,4 @@ Nathan agreed the first six recommendations on 13 November 2026; decisions 7–1
 14. **Agreed (Nathan, 13 Nov 2026): RST `$28` enters the OpticOS maths byte-code** (it was "Calculator not supported", decision 5). The interpreter's 37 calls become one byte each, saving about 99 bytes with the message. Without this the ROM would have about 185 bytes free, below the 256-byte margin. Machine code that calls the Sinclair calculator fails on OpticOS either way, but it no longer stops with an error message.
 15. **Agreed (Nathan, 13 Nov 2026, v0.10; halved in v0.11): larger stacks on 48K.** The workspace below RAMTOP is 4,864 bytes on a 48K machine (machine stack 2,048, control stack 2,048, value stack 512, direct line 256), up from 1,856, so recursion goes about four to five times deeper than before v0.10 (§4.8). It costs RAM, not ROM: FREE on a fresh 48K machine is 36,447 bytes (39,455 before v0.10; v0.10's 9,216-byte workspace left 32,095, and Nathan asked for the sizes to be halved). A 16K machine keeps a 2,048-byte workspace (512 / 768 / 512 / 256), because a large one would not fit. The sizes are in a 4-byte table for each RAM size (`ws_t48`, `ws_t16` in `src/vars.asm`, in 256-byte pages, so the value stack is 512, not half of 768), which CLEAR also uses for its check.
 
-*End of specification v0.13.*
+*End of specification v0.14.*
