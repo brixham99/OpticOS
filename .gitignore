@@ -9,3 +9,5 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
+*.so
+tools/rig/tests/cache/

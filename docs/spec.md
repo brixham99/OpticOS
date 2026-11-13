@@ -488,6 +488,19 @@ Keywords are typed **letter by letter**, which is the recommendation. The tokeni
 
 **Direct commands** are typed on the console: `RUN`, `LIST`, `NEW`, `SAVE`, `LOAD`, `VERIFY`, `CAT`, `CONT`, `FIND`, `FREE`, or any statement.
 
+### 6.7 Boot screen
+
+The cold-start screen (layout agreed with Nathan, 13 November 2026) is:
+
+| Row | Content |
+|---|---|
+| 0 | **Colour bar.** Attribute cells only, with no pixels set. There are 16 swatches, each 2 attribute cells wide, across all 32 columns: black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Bright black is included so the layout stays even. Each cell's ink equals its paper. |
+| 1 | `OpticOS (c) 2026 Optica Technology`, white on black |
+| 2 | Blank |
+| 3 | The prompt `] `, with the cursor at column 2 |
+
+Rows 1–23 are white ink on black paper, and the border is black. **`]` followed by a space is the OpticOS direct-mode prompt everywhere.** It appears at boot and again whenever a command finishes or an error is reported. The prompt and its space use two of the 64 columns, so a console line holds up to 61 characters plus the cursor. The colour bar is an ordinary screen row, so it scrolls away with the console text. The mock-up is `assets/opticos_boot.png`, and the rig's boot test compares the ROM's screen with it pixel for pixel.
+
 ---
 
 ## 7. Interpreter design

@@ -12,7 +12,17 @@ The boot message reads:
 OpticOS (c) 2026 Optica Technology
 ```
 
-Status: **design phase**. The language, the 16K memory map, the compatibility policy and the build plan are in [`docs/spec.md`](docs/spec.md) (and as a PDF, [`docs/spec.pdf`](docs/spec.pdf)). The ROM itself has not been assembled yet.
+Status: **Phase 1 complete** (boot, screen, keyboard, tape and the legacy loader). The ROM boots in Fuse and in the headless rig, and loads ordinary game tapes with `LOAD ""` from a real tape signal, with traps off. There is no OpticBASIC yet: that is Phases 2–4. The design is in [`docs/spec.md`](docs/spec.md). The Phase 1 report, with test results, byte usage and screenshots, is in [`docs/phase1/`](docs/phase1/README.md).
+
+## Building
+
+```
+make                # or ./build.sh : assembles build/opticos.rom (16,384 bytes) with pasmo
+make check          # headless rig tests (add REF=/path/to/48.rom for the reference comparisons)
+fuse-sdl --machine 48 --rom-48 build/opticos.rom --no-traps
+```
+
+`build/` is gitignored. You need `pasmo` 0.5.3, `gcc` and Python 3 with Pillow.
 
 ## Planned features
 
@@ -27,9 +37,9 @@ Status: **design phase**. The language, the 16K memory map, the compatibility po
 
 ## The boot screen
 
-The mock-up above is a faithful ZX Spectrum frame: 256×192 pixels of bitmap, with a 32-pixel black border, giving a 320×256 image (and a 3× nearest-neighbour upscale here so the text is readable). Paper is black, ink is white, bright is off.
+The mock-up above matches the ROM's real boot screen pixel for pixel (the rig checks this). It is a faithful ZX Spectrum frame: 256×192 pixels of bitmap, with a 32-pixel black border, giving a 320×256 image (and a 3× nearest-neighbour upscale here so the text is readable). Paper is black, ink is white, bright is off.
 
-The banner sits on **row 0, column 0** of the 64-column grid, which is the top line of the screen. A solid cursor block (character 127) sits on the line below, at row 1, column 0, as the console landing position after boot. The font has no copyright glyph — a © is illegible at 3 pixels wide — so the banner uses ASCII `(c)`, as the specification requires.
+Row 0 is a colour bar made from attribute cells only: 16 swatches, each two cells wide, showing black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Row 1 holds the banner. Row 2 is blank. Row 3 shows the OpticOS prompt `] ` with the cursor block (character 127) at column 2. `]` is the direct-mode prompt everywhere. Everything below the bar is white on black. The font has no copyright glyph — a © is illegible at 3 pixels wide — so the banner uses ASCII `(c)`, as the specification requires.
 
 The native 1× frame is [`assets/opticos_boot.png`](assets/opticos_boot.png).
 

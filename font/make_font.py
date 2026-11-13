@@ -1113,10 +1113,19 @@ BORDER_X, BORDER_Y = 32, 32  # 320x256 inclusive of the border
 FRAME_W, FRAME_H = SCREEN_W + 2 * BORDER_X, SCREEN_H + 2 * BORDER_Y
 
 BANNER = "OpticOS (c) 2026 Optica Technology"
-BANNER_ROW = 0
+BANNER_ROW = 1
 BANNER_COL = 0
-CURSOR_ROW = 1
-CURSOR_COL = 0
+PROMPT = "] "          # OpticOS direct-mode prompt
+PROMPT_ROW = 3
+CURSOR_ROW = 3
+CURSOR_COL = 2
+
+# Row 0: colour bar in attribute paper colours only, 16 swatches of two
+# attribute cells: black..white normal, then black..white BRIGHT.
+def ula(c: int, bright: bool) -> tuple[int, int, int]:
+    v = 0xFF if bright else 0xD7
+    return ((v if c & 2 else 0), (v if c & 4 else 0), (v if c & 1 else 0))
+BAR = [ula(i & 7, i >= 8) for i in range(16)]
 
 
 def blit_glyph(px: list[list[tuple[int, int, int]]], col: int, row: int, ch: str) -> None:
@@ -1132,6 +1141,11 @@ def blit_glyph(px: list[list[tuple[int, int, int]]], col: int, row: int, ch: str
 
 def render_screen() -> list[list[tuple[int, int, int]]]:
     px = [[PAPER for _ in range(SCREEN_W)] for _ in range(SCREEN_H)]
+    for y in range(8):
+        for x in range(SCREEN_W):
+            px[y][x] = BAR[x // 16]
+    for i, ch in enumerate(PROMPT):
+        blit_glyph(px, i, PROMPT_ROW, ch)
     for i, ch in enumerate(BANNER):
         blit_glyph(px, BANNER_COL + i, BANNER_ROW, ch)
     blit_glyph(px, CURSOR_COL, CURSOR_ROW, "\x7f")
@@ -1222,7 +1236,7 @@ def main() -> None:
         for x, colour in enumerate(row):
             raw.putpixel((x, y), colour)
     sheet = render_font_sheet_labelled()
-    crop = raw.crop((0, 0, 34 * 4, 16))
+    crop = raw.crop((0, 0, 34 * 4, 32))
     closeup = crop.resize((crop.width * 8, crop.height * 8), Image.Resampling.NEAREST)
 
     for here in destinations:
