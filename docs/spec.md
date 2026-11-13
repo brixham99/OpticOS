@@ -508,7 +508,7 @@ The cold-start screen (layout agreed with Nathan, 13 November 2026) is:
 | 0 | **Colour bar.** Attribute cells only, with no pixels set. There are 16 swatches, each 2 attribute cells wide, across all 32 columns: black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Bright black is included so the layout stays even. Each cell's ink equals its paper. |
 | 1 | Blank |
 | 2 | `OpticOS (c) 2026 Optica Technology Design`, white on black |
-| 3 | `OpticBASIC v0.1`, the name and version of the BASIC |
+| 3 | `OpticBASIC v1.0`, the name and version of the BASIC |
 | 4 | Blank |
 | 5 | The prompt `] `, with the cursor at column 2 |
 
