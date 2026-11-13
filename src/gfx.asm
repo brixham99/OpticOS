@@ -43,9 +43,7 @@ pl_s:   ld (hl),a
         and 3
         or $58
         ld h,a
-        ld a,(ATTR_T)
-        ld (hl),a
-        ret
+        jp attr_set             ; colours, with INK 8 / PAPER 8 etc. kept
 err_rng: rst 8
         defb ERR_RANGE
 ; DRAW dx, dy (relative) / DRAW TO x, y

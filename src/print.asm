@@ -22,14 +22,7 @@ po_glyph:
         call draw_glyph
         ld hl,(S_POSN)
         call attr_addr
-        ld a,(MASK_T)
-        ld c,a
-        ld a,(ATTR_T)
-        ld b,a
-        xor (hl)
-        and c
-        xor b                   ; ATTR_T, keeping MASK_T bits from the screen
-        ld (hl),a
+        call attr_set
         ld hl,S_POSN
         inc (hl)
         ret
@@ -349,6 +342,20 @@ sf_off: cpl
         ld (hl),a
         ret
 sc_tab: defb $07,0,$38,3,$80,7,$40,6
+
+; attr_set: store ATTR_T in the attribute cell at HL, keeping the bits that
+; MASK_T marks transparent (INK 8, PAPER 8, FLASH 8, BRIGHT 8) as they are on
+; the screen.  Used by PRINT and by PLOT / DRAW.  BC, DE preserved.
+attr_set:
+        push bc
+        ld bc,(ATTR_T)          ; C = ATTR_T, B = MASK_T
+        ld a,c
+        xor (hl)
+        and b
+        xor c
+        ld (hl),a
+        pop bc
+        ret
 
 ; print_a: RST 16 - send A to the current channel; BC, DE, HL preserved
 print_a:

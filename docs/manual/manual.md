@@ -182,6 +182,8 @@ PRINT area(3, 4) + sq(2)
 
 The words `PROC` and `FN` after `DEF` are optional, and so is `FN` in a call. Arguments are passed **by value**. Arrays cannot be passed, but every array is global, so a procedure can use one by name.
 
+A name must not be a keyword. OpticBASIC would read `DEF PROC run` as the keyword RUN, so RUN stops with error 21, "Keyword as name", at that DEF line before the program starts. Choose another name, such as `run_it` or `cosine`.
+
 `LOCAL` (at the start of a procedure or function) and the parameters give the procedure its own copies of those variables. The old values come back when it ends, or when an error leaves it. Procedures and functions can call themselves (recursion). The program's main part is simply the lines that are not inside a `DEF`.
 
 ## Control structures
@@ -238,7 +240,7 @@ Every keyword and function OpticBASIC has, in alphabetical order. *n*, *x* and *
 
 **BORDER** *n* — Set the border colour, 0–7. `BORDER 1` makes it blue.
 
-**BRIGHT** 0|1 — Bright colours off or on for what is printed next. Also inside PRINT: `PRINT BRIGHT 1; "Hi"`.
+**BRIGHT** 0|1|8 — Bright colours off or on for what is printed or plotted next; 8 keeps the brightness already on the screen. Also inside PRINT: `PRINT BRIGHT 1; "Hi"`.
 
 **CALL** *addr* — Run machine code at *addr*. It returns to BASIC with `RET`. `CALL 32768`
 
@@ -258,7 +260,7 @@ Every keyword and function OpticBASIC has, in alphabetical order. *n*, *x* and *
 
 **DATA** *item* [, *item* …] — Values for READ. Items can be any expressions, numbers or strings. A DATA statement must start its line. `DATA "pear", 3, 2*4`
 
-**DEF** *name*[(*params*)] — Start a procedure (ending `ENDPROC`) or function (ending `ENDFN`). `DEF PROC move(dx)`, `DEF FN half(x) = x / 2`
+**DEF** *name*[(*params*)] — Start a procedure (ending `ENDPROC`) or function (ending `ENDFN`). The name cannot be a keyword (error 21). `DEF PROC move(dx)`, `DEF FN half(x) = x / 2`
 
 **DIM** *a*(*n* [, *n* [, *n*]]) — Make an array with up to 3 dimensions, each counted from 0, so `DIM a(9)` has 10 elements. Numbers start as 0 and strings as "". Making the same array twice is an error. `DIM board%(7,7)`, `DIM name$(20)`
 
@@ -290,7 +292,7 @@ Every keyword and function OpticBASIC has, in alphabetical order. *n*, *x* and *
 
 **FALSE** — 0.
 
-**FLASH** 0|1 — Flashing off or on for what is printed next. Also inside PRINT.
+**FLASH** 0|1|8 — Flashing off or on for what is printed or plotted next; 8 keeps the flashing already on the screen. Also inside PRINT.
 
 **FN** — Optional before a function's name, in DEF or in a call.
 
@@ -356,7 +358,7 @@ Every keyword and function OpticBASIC has, in alphabetical order. *n*, *x* and *
 
 **OVER** 0|1 — With OVER 1, text and lines are combined with what is already on the screen, so drawing twice removes them. It stays set after a PRINT that uses it.
 
-**PAPER** *n* — Set the background colour, 0–7 (8 = keep). Also inside PRINT.
+**PAPER** *n* — Set the background colour, 0–7, for what is printed or plotted next; 8 means keep the colour already on the screen. Also inside PRINT.
 
 **PEEK** *addr* — The byte at *addr*. **POKE** *addr*, *n* stores one.
 
@@ -489,6 +491,7 @@ BREAK and STOP cannot be caught; they always return to the prompt.
 | 18 | Array already made | DIM of an array that exists |
 | 19 | String over 255 | A string longer than 255 characters |
 | 20 | Out of DATA | READ with no DATA left |
+| 21 | Keyword as name | A DEF whose name is a keyword, such as `DEF PROC run` or `DEF FN cos(x)`; reported at the DEF line when the program is RUN |
 | 23 | No such stream | |
 | 26 | Tape: bad or missing block | A tape error, or BREAK during LOAD |
 | 65 | Legacy BASIC: unsupported statement | A Sinclair loader used something the legacy loader does not know (chapter 8) |
@@ -532,7 +535,7 @@ Games that call deeper into the Sinclair ROM, for example its calculator or its 
 |---|---|---|---|---|---|---|---|
 | black | blue | red | magenta | green | cyan | yellow | white |
 
-`INK`, `PAPER`, `BRIGHT` and `FLASH` set the colours for what is printed or plotted next. Used inside a PRINT, as in `PRINT INK 2; "Danger"`, they last only to the end of that PRINT. `INVERSE` and `OVER` stay set. `BORDER` sets the border. `CLS` clears the screen in the current paper colour.
+`INK`, `PAPER`, `BRIGHT` and `FLASH` set the colours for what is printed or plotted next. Used inside a PRINT, as in `PRINT INK 2; "Danger"`, they last only to the end of that PRINT. `INVERSE` and `OVER` stay set. The value 8 means "keep what is already on the screen": after `PAPER 8`, PRINT, PLOT and DRAW change the ink of each cell they touch but leave its paper as it was, and `INK 8`, `BRIGHT 8` and `FLASH 8` do the same for the other parts. `BORDER` sets the border. `CLS` clears the screen in the current paper colour.
 
 Remember that each colour cell holds two characters (chapter 3).
 

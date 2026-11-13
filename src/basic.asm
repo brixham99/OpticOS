@@ -401,7 +401,7 @@ pp_m:   cp T_IF
         cp T_ENDIF
         jr z,pp_endif
         cp T_WEND
-        jr z,pp_wend
+        jp z,pp_wend
         cp T_UNTIL
         jp z,pp_until
         cp T_CATCH
@@ -421,7 +421,8 @@ pp_if:  ld a,T_THEN
 pp_push: push hl                ; the block stack: line, type pairs
         push af
         jr pp_nx
-pp_def: ld de,(TMP)             ; add to the DEF table
+pp_def: call pp_name
+        ld de,(TMP)             ; add to the DEF table
         ex de,hl
         ld (hl),e
         inc hl
@@ -866,6 +867,22 @@ sn_p:   dec a
         ld h,(ix+17)
         ld (CURLN),hl
         ret
+; pp_name: the name after DEF, DEF PROC or DEF FN must be a name (tag $01), not
+; a keyword token (DEF PROC run, DEF FN cos ...): error 21 at the DEF line
+pp_name: push hl                ; DEF name: tag at +5; DEF PROC / FN name: at +6
+        ld de,5
+        add hl,de
+        ld a,(hl)
+        dec a
+        jr z,pp_nok
+        inc hl
+        ld a,(hl)
+        dec a
+pp_nok:  pop hl
+        ret z
+        ld (CURLN),hl
+        rst 8
+        defb ERR_KWNAM
 st_def: call rd_link
         ld a,d
         or e
@@ -1087,8 +1104,8 @@ st_over: ld c,21
         ld a,e
         ld hl,ATTR_P
         call set_colour
-        ld a,(ATTR_P)
-        ld (ATTR_T),a
+        ld hl,(ATTR_P)          ; ATTR_P, MASK_P -> ATTR_T, MASK_T
+        ld (ATTR_T),hl
         ret
 
 ; ---------------------------------------------------- program lines (editor)

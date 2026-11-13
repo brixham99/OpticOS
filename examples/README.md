@@ -1,6 +1,6 @@
 # OpticOS example tape
 
-`opticos_examples.tap` (and the same blocks as `opticos_examples.tzx`) holds ten OpticBASIC programs, each saved by the OpticOS ROM itself in its "Program:" format (a type-0 header, then data starting with the `OB` $01 $00 signature). Every program was loaded and run in Fuse, both from the real tape signal with traps off (`--no-traps --no-detect-loader --no-accelerate-loader`) and with Fuse's tape traps and loader acceleration on (its defaults); the screenshots in `shots/` are from the traps-off runs.
+`opticos_examples.tap` (and the same blocks as `opticos_examples.tzx`) holds eleven OpticBASIC programs, each saved by the OpticOS ROM itself in its "Program:" format (a type-0 header, then data starting with the `OB` $01 $00 signature). Every program was loaded and run in Fuse, both from the real tape signal with traps off (`--no-traps --no-detect-loader --no-accelerate-loader`) and with Fuse's tape traps and loader acceleration on (its defaults); the screenshots in `shots/` are from the traps-off runs.
 
 ## Loading
 
@@ -23,8 +23,9 @@ Start OpticOS, type a LOAD line, then play the tape (in Fuse: F8).
 | `tree` | A recursive tree drawn with `DRAW TO` (about 25 seconds) | [tree.png](shots/tree.png) |
 | `colour` | The eight colours as PAPER and INK, BRIGHT, the even/odd column clash rule, FLASH, INVERSE and boxes drawn in each INK | [colour.png](shots/colour.png) |
 | `hilo` | Guess my number (spec §4.7): `RANDOMIZE`, `RND`, `INPUT`, `TRY` with `ERROR n, msg$` for bad guesses, `CASE` | [hilo.png](shots/hilo.png), [hilo_loaded.png](shots/hilo_loaded.png) |
+| `flag` | The Union Flag in the top 16 rows: blue PAPER cells, white saltire lines with `PLOT` and `DRAW`, thin red diagonals from `INVERSE 1` letting red paper show, and the central cross in whole cells; prints the time it took (about 18 seconds) | [flag.png](shots/flag.png) |
 
-The first seven are the verified examples from the user manual (`docs/manual`); `colour` and `hilo` are new. The sources are in `src/`.
+The first seven are the verified examples from the user manual (`docs/manual`); `colour`, `hilo` and `flag` are new. The sources are in `src/`.
 
 ## Rebuilding
 

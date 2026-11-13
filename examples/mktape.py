@@ -11,7 +11,7 @@ from p3lib import Basic
 from rig import decode_pulses
 ORDER = [('menu', 'examples', 'menu'), ('times', 'times', None), ('guess', 'guess', None), ('fact', 'fact', None),
          ('sort', 'sort', None), ('errors', 'errors', None), ('ball', 'ball', None), ('tree', 'tree', None),
-         ('colour', 'colour', None), ('hilo', 'hilo', None)]
+         ('colour', 'colour', None), ('hilo', 'hilo', None), ('flag', 'flag', None)]
 b = Basic(); s = b.s
 blocks = []
 for src, name, auto in ORDER:

@@ -193,6 +193,26 @@ pd = deep(['DEF PROC d(n)', 'IF n>0 THEN d n-1', 'ENDPROC'], 'd k', 5)
 check('recursive PROC: over 130 deep (was 51)', (int(pd[0]) >= 130, pd[1]), (True, 'No room'))
 check('fact(33) works (34! overflows a number)', b.run(['DEF FN f(n)', 'IF n<=1 THEN RETURN 1', 'RETURN n*f(n-1)', 'ENDFN', 'PRINT f(33)'])[-1], '8.68331763E+36')
 
+# v0.13: INK 8 / PAPER 8 / BRIGHT 8 / FLASH 8 keep the screen's colour, for PRINT and PLOT / DRAW
+A0 = 0x5800
+b.run(['PRINT AT 0,0; PAPER 1; INK 7; STRING$(8, " ");', 'PRINT AT 0,0; PAPER 8; INK 2; "x";'])
+check('PRINT PAPER 8 keeps the paper', '%02X' % s.peek(A0), '0A')
+b.run(['PRINT AT 0,0; PAPER 1; INK 7; STRING$(8, " ");', 'PAPER 3: PAPER 8: INK 4: PLOT 8, 191'])
+check('PLOT after PAPER 8 keeps the paper', '%02X' % s.peek(A0 + 1), '0C')
+b.run(['PRINT AT 0,0; PAPER 1; INK 7; STRING$(8, " ");', 'INK 8: PAPER 5: PLOT 16, 191: DRAW 7, 0'])
+check('DRAW with INK 8 keeps the ink', '%02X' % s.peek(A0 + 2), '2F')
+b.run(['PRINT AT 0,0; PAPER 1; INK 7; BRIGHT 1; FLASH 1; STRING$(8, " ");', 'BRIGHT 8: FLASH 8: INK 2: PAPER 6: PLOT 24, 191'])
+check('PLOT with BRIGHT 8, FLASH 8 keeps both', '%02X' % s.peek(A0 + 3), 'F2')
+b.run(['PRINT AT 0,0; PAPER 1; INK 7; STRING$(8, " ");', 'INK 2: PAPER 6: PLOT 0, 191'])
+check('PLOT without 8 sets ink and paper', '%02X' % s.peek(A0), '32')
+# v0.13: a PROC or FN named with a keyword is error 21 at the DEF line
+check('DEF PROC run: Keyword as name', b.run(['PRINT 1', 'DEF PROC run(x)', 'ENDPROC'])[-1], 'Keyword as name, line 2')
+check('DEF FN cos: Keyword as name', b.run(['DEF FN cos(x) = 1', 'PRINT 2'])[-1], 'Keyword as name, line 1')
+check('DEF PROC span still fine', b.run(['DEF PROC span(x)', 'PRINT x', 'ENDPROC', 'span 7'])[-1], '7')
+check('DEF cos (no FN): Keyword as name', b.run(['DEF cos(x) = 1'])[-1], 'Keyword as name, line 1')
+check('DEF sq (no FN) still fine', b.run(['DEF sq(x) = x*x', 'PRINT sq(5)'])[-1], '25')
+check('ERROR 21 reports Keyword as name', b.run(['ERROR 21'])[-1], 'Keyword as name, line 1')
+
 fails = [k for k, v in res.items() if not v]
 json.dump(dict(cases=res, failures=fails), open(os.path.join(ROOT, 'build/test_phase5.json'), 'w'), indent=1)
 print('\n%d/%d passed' % (len(res) - len(fails), len(res)))

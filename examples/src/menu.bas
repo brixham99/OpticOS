@@ -19,5 +19,6 @@ DEF PROC menu
   DATA "tree", "a recursive tree drawn with DRAW TO"
   DATA "colour", "the eight colours and the clash rule"
   DATA "hilo", "guess my number (INPUT, TRY, CASE)"
+  DATA "flag", "the Union Flag in colour cells and DRAW"
   DATA "", ""
 ENDPROC

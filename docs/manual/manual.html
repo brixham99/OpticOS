@@ -60,7 +60,7 @@ figcaption { font-style: italic; font-size: 8pt; color: #444; margin-top: 1mm; }
   <div class="t2">OPTICBASIC USER MANUAL</div>
   <div class="shot"><img src="img/boot.png" alt="The OpticOS start-up screen"></div>
   <div class="t3">FOR THE 48K ZX SPECTRUM</div>
-  <div class="t4">ROM v1.0 &nbsp;&bull;&nbsp; Manual edition 1, November 2026 &nbsp;&bull;&nbsp; &copy; 2026 Optica Technology Design</div>
+  <div class="t4">ROM v1.0 and later &nbsp;&bull;&nbsp; Manual edition 2, November 2026 &nbsp;&bull;&nbsp; &copy; 2026 Optica Technology Design</div>
 </section>
 <section class="toc"><h1>Contents</h1><ol><li><a href="#c1"><span>1</span><em>Introduction</em><b>3</b></a></li>
 <li><a href="#c2"><span>2</span><em>Getting started</em><b>5</b></a></li>
@@ -305,6 +305,7 @@ DEF FN sq(n) = n * n
 PRINT area(3, 4) + sq(2)
 </code></pre>
 <p>The words <code>PROC</code> and <code>FN</code> after <code>DEF</code> are optional, and so is <code>FN</code> in a call. Arguments are passed <strong>by value</strong>. Arrays cannot be passed, but every array is global, so a procedure can use one by name.</p>
+<p>A name must not be a keyword. OpticBASIC would read <code>DEF PROC run</code> as the keyword RUN, so RUN stops with error 21, "Keyword as name", at that DEF line before the program starts. Choose another name, such as <code>run_it</code> or <code>cosine</code>.</p>
 <p><code>LOCAL</code> (at the start of a procedure or function) and the parameters give the procedure its own copies of those variables. The old values come back when it ends, or when an error leaves it. Procedures and functions can call themselves (recursion). The program's main part is simply the lines that are not inside a <code>DEF</code>.</p>
 <h2>Control structures</h2>
 <pre><code>IF condition THEN statement [ELSE statement]     ' one line
@@ -344,7 +345,7 @@ TRY … CATCH … ENDTRY
 <p><strong>AUTO</strong> — Start adding typed lines to the program after the current line (prompt <code>+</code>). An empty line stops.</p>
 <p><strong>BEEP</strong> <em>duration</em>, <em>pitch</em> — Play a note. Duration is in seconds; pitch is in semitones above middle C (0), from about −24 to 69. <code>BEEP 0.5, 7</code> plays the G above middle C for half a second.</p>
 <p><strong>BORDER</strong> <em>n</em> — Set the border colour, 0–7. <code>BORDER 1</code> makes it blue.</p>
-<p><strong>BRIGHT</strong> 0|1 — Bright colours off or on for what is printed next. Also inside PRINT: <code>PRINT BRIGHT 1; "Hi"</code>.</p>
+<p><strong>BRIGHT</strong> 0|1|8 — Bright colours off or on for what is printed or plotted next; 8 keeps the brightness already on the screen. Also inside PRINT: <code>PRINT BRIGHT 1; "Hi"</code>.</p>
 <p><strong>CALL</strong> <em>addr</em> — Run machine code at <em>addr</em>. It returns to BASIC with <code>RET</code>. <code>CALL 32768</code></p>
 <p><strong>CASE</strong> <em>x</em> <strong>OF</strong> — Start a CASE block (chapter 5). <code>CASE k% OF</code></p>
 <p><strong>CATCH</strong> — Starts the part of a TRY block that runs if an error happened (chapter 7).</p>
@@ -354,7 +355,7 @@ TRY … CATCH … ENDTRY
 <p><strong>CODE</strong> — Used in SAVE, LOAD and VERIFY for blocks of memory (chapter 8).</p>
 <p><strong>COS</strong> <em>x</em> — Cosine of <em>x</em> radians.</p>
 <p><strong>DATA</strong> <em>item</em> [, <em>item</em> …] — Values for READ. Items can be any expressions, numbers or strings. A DATA statement must start its line. <code>DATA "pear", 3, 2*4</code></p>
-<p><strong>DEF</strong> <em>name</em>[(<em>params</em>)] — Start a procedure (ending <code>ENDPROC</code>) or function (ending <code>ENDFN</code>). <code>DEF PROC move(dx)</code>, <code>DEF FN half(x) = x / 2</code></p>
+<p><strong>DEF</strong> <em>name</em>[(<em>params</em>)] — Start a procedure (ending <code>ENDPROC</code>) or function (ending <code>ENDFN</code>). The name cannot be a keyword (error 21). <code>DEF PROC move(dx)</code>, <code>DEF FN half(x) = x / 2</code></p>
 <p><strong>DIM</strong> <em>a</em>(<em>n</em> [, <em>n</em> [, <em>n</em>]]) — Make an array with up to 3 dimensions, each counted from 0, so <code>DIM a(9)</code> has 10 elements. Numbers start as 0 and strings as "". Making the same array twice is an error. <code>DIM board%(7,7)</code>, <code>DIM name$(20)</code></p>
 <p><strong>DIV</strong> — Whole-number division: <code>17 DIV 5</code> is 3.</p>
 <p><strong>DPEEK</strong> <em>addr</em> — The 16-bit value at <em>addr</em> and <em>addr</em>+1, low byte first. <code>DPEEK 23675</code></p>
@@ -370,7 +371,7 @@ TRY … CATCH … ENDTRY
 <p><strong>EXIT FOR</strong> | <strong>EXIT WHILE</strong> | <strong>EXIT REPEAT</strong> — Leave the innermost loop of that kind. <code>IF KEY(" ") THEN EXIT FOR</code></p>
 <p><strong>EXP</strong> <em>x</em> — e to the power <em>x</em>. <code>EXP 1</code> is 2.71828183.</p>
 <p><strong>FALSE</strong> — 0.</p>
-<p><strong>FLASH</strong> 0|1 — Flashing off or on for what is printed next. Also inside PRINT.</p>
+<p><strong>FLASH</strong> 0|1|8 — Flashing off or on for what is printed or plotted next; 8 keeps the flashing already on the screen. Also inside PRINT.</p>
 <p><strong>FN</strong> — Optional before a function's name, in DEF or in a call.</p>
 <p><strong>FOR</strong> <em>v</em> = <em>first</em> <strong>TO</strong> <em>last</em> [<strong>STEP</strong> <em>s</em>] — Repeat the lines up to NEXT, counting <em>v</em> from <em>first</em> to <em>last</em>. The loop does not run at all if <em>first</em> is already past <em>last</em>. <code>FOR i = 10 TO 1 STEP -3</code> gives 10, 7, 4, 1.</p>
 <p><strong>FRAMES</strong> — The number of frames (fiftieths of a second) since the machine was switched on. Use it for timing: <code>t = FRAMES: …: PRINT (FRAMES - t) / 50; " s"</code>.</p>
@@ -403,7 +404,7 @@ TRY … CATCH … ENDTRY
 <p><strong>OTHERWISE</strong> — The branch of a CASE that runs when no WHEN matches.</p>
 <p><strong>OUT</strong> <em>port</em>, <em>n</em> — Send a byte to an output port. <code>OUT 254, 2</code> sets the border red.</p>
 <p><strong>OVER</strong> 0|1 — With OVER 1, text and lines are combined with what is already on the screen, so drawing twice removes them. It stays set after a PRINT that uses it.</p>
-<p><strong>PAPER</strong> <em>n</em> — Set the background colour, 0–7 (8 = keep). Also inside PRINT.</p>
+<p><strong>PAPER</strong> <em>n</em> — Set the background colour, 0–7, for what is printed or plotted next; 8 means keep the colour already on the screen. Also inside PRINT.</p>
 <p><strong>PEEK</strong> <em>addr</em> — The byte at <em>addr</em>. <strong>POKE</strong> <em>addr</em>, <em>n</em> stores one.</p>
 <p><strong>PI</strong> — 3.14159265.</p>
 <p><strong>PLOT</strong> <em>x</em>, <em>y</em> — Set the pixel at <em>x</em> (0–255 across) and <em>y</em> (0–191 up from the <strong>bottom</strong>). <code>PLOT 128, 96</code></p>
@@ -569,6 +570,11 @@ ENDTRY
 <td>READ with no DATA left</td>
 </tr>
 <tr>
+<td style="text-align: right;">21</td>
+<td>Keyword as name</td>
+<td>A DEF whose name is a keyword, such as <code>DEF PROC run</code> or <code>DEF FN cos(x)</code>; reported at the DEF line when the program is RUN</td>
+</tr>
+<tr>
 <td style="text-align: right;">23</td>
 <td>No such stream</td>
 <td></td>
@@ -659,7 +665,7 @@ ENDTRY
 </tr>
 </tbody>
 </table>
-<p><code>INK</code>, <code>PAPER</code>, <code>BRIGHT</code> and <code>FLASH</code> set the colours for what is printed or plotted next. Used inside a PRINT, as in <code>PRINT INK 2; "Danger"</code>, they last only to the end of that PRINT. <code>INVERSE</code> and <code>OVER</code> stay set. <code>BORDER</code> sets the border. <code>CLS</code> clears the screen in the current paper colour.</p>
+<p><code>INK</code>, <code>PAPER</code>, <code>BRIGHT</code> and <code>FLASH</code> set the colours for what is printed or plotted next. Used inside a PRINT, as in <code>PRINT INK 2; "Danger"</code>, they last only to the end of that PRINT. <code>INVERSE</code> and <code>OVER</code> stay set. The value 8 means "keep what is already on the screen": after <code>PAPER 8</code>, PRINT, PLOT and DRAW change the ink of each cell they touch but leave its paper as it was, and <code>INK 8</code>, <code>BRIGHT 8</code> and <code>FLASH 8</code> do the same for the other parts. <code>BORDER</code> sets the border. <code>CLS</code> clears the screen in the current paper colour.</p>
 <p>Remember that each colour cell holds two characters (chapter 3).</p>
 <h2>Drawing</h2>
 <p>The graphics screen is 256 pixels across by 192 up, with (0, 0) at the <strong>bottom left</strong>. <code>PLOT x, y</code> sets a pixel. <code>DRAW dx, dy</code> draws a straight line from the last point by the given amounts, and <code>DRAW TO x, y</code> draws to a given point. Each cell that a line passes through takes the current colours. With <code>OVER 1</code>, pixels are flipped rather than set, so drawing the same line twice rubs it out; with <code>INVERSE 1</code> they are cleared.</p>

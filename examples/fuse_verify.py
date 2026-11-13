@@ -26,7 +26,7 @@ def settle(f, t_min=8, t_max=240):
         still = 0 if moved else still + 1; last = d
         if still >= 3 and time.time() - t0 > t_min: break
     return time.time() - t0
-RUNS = {'times': 3, 'guess': 3, 'fact': 3, 'sort': 4, 'errors': 3, 'ball': 4, 'tree': 32, 'colour': 6}
+RUNS = {'times': 3, 'guess': 3, 'fact': 3, 'sort': 4, 'errors': 3, 'ball': 4, 'tree': 32, 'colour': 6, 'flag': 22}
 only = sys.argv[1:]
 for name in ['examples'] + list(RUNS) + ['hilo']:
     if only and name not in only: continue

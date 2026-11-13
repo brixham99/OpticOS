@@ -22,6 +22,7 @@ ERR_TAPE   equ $1A
 ERR_DATA   equ $14
 ERR_CALC   equ $40
 ERR_LEG    equ $41
+ERR_KWNAM  equ $15
 ERR_OK     equ $FF
 m_err_s:
 err_rst:                        ; RST 8: the byte after the RST is the code
@@ -147,6 +148,9 @@ err_tab:
         defb ERR_SYN
         defm "Syntax erro"
         defb 'r'+$80
+        defb ERR_KWNAM
+        defm "Keyword as nam"
+        defb 'e'+$80
         defb ERR_LEG
         defm "Legacy BASIC: unsupported statemen"
         defb 't'+$80
