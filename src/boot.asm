@@ -49,7 +49,7 @@ bt_st:  ld a,(hl)
         ld (REPDEL),hl
         ld hl,$3C00
         ld (CHARS),hl
-        ld hl,$5D50
+        ld hl,OPROG             ; PEEK 23635 gives the program start
         ld (PROG),hl
         ld (VARS),hl
         ld (E_LINE),hl

@@ -12,7 +12,7 @@ The boot message reads:
 OpticOS (c) 2026 Optica Technology Design
 ```
 
-**Status: Phases 0–5 complete.** The planned feature list (after the cuts in spec §12) is built and fits the 16K ROM with 276 bytes to spare. The ROM boots, loads ordinary game tapes, runs structured OpticBASIC programs, and has a Sinclair-style line editor. The **[user manual (PDF)](docs/manual/OpticOS_User_Manual.pdf)** covers the whole system, with worked examples ([source](docs/manual)). Still to do before a v1.0: an example tape and a check on real hardware and a real TV. The design is in the [specification (PDF)](docs/spec.pdf) ([Markdown](docs/spec.md)); §4.8 lists what is built.
+**Status: Phases 0–5 complete.** The planned feature list (after the cuts in spec §12) is built and fits the 16K ROM with 264 bytes to spare. The ROM boots, loads ordinary game tapes, runs structured OpticBASIC programs, and has a Sinclair-style line editor. The **[user manual (PDF)](docs/manual/OpticOS_User_Manual.pdf)** covers the whole system, with worked examples ([source](docs/manual)). Still to do before a v1.0: an example tape and a check on real hardware and a real TV. The design is in the [specification (PDF)](docs/spec.pdf) ([Markdown](docs/spec.md)); §4.8 lists what is built.
 
 | Phase | What it delivered | Report |
 |---|---|---|
@@ -103,20 +103,20 @@ Fuse needs `--no-traps` so that its tape traps don't bypass the OpticOS tape rou
 
 ## ROM byte usage (Phase 5 complete)
 
-16,108 of 16,384 bytes are placed, leaving **276 free** (the rule is to keep at least 256 spare). By module, as `tools/check_layout.py` reports them:
+16,120 of 16,384 bytes are placed, leaving **264 free** (the rule is to keep at least 256 spare). By module, as `tools/check_layout.py` reports them:
 
 | Part | Bytes |
 |---|---:|
-| Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,363 |
+| Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,369 |
 | Tokeniser, keyword table, LIST | 1,800 |
 | Float core (+ - * /, normalise, compare, conversions, small-int ops) | 1,422 |
 | Expression evaluator and functions | 1,330 |
-| Variables, arrays, string heap + GC, value and control stacks | 1,281 |
+| Variables, arrays, string heap + GC, value and control stacks | 1,301 |
 | Transcendentals, byte-code runner, coefficient tables | 1,148 |
 | Legacy loader shim (interpreter, expressions, PRINT) | 845 |
 | Number <-> string (STR$/PRINT formatting, VAL) | 709 |
 | 64-column print, control codes, colours, scroll, CLS, RST 16 | 578 |
-| Errors: RST 8 handler and messages | 492 |
+| Errors: RST 8 handler and messages | 475 |
 | String and machine functions: INSTR STRING$ HEX$ UPPER$ ERR$ IN USR DPEEK KEY FREE | 465 |
 | Tape commands: SAVE / LOAD / VERIFY, CODE, headers, name match | 422 |
 | Direct mode and console: input line with insert/delete/cursor | 422 |
@@ -124,7 +124,7 @@ Fuse needs `--no-traps` so that its tape traps don't bypass the OpticOS tape rou
 | Interrupt routine, keyboard scan, key tables | 355 |
 | Tape low level: SA-BYTES, LD-BYTES, edges, tape_ret | 310 |
 | Restarts, NMI, reset, RAM test, sysvars, channels | 300 |
-| CASE, EXIT, ERROR n [,msg$], CLEAR [n], PROC-name lookup | 299 |
+| CASE, EXIT, ERROR n [,msg$], CLEAR [n], PROC-name lookup | 302 |
 | Line editor: marker, LIST around it, cursor up/down, EDIT | 268 |
 | Graphics: PLOT, DRAW, DRAW TO | 238 |
 | BEEP, OUT, DPOKE, CALL, SWAP; start-up chime | 216 |
@@ -166,4 +166,4 @@ A Sinclair `48.rom` image is **not** included, and never will be. If a later tes
 
 Code is under the MIT licence. Artwork and text are under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See [LICENSE](LICENSE).
 
-Copyright (c) 2026 Optica Technology.
+Copyright (c) 2026 Optica Technology Design.

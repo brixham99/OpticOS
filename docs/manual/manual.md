@@ -248,7 +248,7 @@ Every keyword and function OpticBASIC has, in alphabetical order. *n*, *x* and *
 
 **CHR$** *n* — The character with code *n* (0–255). `CHR$ 65` is "A".
 
-**CLEAR** [*n*] — Forget all variables, open loops and procedure calls. With *n*, also move RAMTOP (the top of BASIC's memory) to *n*, leaving the memory above it free for machine code: `CLEAR 59999`. *n* must leave at least 1,856 bytes above the variables. Use CLEAR at the top level of a program, not inside a procedure.
+**CLEAR** [*n*] — Forget all variables, open loops and procedure calls. With *n*, also move RAMTOP (the top of BASIC's memory) to *n*, leaving the memory above it free for machine code: `CLEAR 59999`. *n* must leave room for BASIC's stacks between the variables and *n*: 9,216 bytes on a 48K machine, 2,048 on 16K. Use CLEAR at the top level of a program, not inside a procedure.
 
 **CLS** — Clear the screen to the current paper colour, and print from the top.
 
@@ -282,7 +282,7 @@ Every keyword and function OpticBASIC has, in alphabetical order. *n*, *x* and *
 
 **ERR$** — The message of the last error. After `ERROR n, msg$` it is *msg$*.
 
-**ERROR** *n* [, *msg$*] — Cause error number *n* (0–255). With a message, the error report reads *msg$* and ERR$ gives *msg$*; up to 28 characters are kept. `ERROR 200, "Out of fuel"`
+**ERROR** *n* [, *msg$*] — Cause error number *n* (0–255). With a message, the error report reads *msg$* and ERR$ gives *msg$*; up to 28 characters are kept. Without a message, an error number OpticOS has no message for is reported as `Error n` and ERR$ is "". `ERROR 200, "Out of fuel"`
 
 **EXIT FOR** | **EXIT WHILE** | **EXIT REPEAT** — Leave the innermost loop of that kind. `IF KEY(" ") THEN EXIT FOR`
 
@@ -614,8 +614,8 @@ OpticOS keeps the main ROM entry points that games and utilities call, with the 
 | `$5DD0–$5DEB` | The message of the last `ERROR n, msg$` |
 | `$5DF0` (24048) | Start of the program, then the procedure table and the variables, growing upwards |
 | … | Free memory (see `FREE`) |
-| below RAMTOP − 1,856 | The string heap, growing downwards |
-| RAMTOP − 1,856 | The typed-line buffer (256 bytes), value stack (320), control stack (768), machine stack (512) |
+| below the stacks | The string heap, growing downwards |
+| RAMTOP − 9,216 | The typed-line buffer (256 bytes), value stack (768), control stack (4,096), machine stack (4,096); on a 16K machine 256, 512, 768 and 512 bytes, 2,048 in all |
 | RAMTOP (`$FF57`) | The last byte BASIC uses; move it with `CLEAR n` |
 | `$FF58–$FFFF` | 168 bytes kept free, where Sinclair keeps its UDGs |
 
@@ -635,6 +635,7 @@ These keep their Sinclair addresses and meanings:
 | `$5C3B` | 23611 | FLAGS | Bit 5 is set when a new key is pressed |
 | `$5C48` | 23624 | BORDCR | Border colour |
 | `$5C4F` | 23631 | CHANS | Channel table address |
+| `$5C53` | 23635 | PROG | Start of the program: 24048 (`$5DF0`), or 23755 while a Sinclair loader is loaded |
 | `$5C76` | 23670 | SEED | The last RANDOMIZE value |
 | `$5C78` | 23672 | FRAMES | Frame counter, 3 bytes |
 | `$5C7B` | 23675 | UDG | Points to RAMTOP + 1 |
@@ -655,12 +656,12 @@ The other Sinclair system variables are used for OpticOS's own purposes, so do n
 
 | | |
 |---|---|
-| Program size | All of free memory: about 39,000 bytes on a 48K machine with nothing else loaded |
+| Program size | All of free memory: about 32,000 bytes on a 48K machine with nothing else loaded, and about 6,500 on 16K |
 | Line length | 126 characters typed; the stored line up to 255 bytes |
 | Names | Up to 32 characters, all significant |
 | Strings | Up to 255 characters |
 | Arrays | Up to 3 dimensions |
-| Nesting | The stacks are fixed in size. A recursive function inside an expression goes about 12 calls deep (`fact(12)` works, `fact(13)` is "No room"); a recursive procedure with one parameter about 50 |
+| Nesting | Recursion goes deep on a 48K machine: a recursive function inside an expression about 116 calls, a procedure with one parameter about 290, and one with a LOCAL as well about 175. Beyond that the report is "No room". On 16K the stacks are smaller (about 50 for a procedure). |
 | ERROR message | 28 characters |
 
 ## Differences from Sinclair BASIC

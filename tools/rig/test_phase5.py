@@ -178,6 +178,21 @@ ltape = [NOTOGGLE | 35000] + block_pulses(blk(0, lh)) + block_pulses(blk(0xFF, l
 b.line('BORDER 0'); load('LOAD ""', ltape)
 check('BORDER in the legacy shim (10 BORDER 2)', (s.border(), s.peek(SYM['BORDCR']) >> 3 & 7), (2, 2))
 
+# ---- v0.10: PROG, ERROR n without a message, deeper recursion
+check('PROG is $5CCB while a legacy loader is in memory', s.dpeek(SYM['PROG']), 0x5CCB)
+b.line('NEW'); check('PROG ($5C53) back at the program start after NEW', s.dpeek(SYM['PROG']), 0x5DF0)
+check('DPEEK 23635 gives 24048', b.run(['PRINT DPEEK 23635'])[-1], '24048')
+check('ERROR n without a message reports its number', b.run(['PRINT "x"', 'ERROR 42'])[-1], 'Error 42, line 2')
+check('... typed directly too', (b.line('CLS'), b.line('ERROR 200'), out(b)[-1])[2], 'Error 200')
+def deep(defs, call, step):
+    return b.run(defs + ['k=1', 'TRY', 'REPEAT', call + ': k=k+%d' % step, 'UNTIL k>5000', 'CATCH', 'PRINT k-%d;" ";ERR$' % step, 'ENDTRY'],
+                 limit=40_000_000_000)[-1].split(' ', 1)
+fd = deep(['DEF FN g(n)', 'IF n<=0 THEN RETURN 0', 'RETURN 1+g(n-1)', 'ENDFN'], 'x=g(k)', 5)
+check('recursive FN in an expression: over 100 deep (was 11)', (int(fd[0]) >= 100, fd[1]), (True, 'No room'))
+pd = deep(['DEF PROC d(n)', 'IF n>0 THEN d n-1', 'ENDPROC'], 'd k', 5)
+check('recursive PROC: over 250 deep (was 51)', (int(pd[0]) >= 250, pd[1]), (True, 'No room'))
+check('fact(33) works (34! overflows a number)', b.run(['DEF FN f(n)', 'IF n<=1 THEN RETURN 1', 'RETURN n*f(n-1)', 'ENDFN', 'PRINT f(33)'])[-1], '8.68331763E+36')
+
 fails = [k for k, v in res.items() if not v]
 json.dump(dict(cases=res, failures=fails), open(os.path.join(ROOT, 'build/test_phase5.json'), 'w'), indent=1)
 print('\n%d/%d passed' % (len(res) - len(fails), len(res)))

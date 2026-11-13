@@ -23,28 +23,45 @@ err_next: rst 8
         defb ERR_NEXT
 
 ; ---------------------------------------------------- workspace
-; Below RAMTOP: machine stack 512, control stack 768, value stack 320,
-; tokenised direct line 256, then the string heap grows down.
+; Below RAMTOP: machine stack, control stack, value stack, the tokenised
+; direct line (256), then the string heap grows down.  The stack sizes
+; depend on the RAM (v0.10): 48K 4096 / 4096 / 768, 16K 512 / 768 / 512.
 ws_init: call ws_lay
         ld de,OPROG
         jr ws_ld
 ; ws_lay: lay out the stacks, direct line and heap below RAMTOP
 ws_lay: ld hl,(RAMTOP)
-        ld de,-512
-        add hl,de
+        call ws_sel
+        inc bc
+        ld a,(bc)               ; machine stack
+        inc bc
+        add a,h
+        ld h,a
         ld (CSB),hl
-        ld de,-768
-        add hl,de
+        ld a,(bc)               ; control stack
+        inc bc
+        add a,h
+        ld h,a
         ld (CSLIM),hl
         ld (VSLIM),hl
-        ld de,-320
-        add hl,de
+        ld a,(bc)               ; value stack
+        add a,h
+        ld h,a
         ld (VSB),hl
-        ld de,-256
-        add hl,de
+        dec h                   ; the direct line, 256
         ld (TKB),hl
         ld (HTOP),hl
         ret
+; ws_sel: BC = the size table for this RAM: the whole workspace with the
+; direct line, then the machine, control and value stacks (pages, negated)
+ws_sel: ld bc,ws_t48
+        ld a,(P_RAMT+1)
+        rla
+        ret c
+        ld bc,ws_t16
+        ret
+ws_t48: defb -36,-16,-16,-3    ; 48K: 9216 in all; 4096, 4096, 768
+ws_t16: defb -8,-2,-3,-2       ; 16K: 2048 in all; 512, 768, 512
 ; ws_ld: clear A%-Z% and the editor variables; the program ends at DE
 ws_ld:  ld hl,STATIC
         ld b,CON_LEN+1-STATIC

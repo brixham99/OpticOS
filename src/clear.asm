@@ -8,8 +8,11 @@ st_clear:
         call is_end
         jr z,clr_v
         rst $30                 ; DE = new RAMTOP
-        ld hl,-1856             ; the workspace below it
-        add hl,de
+        call ws_sel             ; HL = n - the workspace below it
+        ld a,(bc)
+        add a,d
+        ld h,a
+        ld l,e
         jp nc,err_nomem
         ld bc,(VARSB)
         sbc hl,bc

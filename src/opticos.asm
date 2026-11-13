@@ -1,6 +1,6 @@
 ; =====================================================================
 ; OpticOS - a clean-room 16K ROM for the ZX Spectrum 48K
-; (c) 2026 Optica Technology.  Phase 1: boot, screen, keyboard, tape,
+; (c) 2026 Optica Technology Design.  Phase 1: boot, screen, keyboard, tape,
 ; compatibility entry points and the legacy loader shim.
 ;
 ; Build: pasmo --bin src/opticos.asm build/opticos.rom build/opticos.sym
@@ -93,6 +93,7 @@ secE_end:
         include "edge.asm"
         include "errors.asm"
         include "tape.asm"
+        include "misc2.asm"
 secF_end:
 
 ; ---------------------------------------------------------------- $096F
@@ -131,7 +132,6 @@ secI_end:
         include "strfn2.asm"
         include "flow.asm"
         include "error2.asm"
-        include "misc2.asm"
 m_tkd_s:
         include "gen/tokdisp.inc"
 m_tkd_e:

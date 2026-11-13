@@ -1151,6 +1151,8 @@ p_del:  ld c,(hl)
         pop hl
 ; p_fix: after a change: sentinel, empty DEF table, variables cleared
 p_fix:  push hl
+        ld hl,OPROG             ; PROG back to OpticOS after a legacy load
+        ld (PROG),hl
         ld hl,(PEND)
         xor a
         ld (hl),a

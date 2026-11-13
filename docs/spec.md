@@ -1,6 +1,6 @@
 # OpticOS: design specification
 
-**Version 0.9, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. **v0.6** (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). **v0.7** (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). **v0.8** (phase 5c) records the last cuts as decision 13 (array parameters by reference, `CALL` register arguments, `CAT`, the OpticBASIC `SCREEN$` tape forms, `JOY`), builds CASE, EXIT, `ERROR n, msg$`, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2). **v0.9** removes the last UDG mentions (§4.7, §5.4, §6.1, §9), records `TAB(c)` as built, lengthens the boot banner to `OpticOS (c) 2026 Optica Technology Design`, records the measured nesting limits (§4.8), corrects §6.1 (codes 128–255 print as `?`; no block graphics) and points to the user manual (`docs/manual`).
+**Version 0.10, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. **v0.6** (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). **v0.7** (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). **v0.8** (phase 5c) records the last cuts as decision 13 (array parameters by reference, `CALL` register arguments, `CAT`, the OpticBASIC `SCREEN$` tape forms, `JOY`), builds CASE, EXIT, `ERROR n, msg$`, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2). **v0.9** removes the last UDG mentions (§4.7, §5.4, §6.1, §9), records `TAB(c)` as built, lengthens the boot banner to `OpticOS (c) 2026 Optica Technology Design`, records the measured nesting limits (§4.8), corrects §6.1 (codes 128–255 print as `?`; no block graphics) and points to the user manual (`docs/manual`). **v0.10** fixes PROG (`DPEEK 23635` now gives the program start, 24048), makes `ERROR n` without a message report `Error n`, enlarges the stacks below RAMTOP on 48K machines (decision 15), and completes the company name, Optica Technology Design.
 Project, ROM and future repo name: **OpticOS**. Boot banner: `OpticOS (c) 2026 Optica Technology Design`.
 
 This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.
@@ -219,11 +219,11 @@ TRY … CATCH … ENDTRY
 ERROR n [, msg$]                           ' raise an error
 ```
 
-`CASE` compares the selector with each `WHEN` value in turn (numbers or strings; a mismatch of type is an error), runs the first branch that matches, or `OTHERWISE`, and continues after `ENDCASE`. CASE, WHEN, OTHERWISE and ENDCASE must each start a line, as the other block keywords do (a WHEN branch can follow on the same line after `:`). `EXIT WHILE`, `EXIT REPEAT` and `EXIT FOR` continue after the matching WEND, UNTIL or NEXT statement. `ERROR n, msg$` gives ERR = n, ERR$ = msg$ and an error report of `msg$, line L`.
+`CASE` compares the selector with each `WHEN` value in turn (numbers or strings; a mismatch of type is an error), runs the first branch that matches, or `OTHERWISE`, and continues after `ENDCASE`. CASE, WHEN, OTHERWISE and ENDCASE must each start a line, as the other block keywords do (a WHEN branch can follow on the same line after `:`). `EXIT WHILE`, `EXIT REPEAT` and `EXIT FOR` continue after the matching WEND, UNTIL or NEXT statement. `ERROR n, msg$` gives ERR = n, ERR$ = msg$ and an error report of `msg$, line L`. `ERROR n` alone uses the ROM's message for n if there is one, and otherwise reports `Error n, line L` (v0.10; it printed `Error $00` before), with ERR$ = "".
 
 **Data**
 
-`[LET] v = expr`, `DIM`, `SWAP a, b`, `DATA`, `READ`, `RESTORE [procname]` (from the first DATA line after that DEF), `CLEAR [ramtop]` (forgets the variables, open loops and PROC calls, so use it at the top level; `CLEAR n` also moves RAMTOP to n, with the stacks, direct line and heap below it, and needs n − 1,856 above the variables; typed directly, the rest of the line is not run), `RANDOMIZE [n]`
+`[LET] v = expr`, `DIM`, `SWAP a, b`, `DATA`, `READ`, `RESTORE [procname]` (from the first DATA line after that DEF), `CLEAR [ramtop]` (forgets the variables, open loops and PROC calls, so use it at the top level; `CLEAR n` also moves RAMTOP to n, with the stacks, direct line and heap below it, and needs n − 9,216 (on 16K, n − 2,048) above the variables; typed directly, the rest of the line is not run), `RANDOMIZE [n]`
 
 **Screen and text**
 
@@ -356,7 +356,7 @@ Differences from the text above, as built:
 - An uncaught error prints `message, line n` on the screen and makes that line current. There is no status bar.
 - The DEF table built by the prepass lies just above the program (§7.2), and every program edit clears the variables.
 - `TAB` takes its column in brackets, `TAB(c)`; `TAB c` is a syntax error.
-- Nesting is limited by the fixed stacks below RAMTOP (machine stack 512 bytes, control stack 768, value stack 320). Measured: a recursive FN used inside an expression nests 12 deep (`fact(12)` works, `fact(13)` stops with "No room"), and a recursive PROC with one parameter about 50 deep.
+- Nesting is limited by the stacks below RAMTOP. Since v0.10 (decision 15) their sizes depend on the RAM: on a 48K machine the machine stack is 4,096 bytes, the control stack 4,096 and the value stack 768; on 16K they are 512, 768 and 512. Measured on 48K: a recursive FN used inside an expression nests 116 deep (`fact(33)` works; `fact(34)` is an Overflow, because 34! is beyond the number range), a recursive PROC with one parameter 291 deep, and one with a LOCAL as well 176 deep. Before v0.10 the limits were 12, 51 and 31. On 16K they are about the same as before (a PROC 53 deep).
 
 ## 5. Program storage
 
@@ -408,7 +408,8 @@ $5DF0        PROG     -> program lines … $00, then the DEF table
              VARS     -> variable records (grow up)
              (free)
              STRHEAP  <- string heap (grows down from STKBOT)
-             STKBOT   -> control stack and machine stack (grow down from RAMTOP)
+             STKBOT   -> direct line (256), value stack, control stack and machine stack
+                         below RAMTOP: 768 / 4,096 / 4,096 bytes on 48K, 512 / 768 / 512 on 16K
 RAMTOP (default $FF57) +1 -> 168 bytes kept free to P_RAMT $FFFF, where Sinclair keeps its UDGs
              (the UDG variable points here for machine code; OpticOS does not print UDGs)
 ```
@@ -633,7 +634,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 | 4 | 64-column print, control codes, colours, scroll, CLS, RST 16 | 578 |
 | 8 | Tape low level: SA-BYTES, LD-BYTES, edges, tape_ret | 310 |
 | 10 | Sound: BEEPER | 82 |
-| 26 | Errors: RST 8 handler and messages | 492 |
+| 26 | Errors: RST 8 handler and messages | 475 |
 | 9 | Tape commands: SAVE / LOAD / VERIFY, CODE, headers, name match | 422 |
 | 27 | Legacy loader shim (interpreter, expressions, PRINT) | 845 |
 | 13 | Number output for the legacy shim and console (pr_dec, pr_hex) | 50 |
@@ -641,10 +642,10 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 | 13 | Number <-> string (STR$/PRINT formatting, VAL) | 709 |
 | 14 | Transcendentals, byte-code runner, coefficient tables | 1,148 |
 | 18 | Expression evaluator and functions | 1,330 |
-| 17 | Variables, arrays, string heap + GC, value and control stacks | 1,281 |
+| 17 | Variables, arrays, string heap + GC, value and control stacks | 1,301 |
 | 15 | Tokeniser, keyword table, LIST | 1,800 |
-| 19 | Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,363 |
-| 19-20 | CASE, EXIT, ERROR n [,msg$], CLEAR [n], PROC-name lookup | 299 |
+| 19 | Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,369 |
+| 19-20 | CASE, EXIT, ERROR n [,msg$], CLEAR [n], PROC-name lookup | 302 |
 | 25 | Direct mode and console: input line with insert/delete/cursor | 422 |
 | 24 | Line editor: marker, LIST around it, cursor up/down, EDIT | 268 |
 | 25 | INPUT, DATA / READ / RESTORE | 183 |
@@ -653,8 +654,8 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 | 18 | String and machine functions: INSTR STRING$ HEX$ UPPER$ ERR$ IN USR DPEEK KEY FREE | 465 |
 | 28 | Fixed-address stubs (CHAN-OPEN, PR-STRING, PIXEL-ADD, $096F) | 78 |
 | 7 | 4-pixel font | 384 |
-| | **Total** (v0.2 budget: 15,374) | **16,108** |
-| | **Free (of 16,384)** | **276** (margin rule: at least 256; 283 before the longer boot banner) |
+| | **Total** (v0.2 budget: 15,374) | **16,120** |
+| | **Free (of 16,384)** | **264** (margin rule: at least 256; 283 before the longer boot banner, 276 before v0.10) |
 
 The ROM builds its own version of this table (`build/bytes.md`, from `tools/check_layout.py`). The free bytes are spread over twelve gaps between the fixed addresses (the largest is 62 bytes).
 
@@ -705,7 +706,7 @@ The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print 
 | `$5C3D` | ERR_SP | Yes (OpticOS meaning: error frame) | Code that traps errors |
 | `$5C48` | BORDCR | Yes | Restoring the border after a load |
 | `$5C4F/51` | CHANS/CURCHL | Yes | RST 16 and CHAN-OPEN users |
-| `$5C53` | PROG | Yes (OpticOS program start, or `$5CCB` in legacy mode) | `PEEK 23635` loaders |
+| `$5C53` | PROG | Yes: the OpticOS program start `$5DF0` (24048), or `$5CCB` while a Sinclair loader is in memory. (Before v0.10 it wrongly held `$5D50`.) It is set at boot and on every NEW, LOAD and program edit. | `PEEK 23635` loaders |
 | `$5C6B` | DF_SZ | Yes | Lower-screen size |
 | `$5C76` | SEED | Yes | RND |
 | `$5C78` | FRAMES (3) | Yes | Timing in many games |
@@ -806,5 +807,6 @@ Nathan agreed the first six recommendations on 13 November 2026; decisions 7–1
 
 13. **Dropped in phase 5c (Nathan, 13 Nov 2026): array parameters by reference, `CALL` register arguments, `CAT`, and the OpticBASIC `SCREEN$` tape forms** (`SCREEN$` is `CODE 16384,6912`; the legacy shim keeps `LOAD "" SCREEN$` for loaders). **`JOY` is dropped too** (read a Kempston joystick with `IN 31`). **`BORDER` stays**, in OpticBASIC and in the legacy shim, and both are tested. As built: `FREE` is a function, not a command (`PRINT FREE`); `SAVE … AUTO` and `RUN name` take a PROC without parameters; `ERROR n, msg$` keeps up to 28 characters; `EXIT` finds its WEND, UNTIL or NEXT by counting loop keywords forwards, and `EXIT FOR` drops the FOR frame, so it should not be used from inside a TRY block within the loop.
 14. **Agreed (Nathan, 13 Nov 2026): RST `$28` enters the OpticOS maths byte-code** (it was "Calculator not supported", decision 5). The interpreter's 37 calls become one byte each, saving about 99 bytes with the message. Without this the ROM would have about 185 bytes free, below the 256-byte margin. Machine code that calls the Sinclair calculator fails on OpticOS either way, but it no longer stops with an error message.
+15. **Agreed (Nathan, 13 Nov 2026, v0.10): larger stacks on 48K.** The workspace below RAMTOP is 9,216 bytes on a 48K machine (machine stack 4,096, control stack 4,096, value stack 768, direct line 256), up from 1,856, so recursion goes about ten times deeper (§4.8). It costs RAM, not ROM: FREE on a fresh 48K machine goes from 39,455 to 32,095 bytes. A 16K machine keeps a 2,048-byte workspace (512 / 768 / 512 / 256), because a large one would not fit. The sizes are in a 4-byte table for each RAM size (`ws_t48`, `ws_t16` in `src/vars.asm`), which CLEAR also uses for its check.
 
-*End of specification v0.9.*
+*End of specification v0.10.*

@@ -56,22 +56,12 @@ es_sk:  bit 7,(hl)
         inc hl
         jr z,es_sk
         jr es_lp
-es_unk: ld hl,msg_err
+es_unk: push bc                 ; pr_msg changes C
+        ld hl,msg_err
         call pr_msg
-        ld a,c
-pr_hex: push af
-        rrca
-        rrca
-        rrca
-        rrca
-        call ph_d
-        pop af
-ph_d:   and $0F
-        add a,'0'
-        cp '9'+1
-        jr c,ph_o
-        add a,7
-ph_o:   jp pr_out
+        pop hl
+        ld h,0
+        jp pr_dec               ; "Error 42"
 
 ; pr_msg: print a bit-7-terminated string at HL directly to the screen
 pr_msg: ld a,(hl)
@@ -165,8 +155,8 @@ err_tab:
         defb 'K'+$80
         defb $FF                ; never matched: ERR_OK entry above catches $FF
 msg_err:
-        defm "Error "
-        defb '$'+$80
+        defm "Error"
+        defb ' '+$80
 msg_prog:
         defm "Program:"
         defb ' '+$80
