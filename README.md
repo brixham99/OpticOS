@@ -9,10 +9,10 @@
 The boot message reads:
 
 ```
-OpticOS (c) 2026 Optica Technology
+OpticOS (c) 2026 Optica Technology Design
 ```
 
-**Status: Phases 0–5 complete.** The planned feature list (after the cuts in spec §12) is built and fits the 16K ROM with 283 bytes to spare. The ROM boots, loads ordinary game tapes, runs structured OpticBASIC programs, and has a Sinclair-style line editor. Still to do before a v1.0: a user manual, an example tape and a check on real hardware and a real TV. The design is in the [specification (PDF)](docs/spec.pdf) ([Markdown](docs/spec.md)); §4.8 lists what is built.
+**Status: Phases 0–5 complete.** The planned feature list (after the cuts in spec §12) is built and fits the 16K ROM with 276 bytes to spare. The ROM boots, loads ordinary game tapes, runs structured OpticBASIC programs, and has a Sinclair-style line editor. Still to do before a v1.0: a user manual, an example tape and a check on real hardware and a real TV. The design is in the [specification (PDF)](docs/spec.pdf) ([Markdown](docs/spec.md)); §4.8 lists what is built.
 
 | Phase | What it delivered | Report |
 |---|---|---|
@@ -103,7 +103,7 @@ Fuse needs `--no-traps` so that its tape traps don't bypass the OpticOS tape rou
 
 ## ROM byte usage (Phase 5 complete)
 
-16,101 of 16,384 bytes are placed, leaving **283 free** (the rule is to keep at least 256 spare). By module, as `tools/check_layout.py` reports them:
+16,108 of 16,384 bytes are placed, leaving **276 free** (the rule is to keep at least 256 spare). By module, as `tools/check_layout.py` reports them:
 
 | Part | Bytes |
 |---|---:|
@@ -131,7 +131,7 @@ Fuse needs `--no-traps` so that its tape traps don't bypass the OpticOS tape rou
 | INPUT, DATA / READ / RESTORE | 183 |
 | Sound: BEEPER | 82 |
 | Fixed-address stubs (CHAN-OPEN, PR-STRING, PIXEL-ADD, $096F) | 78 |
-| Boot banner + version text, calls | 61 |
+| Boot banner + version text, calls | 68 |
 | Number output for the legacy shim and console (pr_dec, pr_hex) | 50 |
 
 The free bytes are spread over twelve gaps between the ROM's fixed addresses, the largest 62 bytes.
@@ -140,7 +140,7 @@ The free bytes are spread over twelve gaps between the ROM's fixed addresses, th
 
 The mock-up above matches the ROM's real boot screen pixel for pixel (the rig checks this). It is a faithful ZX Spectrum frame: 256×192 pixels of bitmap, with a 32-pixel black border, giving a 320×256 image (and a 3× nearest-neighbour upscale here so the text is readable). Paper is black, ink is white, bright is off.
 
-Row 0 is a colour bar made from attribute cells only: 16 swatches, each two cells wide, showing black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Row 1 is blank. Row 2 holds the banner, `OpticOS (c) 2026 Optica Technology`, and row 3 the BASIC's name and version, `OpticBASIC v0.1`. Row 4 is blank. Row 5 shows the OpticOS prompt `] ` with the cursor block (character 127) at column 2. `]` is the direct-mode prompt everywhere. Everything below the bar is white on black. The font has no copyright glyph — a © is illegible at 3 pixels wide — so the banner uses ASCII `(c)`, as the specification requires.
+Row 0 is a colour bar made from attribute cells only: 16 swatches, each two cells wide, showing black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Row 1 is blank. Row 2 holds the banner, `OpticOS (c) 2026 Optica Technology Design`, and row 3 the BASIC's name and version, `OpticBASIC v0.1`. Row 4 is blank. Row 5 shows the OpticOS prompt `] ` with the cursor block (character 127) at column 2. `]` is the direct-mode prompt everywhere. Everything below the bar is white on black. The font has no copyright glyph — a © is illegible at 3 pixels wide — so the banner uses ASCII `(c)`, as the specification requires.
 
 The native 1× frame is [`assets/opticos_boot.png`](assets/opticos_boot.png).
 

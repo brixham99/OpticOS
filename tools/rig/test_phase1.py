@@ -42,7 +42,7 @@ def t_boot():
     rows = T(s.text_rows(FONT))
     check('row 0 has no text (colour bar only)', rows[0] == '', repr(rows[0]))
     check('row 1 blank', rows[1] == '', repr(rows[1]))
-    check('boot banner text at row 2', rows[2] == 'OpticOS (c) 2026 Optica Technology', repr(rows[2]))
+    check('boot banner text at row 2', rows[2] == 'OpticOS (c) 2026 Optica Technology Design', repr(rows[2]))
     check('OpticBASIC version at row 3', rows[3] == 'OpticBASIC v0.1', repr(rows[3]))
     check('row 4 blank, row 5 prompt "] "', rows[4] == '' and rows[5] == ']', repr(rows[4:6]))
     check('rows 6-23 empty', all(r == '' for r in rows[6:]), '')

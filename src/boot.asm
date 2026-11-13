@@ -101,8 +101,8 @@ bt_nb:  ld (hl),a
         call chime
         jp console
 
-banner: defm "OpticOS (c) 2026 Optica Technolog"
-        defb 'y'+$80
+banner: defm "OpticOS (c) 2026 Optica Technology Desig"
+        defb 'n'+$80
 banner2: defm "OpticBASIC v0."
         defb '1'+$80
 

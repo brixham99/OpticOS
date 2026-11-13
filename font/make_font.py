@@ -1112,7 +1112,7 @@ SCREEN_W, SCREEN_H = 256, 192
 BORDER_X, BORDER_Y = 32, 32  # 320x256 inclusive of the border
 FRAME_W, FRAME_H = SCREEN_W + 2 * BORDER_X, SCREEN_H + 2 * BORDER_Y
 
-BANNER = "OpticOS (c) 2026 Optica Technology"
+BANNER = "OpticOS (c) 2026 Optica Technology Design"
 BANNER_ROW = 2
 BANNER_COL = 0
 BANNER2 = "OpticBASIC v0.1"

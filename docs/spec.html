@@ -5,7 +5,7 @@ pre{background:#f4f4f7;border:1px solid #dde;padding:6px;font-size:8.3pt;white-s
 @page{size:A4;margin:16mm 14mm}</style></head><body>
 <h1>OpticOS: design specification</h1>
 <p><strong>Version 0.8, 13 November 2026.</strong> The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. <strong>v0.6</strong> (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). <strong>v0.7</strong> (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). <strong>v0.8</strong> (phase 5c) records the last cuts as decision 13 (array parameters by reference, <code>CALL</code> register arguments, <code>CAT</code>, the OpticBASIC <code>SCREEN$</code> tape forms, <code>JOY</code>), builds CASE, EXIT, <code>ERROR n, msg$</code>, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2).
-Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>OpticOS (c) 2026 Optica Technology</code>.</p>
+Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>OpticOS (c) 2026 Optica Technology Design</code>.</p>
 <p>This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.</p>
 <hr />
 <h2>1. Goals and non-goals</h2>
@@ -871,7 +871,7 @@ row:  ld   a,(de)      ;  7
 </tr>
 <tr>
 <td>2</td>
-<td><code>OpticOS (c) 2026 Optica Technology</code>, white on black</td>
+<td><code>OpticOS (c) 2026 Optica Technology Design</code>, white on black</td>
 </tr>
 <tr>
 <td>3</td>
@@ -1076,7 +1076,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <td>2</td>
 <td>Boot banner + version text, calls</td>
-<td style="text-align: right;">61</td>
+<td style="text-align: right;">68</td>
 </tr>
 <tr>
 <td>3</td>
@@ -1201,12 +1201,12 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <td></td>
 <td><strong>Total</strong> (v0.2 budget: 15,374)</td>
-<td style="text-align: right;"><strong>16,101</strong></td>
+<td style="text-align: right;"><strong>16,108</strong></td>
 </tr>
 <tr>
 <td></td>
 <td><strong>Free (of 16,384)</strong></td>
-<td style="text-align: right;"><strong>283</strong> (margin rule: at least 256)</td>
+<td style="text-align: right;"><strong>276</strong> (margin rule: at least 256; 283 before the longer boot banner)</td>
 </tr>
 </tbody>
 </table>
@@ -1215,7 +1215,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <p><strong>Rebalance after phase 4 (v0.4).</strong> The full-screen editor (1,400) is replaced by a Sinclair-style line editor, built in 585 bytes and budgeted at 600. That recovers 800 bytes of the overrun. The ROM as built has 1,958 bytes free, spread over seven gaps (the largest now 397 bytes).</p>
 <p><strong>Rebalance in phase 5a (v0.6).</strong> ASN and ACS were dropped (−87 bytes with their keywords). INPUT, DATA/READ/RESTORE and SAVE/LOAD/VERIFY with CODE were built in 501 bytes (212 + 289), less than their budgets. The v0.4 projection had not counted the keyword table for the keywords still to come, so row 15–17 now includes about 270 bytes for them, and row 26 includes room for a few more messages.</p>
 <p><strong>Rebalance in phase 5b (v0.7).</strong> Nathan's cuts (decisions 8–11) remove MODE 32, UDG printing, CIRCLE, LABEL/GOTO, SOUND, SCREEN$(r,c), ATTR, POINT, FIND, CONT, ERRLINE and ERRPROC$ from the plan. The squeezes so far saved 222 bytes: GET-CHAR, NEXT-CHAR and an "integer expression" helper moved into the free restarts <code>$18</code>, <code>$20</code> and <code>$30</code>, so about 80 three-byte <code>CALL</code>s became one-byte <code>RST</code>s (186); RND keeps its state in registers (21); a shared "number 0–255" helper (15). Graphics, colours, BEEP, the string and machine functions and SWAP were then built in 820 bytes plus their keywords. The start-up chime (§6.7) adds 23 bytes. One planned squeeze was tried and rejected: sending small integers through the float path in STR$ saves 36 bytes but makes printing an integer about 15 times slower (about 80,000 T-states).</p>
-<p><strong>Rebalance in phase 5c (v0.8): the feature list is complete.</strong> Decision 13 drops array parameters by reference, <code>CALL</code> register arguments, <code>CAT</code>, the OpticBASIC <code>SCREEN$</code> tape forms and <code>JOY</code> (12 bytes back). The last maths squeezes save 39 bytes: COS from SIN (cos r = 2(½ − sin²(r/2)), one polynomial fewer), EXP with 8 coefficients instead of 9, and a shorter VAL digit loop. They cost some accuracy in SIN and COS (worst case 1.81 ulp, was 1.07; see docs/maths.md). The largest saving was not in the plan: RST <code>$28</code>, which raised "Calculator not supported", now enters the maths byte-code runner, so its 37 calls take one byte instead of three, and the message went too (about 99 bytes). CASE, EXIT, <code>ERROR n, msg$</code>, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO were then built in about 500 bytes with their keywords. The ROM has 283 bytes free, so the 256-byte margin is kept. Fixing a line-number bug in error reports cost 2 bytes.</p>
+<p><strong>Rebalance in phase 5c (v0.8): the feature list is complete.</strong> Decision 13 drops array parameters by reference, <code>CALL</code> register arguments, <code>CAT</code>, the OpticBASIC <code>SCREEN$</code> tape forms and <code>JOY</code> (12 bytes back). The last maths squeezes save 39 bytes: COS from SIN (cos r = 2(½ − sin²(r/2)), one polynomial fewer), EXP with 8 coefficients instead of 9, and a shorter VAL digit loop. They cost some accuracy in SIN and COS (worst case 1.81 ulp, was 1.07; see docs/maths.md). The largest saving was not in the plan: RST <code>$28</code>, which raised "Calculator not supported", now enters the maths byte-code runner, so its 37 calls take one byte instead of three, and the message went too (about 99 bytes). CASE, EXIT, <code>ERROR n, msg$</code>, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO were then built in about 500 bytes with their keywords. The ROM has 283 bytes free, so the 256-byte margin is kept. Fixing a line-number bug in error reports cost 2 bytes. The longer boot banner (<code>Optica Technology Design</code>, 7 more characters) then left 276 free.</p>
 <p>The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print logic costs about 100 bytes more than a plain 32-column printer, so the change of display gained roughly 200 bytes overall. Adding an 8×8 font at <code>$3D00</code> would bring the total to 16,142, leaving a margin of 242 (1.5%). That is too thin, so the font is left out for now (§12).</p>
 <h3>8.3 Benchmarks</h3>
 <ul>
@@ -1439,7 +1439,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tbody>
 <tr>
 <td>Boot</td>
-<td>Rig: the banner <code>OpticOS (c) 2026 Optica Technology</code> appears at row 0, read back with a Python decoder that converts screen bitmaps to text using our font. RAM test passes for 16K and 48K.</td>
+<td>Rig: the banner <code>OpticOS (c) 2026 Optica Technology Design</code> appears at row 0, read back with a Python decoder that converts screen bitmaps to text using our font. RAM test passes for 16K and 48K.</td>
 </tr>
 <tr>
 <td>Keyboard</td>

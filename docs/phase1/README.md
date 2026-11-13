@@ -29,7 +29,7 @@ Build it with `make` or `./build.sh`, which runs `pasmo --bin src/opticos.asm` a
 
 ### Boot screen
 
-Row 0 is a 16-swatch colour bar made from attribute cells only: normal black to white, then BRIGHT black to white, each swatch two cells wide. Row 1 is blank, row 2 holds `OpticOS (c) 2026 Optica Technology`, row 3 holds `OpticBASIC v0.1`, row 4 is blank, and row 5 shows the `] ` prompt with the cursor at column 2. The rig checks that the ROM's screen matches `assets/opticos_boot.png` exactly.
+Row 0 is a 16-swatch colour bar made from attribute cells only: normal black to white, then BRIGHT black to white, each swatch two cells wide. Row 1 is blank, row 2 holds `OpticOS (c) 2026 Optica Technology Design`, row 3 holds `OpticBASIC v0.1`, row 4 is blank, and row 5 shows the `] ` prompt with the cursor at column 2. The rig checks that the ROM's screen matches `assets/opticos_boot.png` exactly.
 
 ## Test results (rig, `test_phase1.py --ref 48.rom`)
 
@@ -37,7 +37,7 @@ Row 0 is a 16-swatch colour bar made from attribute cells only: normal black to 
 |---|---|---|
 | row 0 has no text (colour bar only) | PASS | '' |
 | row 1 blank | PASS | '' |
-| boot banner text at row 2 | PASS | 'OpticOS (c) 2026 Optica Technology' |
+| boot banner text at row 2 | PASS | 'OpticOS (c) 2026 Optica Technology Design' |
 | OpticBASIC version at row 3 | PASS | 'OpticBASIC v0.1' |
 | row 4 blank, row 5 prompt "] " | PASS | ['', ']'] |
 | rows 6-23 empty | PASS |  |

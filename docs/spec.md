@@ -1,7 +1,7 @@
 # OpticOS: design specification
 
 **Version 0.8, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. **v0.6** (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). **v0.7** (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). **v0.8** (phase 5c) records the last cuts as decision 13 (array parameters by reference, `CALL` register arguments, `CAT`, the OpticBASIC `SCREEN$` tape forms, `JOY`), builds CASE, EXIT, `ERROR n, msg$`, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2).
-Project, ROM and future repo name: **OpticOS**. Boot banner: `OpticOS (c) 2026 Optica Technology`.
+Project, ROM and future repo name: **OpticOS**. Boot banner: `OpticOS (c) 2026 Optica Technology Design`.
 
 This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.
 
@@ -508,7 +508,7 @@ The cold-start screen (layout agreed with Nathan, 13 November 2026) is:
 |---|---|
 | 0 | **Colour bar.** Attribute cells only, with no pixels set. There are 16 swatches, each 2 attribute cells wide, across all 32 columns: black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Bright black is included so the layout stays even. Each cell's ink equals its paper. |
 | 1 | Blank |
-| 2 | `OpticOS (c) 2026 Optica Technology`, white on black |
+| 2 | `OpticOS (c) 2026 Optica Technology Design`, white on black |
 | 3 | `OpticBASIC v0.1`, the name and version of the BASIC |
 | 4 | Blank |
 | 5 | The prompt `] `, with the cursor at column 2 |
@@ -630,7 +630,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 | # | Module | Bytes, as built (v0.8, phase 5 complete) |
 |---|---|---:|
 | 1 | Restarts, NMI, reset, RAM test, sysvars, channels | 300 |
-| 2 | Boot banner + version text, calls | 61 |
+| 2 | Boot banner + version text, calls | 68 |
 | 3 | Interrupt routine, keyboard scan, key tables | 355 |
 | 4 | 64-column print, control codes, colours, scroll, CLS, RST 16 | 578 |
 | 8 | Tape low level: SA-BYTES, LD-BYTES, edges, tape_ret | 310 |
@@ -655,8 +655,8 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 | 18 | String and machine functions: INSTR STRING$ HEX$ UPPER$ ERR$ IN USR DPEEK KEY FREE | 465 |
 | 28 | Fixed-address stubs (CHAN-OPEN, PR-STRING, PIXEL-ADD, $096F) | 78 |
 | 7 | 4-pixel font | 384 |
-| | **Total** (v0.2 budget: 15,374) | **16,101** |
-| | **Free (of 16,384)** | **283** (margin rule: at least 256) |
+| | **Total** (v0.2 budget: 15,374) | **16,108** |
+| | **Free (of 16,384)** | **276** (margin rule: at least 256; 283 before the longer boot banner) |
 
 The ROM builds its own version of this table (`build/bytes.md`, from `tools/check_layout.py`). The free bytes are spread over twelve gaps between the fixed addresses (the largest is 62 bytes).
 
@@ -668,7 +668,7 @@ The ROM builds its own version of this table (`build/bytes.md`, from `tools/chec
 
 **Rebalance in phase 5b (v0.7).** Nathan's cuts (decisions 8–11) remove MODE 32, UDG printing, CIRCLE, LABEL/GOTO, SOUND, SCREEN$(r,c), ATTR, POINT, FIND, CONT, ERRLINE and ERRPROC$ from the plan. The squeezes so far saved 222 bytes: GET-CHAR, NEXT-CHAR and an "integer expression" helper moved into the free restarts `$18`, `$20` and `$30`, so about 80 three-byte `CALL`s became one-byte `RST`s (186); RND keeps its state in registers (21); a shared "number 0–255" helper (15). Graphics, colours, BEEP, the string and machine functions and SWAP were then built in 820 bytes plus their keywords. The start-up chime (§6.7) adds 23 bytes. One planned squeeze was tried and rejected: sending small integers through the float path in STR$ saves 36 bytes but makes printing an integer about 15 times slower (about 80,000 T-states).
 
-**Rebalance in phase 5c (v0.8): the feature list is complete.** Decision 13 drops array parameters by reference, `CALL` register arguments, `CAT`, the OpticBASIC `SCREEN$` tape forms and `JOY` (12 bytes back). The last maths squeezes save 39 bytes: COS from SIN (cos r = 2(½ − sin²(r/2)), one polynomial fewer), EXP with 8 coefficients instead of 9, and a shorter VAL digit loop. They cost some accuracy in SIN and COS (worst case 1.81 ulp, was 1.07; see docs/maths.md). The largest saving was not in the plan: RST `$28`, which raised "Calculator not supported", now enters the maths byte-code runner, so its 37 calls take one byte instead of three, and the message went too (about 99 bytes). CASE, EXIT, `ERROR n, msg$`, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO were then built in about 500 bytes with their keywords. The ROM has 283 bytes free, so the 256-byte margin is kept. Fixing a line-number bug in error reports cost 2 bytes.
+**Rebalance in phase 5c (v0.8): the feature list is complete.** Decision 13 drops array parameters by reference, `CALL` register arguments, `CAT`, the OpticBASIC `SCREEN$` tape forms and `JOY` (12 bytes back). The last maths squeezes save 39 bytes: COS from SIN (cos r = 2(½ − sin²(r/2)), one polynomial fewer), EXP with 8 coefficients instead of 9, and a shorter VAL digit loop. They cost some accuracy in SIN and COS (worst case 1.81 ulp, was 1.07; see docs/maths.md). The largest saving was not in the plan: RST `$28`, which raised "Calculator not supported", now enters the maths byte-code runner, so its 37 calls take one byte instead of three, and the message went too (about 99 bytes). CASE, EXIT, `ERROR n, msg$`, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO were then built in about 500 bytes with their keywords. The ROM has 283 bytes free, so the 256-byte margin is kept. Fixing a line-number bug in error reports cost 2 bytes. The longer boot banner (`Optica Technology Design`, 7 more characters) then left 276 free.
 
 The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print logic costs about 100 bytes more than a plain 32-column printer, so the change of display gained roughly 200 bytes overall. Adding an 8×8 font at `$3D00` would bring the total to 16,142, leaving a margin of 242 (1.5%). That is too thin, so the font is left out for now (§12).
 
@@ -758,7 +758,7 @@ A magic byte and checksum on this area lets OpticOS detect corruption by machine
 
 | Suite | How it works |
 |---|---|
-| Boot | Rig: the banner `OpticOS (c) 2026 Optica Technology` appears at row 0, read back with a Python decoder that converts screen bitmaps to text using our font. RAM test passes for 16K and 48K. |
+| Boot | Rig: the banner `OpticOS (c) 2026 Optica Technology Design` appears at row 0, read back with a Python decoder that converts screen bitmaps to text using our font. RAM test passes for 16K and 48K. |
 | Keyboard | Inject matrix states. Check LAST_K, repeat and E mode. |
 | Print | Pixel-exact checks at odd and even columns, pair path, INVERSE/OVER, attribute-cell policy, scrolling. T-state counts per character recorded (target ≤ 850 T masked, ≤ 500 T pair). |
 | Maths | About 5,000 vectors against mpmath, with error in units of the last place. Integer fast path and overflow promotion. |
