@@ -23,6 +23,7 @@ lib.z_mic_count.restype = ctypes.c_long
 lib.z_ear_pos.restype = ctypes.c_long
 lib.z_tstates.restype = ctypes.c_longlong
 lib.z_run_until.argtypes = [ctypes.c_int, ctypes.c_longlong]
+lib.z_run_until2.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_longlong]
 
 # --- keyboard: (row, bit); rows $FE..$7F
 ROWS = ['^zxcv', 'asdfg', 'qwert', '12345', '09876', 'poiuy', '\nlkjh', ' #mnb']  # ^ caps, # sym
@@ -105,6 +106,7 @@ class Spectrum:
     def frame(self, n=1):
         for _ in range(n): lib.z_frame(); self.frames += 1
     def run_until(self, pc, tstates): return lib.z_run_until(pc, tstates)
+    def run_until2(self, pc1, pc2, tstates): return lib.z_run_until2(pc1, pc2, tstates)
     def call(self, addr, ret=0x5FF0, limit=50_000_000, **regs):
         """Call a ROM routine with registers; returns regs on return."""
         self.load(ret, b'\x18\xfe')           # JR $ sentinel

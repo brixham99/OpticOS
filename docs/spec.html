@@ -4,7 +4,7 @@ table{border-collapse:collapse;margin:.6em 0;width:100%;font-size:8.8pt}td,th{bo
 pre{background:#f4f4f7;border:1px solid #dde;padding:6px;font-size:8.3pt;white-space:pre-wrap;page-break-inside:avoid}code{font-family:'DejaVu Sans Mono',monospace;font-size:92%}
 @page{size:A4;margin:16mm 14mm}</style></head><body>
 <h1>OpticOS: design specification</h1>
-<p><strong>Version 0.11, 13 November 2026.</strong> The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. <strong>v0.6</strong> (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). <strong>v0.7</strong> (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). <strong>v0.8</strong> (phase 5c) records the last cuts as decision 13 (array parameters by reference, <code>CALL</code> register arguments, <code>CAT</code>, the OpticBASIC <code>SCREEN$</code> tape forms, <code>JOY</code>), builds CASE, EXIT, <code>ERROR n, msg$</code>, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2). <strong>v0.9</strong> removes the last UDG mentions (§4.7, §5.4, §6.1, §9), records <code>TAB(c)</code> as built, lengthens the boot banner to <code>OpticOS (c) 2026 Optica Technology Design</code>, records the measured nesting limits (§4.8), corrects §6.1 (codes 128–255 print as <code>?</code>; no block graphics) and points to the user manual (<code>docs/manual</code>). <strong>v0.10</strong> fixes PROG (<code>DPEEK 23635</code> now gives the program start, 24048), makes <code>ERROR n</code> without a message report <code>Error n</code>, enlarges the stacks below RAMTOP on 48K machines (decision 15), and completes the company name, Optica Technology Design. <strong>v0.11</strong> halves the 48K stacks (decision 15) and adds the example tape (<code>examples/</code>).
+<p><strong>Version 0.12, 13 November 2026.</strong> The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. <strong>v0.6</strong> (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). <strong>v0.7</strong> (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). <strong>v0.8</strong> (phase 5c) records the last cuts as decision 13 (array parameters by reference, <code>CALL</code> register arguments, <code>CAT</code>, the OpticBASIC <code>SCREEN$</code> tape forms, <code>JOY</code>), builds CASE, EXIT, <code>ERROR n, msg$</code>, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2). <strong>v0.9</strong> removes the last UDG mentions (§4.7, §5.4, §6.1, §9), records <code>TAB(c)</code> as built, lengthens the boot banner to <code>OpticOS (c) 2026 Optica Technology Design</code>, records the measured nesting limits (§4.8), corrects §6.1 (codes 128–255 print as <code>?</code>; no block graphics) and points to the user manual (<code>docs/manual</code>). <strong>v0.10</strong> fixes PROG (<code>DPEEK 23635</code> now gives the program start, 24048), makes <code>ERROR n</code> without a message report <code>Error n</code>, enlarges the stacks below RAMTOP on 48K machines (decision 15), and completes the company name, Optica Technology Design. <strong>v0.11</strong> halves the 48K stacks (decision 15) and adds the example tape (<code>examples/</code>). <strong>v0.12</strong> (after the v1.0 release) makes the tape routines safe under emulators that trap them (§3.1).
 Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>OpticOS (c) 2026 Optica Technology Design</code>.</p>
 <p>This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.</p>
 <hr />
@@ -124,6 +124,59 @@ Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>
 </tbody>
 </table>
 <p>OpticOS programs are saved as <strong>type 0</strong> headers, so tape catalogues still say "Program:". The data block begins with the 4-byte signature <code>"OB" $01 $00</code>. On LOAD, a type-0 block without this signature is a Sinclair BASIC program and is handed to the legacy loader (§3.4).</p>
+<p><strong>Tape traps (v0.12).</strong> Emulators that load <code>.tap</code> files instantly, or save them quickly, do it by trapping the ROM's tape routines at fixed addresses and returning through fixed points, without playing any signal. OpticOS keeps that layout so a trap either works or cannot misfire. The addresses come from Fuse's public source (<code>tape.c</code>, <code>z80/opcodes_base.c</code>) and the documented entry convention (IX = start, DE = length, A = flag, carry set = LOAD), not from the Sinclair code:</p>
+<table>
+<thead>
+<tr>
+<th>Address</th>
+<th>OpticOS has</th>
+<th>Used by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>$04C2</td>
+<td>SA-BYTES entry; the exit handler $053F is pushed first</td>
+<td>save traps at the entry</td>
+</tr>
+<tr>
+<td>$04D0</td>
+<td><code>EX AF,AF'</code> with A = flag and IX, DE as on entry</td>
+<td>Fuse's save trap, which resumes at $053E</td>
+</tr>
+<tr>
+<td>$053E</td>
+<td><code>RET</code> (pops the exit handler)</td>
+<td>return point of save traps</td>
+</tr>
+<tr>
+<td>$053F</td>
+<td><code>tape_ret</code>, the common exit: border, EI, BREAK check; safe to run twice</td>
+<td>traps that return into SA/LD-RET</td>
+</tr>
+<tr>
+<td>$0556</td>
+<td>LD-BYTES entry; DI, <code>EX AF,AF'</code>, then pushes $053F</td>
+<td>load traps at the entry</td>
+</tr>
+<tr>
+<td>$0562</td>
+<td>an instruction boundary, with the exit handler pushed and A' / F' set</td>
+<td>Spectranet-style load traps</td>
+</tr>
+<tr>
+<td>$056B</td>
+<td><code>RET NZ</code> reached with Z set, so never taken</td>
+<td>Fuse's load trap, which resumes at $05E2</td>
+</tr>
+<tr>
+<td>$05E2</td>
+<td><code>RET</code> (pops the exit handler)</td>
+<td>return point of load traps</td>
+</tr>
+</tbody>
+</table>
+<p>The legacy loader and OpticBASIC's LOAD read a header with one 17-byte call and a data block with one call of the header's length, as a trap expects. The tape signature <code>OB</code> $01 $00 lies at $0605 and the error-message table over $0767–$0808, so no OpticOS code is fetched where traps on the Sinclair ROM's higher-level tape entry points (the SAVE/LOAD command and header and block loading) would sit; LOAD reaches nothing at a published tape entry point before $0556. <code>tools/check_layout.py</code> checks the bytes, and <code>tools/rig/test_traps.py</code> loads and saves through emulated Fuse, entry and Spectranet traps. v1.0 lacked this layout and crashed on The Spectrum (Retro Games, 2024) when loading a <code>.tap</code>.</p>
 <h3>3.2 Fixed entry points</h3>
 <p>Each one is either the real routine or a 3-byte <code>JP</code> stub at the original address. Its register contract is documented and tested.</p>
 <table>
@@ -1558,6 +1611,6 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <li><strong>Agreed (Nathan, 13 Nov 2026): RST <code>$28</code> enters the OpticOS maths byte-code</strong> (it was "Calculator not supported", decision 5). The interpreter's 37 calls become one byte each, saving about 99 bytes with the message. Without this the ROM would have about 185 bytes free, below the 256-byte margin. Machine code that calls the Sinclair calculator fails on OpticOS either way, but it no longer stops with an error message.</li>
 <li><strong>Agreed (Nathan, 13 Nov 2026, v0.10; halved in v0.11): larger stacks on 48K.</strong> The workspace below RAMTOP is 4,864 bytes on a 48K machine (machine stack 2,048, control stack 2,048, value stack 512, direct line 256), up from 1,856, so recursion goes about four to five times deeper than before v0.10 (§4.8). It costs RAM, not ROM: FREE on a fresh 48K machine is 36,447 bytes (39,455 before v0.10; v0.10's 9,216-byte workspace left 32,095, and Nathan asked for the sizes to be halved). A 16K machine keeps a 2,048-byte workspace (512 / 768 / 512 / 256), because a large one would not fit. The sizes are in a 4-byte table for each RAM size (<code>ws_t48</code>, <code>ws_t16</code> in <code>src/vars.asm</code>, in 256-byte pages, so the value stack is 512, not half of 768), which CLEAR also uses for its check.</li>
 </ol>
-<p><em>End of specification v0.11.</em></p>
+<p><em>End of specification v0.12.</em></p>
 </body>
 </html>

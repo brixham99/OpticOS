@@ -1,6 +1,6 @@
 # OpticOS example tape
 
-`opticos_examples.tap` (and the same blocks as `opticos_examples.tzx`) holds ten OpticBASIC programs, each saved by the OpticOS ROM itself in its "Program:" format (a type-0 header, then data starting with the `OB` $01 $00 signature). Every program was loaded from the real tape signal in Fuse with traps off (`--no-traps --no-detect-loader --no-accelerate-loader`) and run; the screenshots are in `shots/`.
+`opticos_examples.tap` (and the same blocks as `opticos_examples.tzx`) holds ten OpticBASIC programs, each saved by the OpticOS ROM itself in its "Program:" format (a type-0 header, then data starting with the `OB` $01 $00 signature). Every program was loaded and run in Fuse, both from the real tape signal with traps off (`--no-traps --no-detect-loader --no-accelerate-loader`) and with Fuse's tape traps and loader acceleration on (its defaults); the screenshots in `shots/` are from the traps-off runs.
 
 ## Loading
 
@@ -31,5 +31,6 @@ The first seven are the verified examples from the user manual (`docs/manual`); 
     ./build.sh
     python3 examples/mktape.py        # types each program into the ROM in the test rig and records its SAVE
     python3 examples/fuse_verify.py   # loads and runs each one in Fuse, screenshots into shots/
+    python3 examples/fuse_verify.py --traps   # the same with Fuse's tape traps on (screenshots into build/shots_traps/)
 
 `mktape.py` checks every header name, the `OB` $01 $00 signature and the parity bytes before writing the tape.

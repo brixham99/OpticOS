@@ -16,10 +16,13 @@ def ensure_x():
         subprocess.Popen(['Xvfb', DISP, '-screen', '0', '800x600x24'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(1.5)
 class Fuse:
-    def __init__(self, rom, tape=None):
+    def __init__(self, rom, tape=None, traps=False):
+        # traps=False: real tape signal only.  traps=True: Fuse's defaults
+        # (tape traps, loader detection and loader acceleration all on).
         ensure_x()
-        args = ['fuse-sdl', '--machine', '48', '--rom-48', rom, '--no-traps', '--no-auto-load',
-                '--no-detect-loader', '--no-accelerate-loader', '--fastload', '--no-sound',
+        mode = ['--traps', '--detect-loader', '--accelerate-loader'] if traps else \
+               ['--no-traps', '--no-detect-loader', '--no-accelerate-loader']
+        args = ['fuse-sdl', '--machine', '48', '--rom-48', rom, '--no-auto-load'] + mode + ['--fastload', '--no-sound',
                 '--no-confirm-actions', '--no-statusbar', '--graphics-filter', 'normal']
         if tape: args += ['--tape', tape]
         self.p = subprocess.Popen(args, env=ENV, cwd=DATA, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
@@ -45,10 +48,14 @@ class Fuse:
     def close(self): self.p.terminate(); self.p.wait()
 
 if __name__ == '__main__':
+    # --traps: Fuse's defaults (tape traps, loader detection and acceleration);
+    # the tape is then started by Fuse itself, so F8 is not pressed.
+    TRAPS = '--traps' in sys.argv
+    sys.argv = [a for a in sys.argv if a != '--traps']
     rom, out = os.path.abspath(sys.argv[1]), sys.argv[2]
     os.makedirs(out, exist_ok=True)
     subprocess.run(['pkill', '-f', 'fuse-sdl.*opticos'])
-    f = Fuse(rom); time.sleep(3)
+    f = Fuse(rom, traps=TRAPS); time.sleep(3)
     f.shot(os.path.join(out, 'fuse_boot.png'))
     for k in 'hello':
         f.key(k)
@@ -56,11 +63,11 @@ if __name__ == '__main__':
     f.shot(os.path.join(out, 'fuse_console.png')); f.close()
     for tape in sys.argv[3:]:
         name = os.path.splitext(os.path.basename(tape))[0]
-        f = Fuse(rom, os.path.abspath(tape)); time.sleep(3)
+        f = Fuse(rom, os.path.abspath(tape), traps=TRAPS); time.sleep(3)
         for k in 'load': f.key(k)
         f.key('space'); f.key('p', mods=('Control_L',)); f.key('p', mods=('Control_L',))
         f.key('Return'); time.sleep(0.3)
-        f.key('F8')                      # play the tape
+        if not TRAPS: f.key('F8')        # play the tape
         t0 = time.time(); last = None; still = 0
         # wait for loading to finish: the screen stops changing, or the
         # tape's real-time length has passed (animated title screens)

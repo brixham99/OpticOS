@@ -41,7 +41,6 @@ tp_sig: ld hl,ob_sig
         ld bc,4
         ldir
         ret
-ob_sig: defb "OB",1,0
 
 ; SAVE "name" [CODE start, length]
 st_save:

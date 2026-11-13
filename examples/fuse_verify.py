@@ -9,7 +9,12 @@ ROOT = os.path.join(HERE, '..')
 sys.path.insert(0, os.path.join(ROOT, 'tools')); sys.path.insert(0, os.path.join(ROOT, 'tools', 'rig'))
 from fuse_phase1 import Fuse
 from fuse_phase2 import type_line
-OUT = os.path.join(HERE, 'shots'); os.makedirs(OUT, exist_ok=True)
+# --traps: Fuse's defaults (tape traps, loader detection and acceleration),
+# F8 not pressed; screenshots then go to build/shots_traps/.
+TRAPS = '--traps' in sys.argv
+sys.argv = [a for a in sys.argv if a != '--traps']
+OUT = os.path.join(ROOT, 'build', 'shots_traps') if TRAPS else os.path.join(HERE, 'shots')
+os.makedirs(OUT, exist_ok=True)
 ROM = os.path.abspath(os.path.join(ROOT, 'build', 'opticos.rom'))
 TAPE = os.path.join(HERE, 'opticos_examples.tap')
 def settle(f, t_min=8, t_max=240):
@@ -26,9 +31,9 @@ only = sys.argv[1:]
 for name in ['examples'] + list(RUNS) + ['hilo']:
     if only and name not in only: continue
     subprocess.run(['pkill', '-f', 'fuse-sdl'])
-    f = Fuse(ROM, TAPE); time.sleep(3)
+    f = Fuse(ROM, TAPE, traps=TRAPS); time.sleep(3)
     type_line(f, 'LOAD ""' if name == 'examples' else 'LOAD "%s"' % name)
-    f.key('F8')
+    if not TRAPS: f.key('F8')
     t = settle(f)
     f.shot(os.path.join(OUT, '%s_loaded.png' % name))
     if name in RUNS:

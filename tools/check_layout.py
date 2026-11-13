@@ -21,6 +21,16 @@ for k, v in FIXED.items():
     if sym.get(k) != v: fail('%s at %s, expected %04X' % (k, hex(sym.get(k, -1)), v))
 if (sym['PR_OUT'] >> 8) != 0x09: fail('PR_OUT must be in page $09 (POKE 23739,111)')
 if rom[0x096F] != 0xC9: fail('no RET at $096F')
+# tape-trap layout (see src/save.asm): Fuse-style traps and their return points
+for a, b, what in ((0x04D0, 0x08, "EX AF,AF' (save trap)"), (0x053E, 0xC9, 'RET (save trap return)'),
+                   (0x056B, 0xC0, 'RET NZ (load trap)'), (0x05E2, 0xC9, 'RET (load trap return)')):
+    if rom[a] != b: fail('no %s at %04X' % (what, a))
+if sym.get('tape_ret') != 0x053F: fail('tape_ret not at $053F')
+if sym.get('lb_wait') != 0x0568: fail('LD-BYTES prefix moved: $056B is no longer the RET NZ')
+# Fuse also traps EX AF,AF' at $0076 and RET NZ at $0111 (Timex) on any 48K ROM
+if not (sym['err_tab'] <= 0x0767 and sym['m_err_e'] > 0x0808): fail('error table no longer covers $0767-$0808')
+if sym.get('ob_sig') != 0x0605: fail('ob_sig not at $0605')
+if rom[0x0076] == 0x08 or rom[0x0111] == 0xC0: fail('stray Timex tape-trap opcode at $0076 / $0111')
 # each section end must not pass the next fixed point
 LIMITS = [('m_isr_e', 0x0066), ('secB_end', 0x03B5), ('secC_end', 0x04C2),
           ('secD_end', 0x0556), ('secE_end', 0x05E3), ('secF_end', 0x096F), ('secG_end', 0x0D6B),
@@ -39,7 +49,7 @@ MODS = [
   ('64-column print, control codes, colours, scroll, CLS, RST 16', '4', 1000,
       r('m_prt_s', 'm_prt_e') + r('m_cls_s', 'm_cls_e') + 3),
   ('Tape low level: SA-BYTES, LD-BYTES, edges, tape_ret', '8', 380,
-      r('m_sav_s', 'm_sav_e') + r('m_ld_s', 'm_ld_e') + r('m_edge_s', 'm_edge_e') + r('m_ld_s2', 'm_ld_e2')),
+      r('m_sav_s', 'm_sav_g') + r('trap_ret', 'm_sav_e') + r('m_ld_s', 'm_ld_e') + 1 + r('m_edge_s', 'm_edge_e') + r('m_ld_s2', 'm_ld_e2')),
   ('Sound: BEEPER', '10', 160, r('m_snd_s', 'm_snd_e')),
   ('Errors: RST 8 handler and messages', '26', 450, r('m_err_s', 'm_err_e')),
   ('Tape commands: SAVE / LOAD / VERIFY, CODE, headers, name match', '9', 520, r('m_tcmd_s', 'm_tcmd_e') + r('m_tp_s', 'm_tp_e')),

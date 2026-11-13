@@ -91,9 +91,9 @@ secE_end:
 ; ---------------------------------------------------------------- $05E3
         org $05E3
         include "edge.asm"
-        include "errors.asm"
-        include "tape.asm"
         include "misc2.asm"
+        include "errors.asm"            ; its message table covers $0767-$0808, so no
+        include "tape.asm"              ; code is fetched where LD-BLOCK-level traps sit
 secF_end:
 
 ; ---------------------------------------------------------------- $096F

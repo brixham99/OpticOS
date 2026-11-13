@@ -11,7 +11,7 @@ This manual describes OpticOS and OpticBASIC exactly as they are built. Every ex
 ## What you need
 
 - A 48K ZX Spectrum, or an emulator. OpticOS also starts on a 16K machine, with less room for programs.
-- The ROM file `opticos.rom` (16,384 bytes). In Fuse, start with `fuse --machine 48 --rom-48 opticos.rom --no-traps`. The `--no-traps` option matters: without it, Fuse loads and saves tapes behind the ROM's back. On real hardware the ROM goes in an EPROM in place of the original; this has not yet been tried.
+- The ROM file `opticos.rom` (16,384 bytes). In Fuse, start with `fuse --machine 48 --rom-48 opticos.rom --no-traps` to load from the real tape signal, as on a real Spectrum, or leave the tape traps on to load `.tap` files at once (this needs a ROM built after v1.0; v1.0 itself needs `--no-traps`). On real hardware the ROM goes in an EPROM in place of the original; this has not yet been tried.
 
 ## How this manual is laid out
 
@@ -495,7 +495,7 @@ BREAK and STOP cannot be caught; they always return to the prompt.
 
 # Tape
 
-OpticOS uses the standard Spectrum tape signal and headers, so its tapes can be read by other tools, and tape images (`.tap` and `.tzx`) work in emulators. In Fuse, turn the tape traps off (`--no-traps`) so that OpticOS's own routines do the work.
+OpticOS uses the standard Spectrum tape signal and headers, so its tapes can be read by other tools, and tape images (`.tap` and `.tzx`) work in emulators. Emulators that load `.tap` files instantly do it by trapping the ROM's tape routines. ROMs built after v1.0 keep the layout these traps expect, and have been tested with Fuse's traps on; The Spectrum from Retro Games has not yet been retested. With v1.0, turn the traps off in Fuse (`--no-traps`); on The Spectrum, v1.0 crashes when loading a `.tap`, so try the `.tzx` tape, which The Spectrum's manual says it plays in real time.
 
 | Command | What it does |
 |---|---|

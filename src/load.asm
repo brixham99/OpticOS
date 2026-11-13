@@ -8,20 +8,22 @@ LB_SYNMAX equ 222
 LB_BIT0   equ 180               ; bit 0 cycle about +14, bit 1 about +43
 LB_BITTH  equ 208
 m_ld_s:
-LD_BYTES:
-        ex af,af'               ; A' = flag, F' carry = load / verify
+LD_BYTES:                       ; (trap layout: see save.asm)
         di
+        ex af,af'               ; A' = flag, F' carry = load / verify
+        ld hl,tape_ret          ; exit handler ($053F) on the stack
+        push hl
         ld a,$0F
         out ($FE),a
-        ld hl,tape_ret
-        push hl
         in a,($FE)
-        rra
+        rra                     ; $0562: an instruction boundary
         and $20
         or $02
         ld c,a                  ; C bit 5 = EAR level, bits 0-2 = border
 lb_wait:
         ld h,0                  ; need 256 good pilot cycles in a row
+        cp a
+        ret nz                  ; $056B: never taken (Z set); load traps fire here
 lb_lead:
         ld b,LB_PIL0
         call LD_EDGE2
@@ -86,3 +88,5 @@ lb_nc:  ld a,$7F                ; time-out or BREAK?
         jr c,lb_wait            ; time-out: keep looking for a leader
         ret                     ; BREAK: carry clear, tape_ret reports it
 m_ld_e:
+        org $05E2
+        ret                     ; $05E2: load traps resume here

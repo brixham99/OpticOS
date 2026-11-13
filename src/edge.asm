@@ -28,6 +28,7 @@ le_lp:  ld a,$7F                ; 59 T per sample
         out ($FE),a
         scf
         ret
+ob_sig: defb "OB",1,0           ; (tape.asm) data at $0605, where SAVE-ETC-level traps sit
 m_edge_e:
 
 ; lb_byte: read 8 bits into L (via full-cycle widths), fold into parity H

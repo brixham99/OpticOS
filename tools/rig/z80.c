@@ -441,6 +441,16 @@ int z_run_until(int stop, long long n){
   }
   return 0;
 }
+/* As z_run_until, with two stop addresses: returns 1 or 2 for the one hit. */
+int z_run_until2(int s1, int s2, long long n){
+  long long end = TT + T + n;
+  while (TT + T < end) {
+    if (T >= FRAME) { T -= FRAME; TT += FRAME; int_pending = 1; halt_t = -1; }
+    if (!halted) { if (rPC.w == s1) return 1; if (rPC.w == s2) return 2; }
+    step();
+  }
+  return 0;
+}
 /* Single instruction step (no interrupts). Returns T-states used. */
 int z_step(void){ long t = T; exec(); ei_delay = 0; return (int)(T - t); }
 

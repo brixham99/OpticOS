@@ -73,8 +73,21 @@ sa_half:                        ; wait 13*B, then flip MIC and border
         out ($FE),a
         ret
 
-; tape_ret: common exit for SA-BYTES and LD-BYTES: restore the border,
-; re-enable interrupts and report BREAK (error D) if SPACE is held.
+; Tape-trap layout (v1.0.1).  Emulators that fast-load or fast-save .tap
+; files trap the tape routines at fixed addresses and return through fixed
+; points.  From Fuse's public source (tape.c, z80/opcodes_base.c): the save
+; trap fires on the EX AF,AF' at $04D0 (A = flag, IX, DE as on entry, the
+; exit handler on the stack) and resumes at $053E, which must be a RET; the
+; load trap fires on a RET NZ at $056B and resumes at the RET at $05E2.
+; Either RET pops the handler pushed on entry, tape_ret at $053F, which
+; other trapping interfaces (e.g. Spectranet) also return into.  tape_ret
+; can run twice without harm.  check_layout.py checks these bytes.
+m_sav_g:                        ; (zero-filled gap up to $053E)
+        org $053E
+trap_ret:
+        ret                     ; $053E: save traps resume here
+; tape_ret ($053F): common exit for SA-BYTES and LD-BYTES: restore the
+; border, re-enable interrupts and report BREAK (error D) if SPACE is held.
 tape_ret:
         ei
         push af
@@ -86,8 +99,8 @@ tape_ret:
         out ($FE),a
         ld a,$7F
         in a,($FE)
-        bit 0,a
-        jr z,tr_brk
+        rra                     ; carry clear = SPACE held
+        jr nc,tr_brk
         pop af
         ret
 tr_brk: rst 8
