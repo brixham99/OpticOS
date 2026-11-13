@@ -289,7 +289,7 @@ CON = [('PRINT "Hello, World!"', ['Hello, World!']),
        ('? 1/0', ['Division by zero']), ('? 1E38*10', ['Overflow']),
        ('? SQR -1', ['Bad argument']), ('? 2+', ['Syntax error']), ('foo', ['No such PROC or FN'])]
 con = {}
-s2 = Spectrum(ROM); s2.frame(80)
+s2 = Spectrum(ROM); s2.frame(150)
 def screen(sp): return [r.rstrip('\x7f').rstrip() for r in sp.text_rows(FONT)]
 for i, (line, want) in enumerate(CON):
     if i == 7:

@@ -1,6 +1,6 @@
 # OpticOS: design specification
 
-**Version 0.7, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. **v0.6** (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). **v0.7** (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built.
+**Version 0.7, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. **v0.6** (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). **v0.7** (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7).
 Project, ROM and future repo name: **OpticOS**. Boot banner: `OpticOS (c) 2026 Optica Technology`.
 
 This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.
@@ -512,6 +512,19 @@ The cold-start screen (layout agreed with Nathan, 13 November 2026) is:
 
 Rows 1–23 are white ink on black paper, and the border is black. **`]` followed by a space is the OpticOS direct-mode prompt everywhere.** It appears at boot and again whenever a command finishes or an error is reported. The prompt and its space use two of the 64 columns, so a console line holds up to 61 characters plus the cursor. The colour bar is an ordinary screen row, so it scrolls away with the console text. The mock-up is `assets/opticos_boot.png`, and the rig's boot test compares the ROM's screen with it pixel for pixel.
 
+**Start-up sound (v0.7, Nathan's request).** Once the boot screen is drawn, and before the first prompt accepts keys, OpticOS plays the BBC Micro's two power-on tones **in reverse order**, through the standard `BEEPER` routine (`chime`, 20 bytes of code, plus a 3-byte call from the boot code). The BBC sound is described, not copied. Its sources:
+
+- The low first tone is not produced by software. It is the SN76489 sound chip's power-on state, playing until the MOS initialises the 6522 VIA and silences the chip. Users on stardot ("Default sn76489 sound chip state", stardot.org.uk/forums/viewtopic.php?t=16106) measured about 900 ms of it, then about 50 ms of silence. The MDFS archive ("Only one beep", mdfsnet.f9.co.uk, 2009) explains the same thing. Its pitch is about **122 Hz**, the chip's lowest tone: 4 MHz / (32 × 1023) = 122.2 Hz.
+- The high second tone is an ordinary BELL (VDU 7). It sits after the RAM size ("16K" or "32K") in the start-up message, which is why only a hard reset beeps. The default BELL is SOUND pitch **101**, for duration **6** (twentieths of a second, so 0.3 s). Source: *Acorn Electron Advanced User Guide*, OSBYTE &D5/&D6, where the BBC MOS 1.2 defaults are the same. On the BBC User Guide's pitch scale (53 = middle C, 4 steps per semitone), pitch 101 is the C an octave above middle C, **523.25 Hz**.
+
+| | BBC Micro (cold boot) | OpticOS (reversed) |
+|---|---|---|
+| First | about 122 Hz, about 0.9 s | 523.25 Hz, 0.3 s (BEEPER DE=157, HL=806) |
+| Gap | about 50 ms | two frames (40 ms, `HALT` ×2) |
+| Second | 523.25 Hz, 0.3 s | 122.2 Hz, 0.9 s (DE=110, HL=3550) |
+
+The rig measures 523.3 Hz for 0.30 s, then 121.9 Hz for 0.90 s. The chime adds about 1.25 s to the cold start, with interrupts off while BEEPER runs. FRAMES does not advance during it, and keys pressed during it are not seen. The rigs now wait 150 frames, not 80, after power-on, and tape loading is unaffected because `LOAD ""` is typed after the prompt appears. Warm starts (NEW) do not play the sound.
+
 ---
 
 ## 7. Interpreter design
@@ -614,7 +627,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 | # | Module | v0.2 budget | Built after phase 5b | v0.7 budget |
 |---|---|---:|---:|---:|
 | 1 | Restarts (now holding GET-CHAR, NEXT-CHAR and an integer-expression helper), NMI, reset, RAM test, system-variable and channel init | 380 | 297 | 297 |
-| 2 | Boot banner plus the call to print it | 40 | 61 | 61 |
+| 2 | Boot banner plus the call to print it, and the call to the start-up chime | 40 | 64 | 64 |
 | 3 | Interrupt routine, keyboard scan, debounce and repeat, key tables | 520 | 355 | 355 |
 | 4 | 64-column print, control codes, AT/TAB, colours, scroll, cursor | 1,000 | 578 | 578 |
 | 5 | MODE 32 (dropped, decision 8) | 110 | – | 0 |
@@ -622,14 +635,14 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 | 7 | **4-pixel font, 96 glyphs, 2 per byte** | 384 | 384 | 384 |
 | 8 | Tape low level: SA-BYTES, LD-BYTES, edge routines | 380 | 310 | 310 |
 | 9 | Tape commands: SAVE/LOAD/VERIFY with CODE (built); SAVE AUTO, SCREEN$, CAT to come | 520 | 379 | 489 |
-| 10 | Sound and machine statements: BEEPER, BEEP, OUT, DPOKE, CALL, SWAP (SOUND dropped) | 160 | 278 | 278 |
+| 10 | Sound and machine statements: BEEPER, BEEP, start-up chime, OUT, DPOKE, CALL, SWAP (SOUND dropped) | 160 | 298 | 298 |
 | 11 | Graphics: PLOT, DRAW, DRAW TO (CIRCLE, POINT, ATTR, SCREEN$ dropped) | 620 | 238 | 238 |
 | 12 | Float core | 1,100 | 1,424 | 1,424 |
 | 13 | Number ↔ string, pr_dec / pr_hex | 550 | 788 | 788 |
 | 14 | Transcendentals, byte-code runner, coefficient tables | 950 | 1,222 | 1,222 |
 | 15–17 | Tokeniser, LIST auto-indent, keyword table, dispatch tables (about 11 keywords still to add) | 1,500 | 1,740 | 1,822 |
 | 18 | Expression evaluator and functions, including INSTR, STRING$, HEX$, UPPER$, ERR$, IN, USR, DPEEK, JOY (KEY, FREE to come) | 850 | 1,712 | 1,772 |
-| 19 | Interpreter core (EXIT, ERROR n,msg$, CLEAR, RUN/RESTORE procname, array parameters, CALL registers to come) | 1,550 | 2,195 | 2,505 |
+| 19 | Interpreter core (EXIT, ERROR n,msg$, CLEAR, RUN/RESTORE procname, array parameters, CALL registers to come) | 1,550 | 2,196 | 2,505 |
 | 20 | CASE / WHEN / OTHERWISE | 150 | – | 150 |
 | 21–22 | Variables, arrays, string heap and GC, value and control stacks | 1,150 | 1,275 | 1,275 |
 | 23 | INPUT, DATA/READ/RESTORE | 450 | 200 | 200 |
@@ -638,8 +651,8 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 | 26 | Errors: RST 8 unwind and messages | 450 | 502 | 522 |
 | 27 | Legacy loader shim (kept whole, decision 11) | 650 | 845 | 845 |
 | 28 | Fixed-address stubs | 200 | 78 | 78 |
-| | **Total** | **15,374** | **15,669** | **16,401** |
-| | **Margin (of 16,384)** | **1,010** | **715 free now** | **−17 (over)** |
+| | **Total** | **15,374** | **15,693** | **16,425** |
+| | **Margin (of 16,384)** | **1,010** | **691 free now** | **−41 (over)** |
 
 **Rebalance after phase 3 (v0.3).** The maths (items 12–14, +882 bytes) and the interpreter (items 15–22, +1,450 bytes) came out larger than the v0.2 estimates. As agreed, the size reduction is left to phase 5, and the budgets above now record what was built, with room kept for the features each module still lacks. The ROM built so far fits, with 2,543 bytes free (well above the 256-byte margin rule). The free space is in seven gaps between fixed addresses, the largest being 613 bytes, so later modules must be split to fit.
 
@@ -647,9 +660,9 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 
 **Rebalance in phase 5a (v0.6).** ASN and ACS were dropped (−87 bytes with their keywords). INPUT, DATA/READ/RESTORE and SAVE/LOAD/VERIFY with CODE were built in 501 bytes (212 + 289), less than their budgets. The v0.4 projection had not counted the keyword table for the keywords still to come, so row 15–17 now includes about 270 bytes for them, and row 26 includes room for a few more messages.
 
-**Rebalance in phase 5b (v0.7).** Nathan's cuts (decisions 8–11) remove MODE 32, UDG printing, CIRCLE, LABEL/GOTO, SOUND, SCREEN$(r,c), ATTR, POINT, FIND, CONT, ERRLINE and ERRPROC$ from the plan. The squeezes so far saved 222 bytes: GET-CHAR, NEXT-CHAR and an "integer expression" helper moved into the free restarts `$18`, `$20` and `$30`, so about 80 three-byte `CALL`s became one-byte `RST`s (186); RND keeps its state in registers (21); a shared "number 0–255" helper (15). Graphics, colours, BEEP, the string and machine functions and SWAP were then built in 820 bytes plus their keywords. One planned squeeze was tried and rejected: sending small integers through the float path in STR$ saves 36 bytes but makes printing an integer about 15 times slower (about 80,000 T-states).
+**Rebalance in phase 5b (v0.7).** Nathan's cuts (decisions 8–11) remove MODE 32, UDG printing, CIRCLE, LABEL/GOTO, SOUND, SCREEN$(r,c), ATTR, POINT, FIND, CONT, ERRLINE and ERRPROC$ from the plan. The squeezes so far saved 222 bytes: GET-CHAR, NEXT-CHAR and an "integer expression" helper moved into the free restarts `$18`, `$20` and `$30`, so about 80 three-byte `CALL`s became one-byte `RST`s (186); RND keeps its state in registers (21); a shared "number 0–255" helper (15). Graphics, colours, BEEP, the string and machine functions and SWAP were then built in 820 bytes plus their keywords. The start-up chime (§6.7) adds 23 bytes. One planned squeeze was tried and rejected: sending small integers through the float path in STR$ saves 36 bytes but makes printing an integer about 15 times slower (about 80,000 T-states).
 
-**Warning: the remainder is about 270 bytes short.** With the v0.7 budgets the finished ROM would need 16,401 bytes, 17 over 16,384, or about **273 bytes over** once the 256-byte margin is kept (the v0.6 projection was about 1,180 over). It can be closed by dropping array parameters by reference (about 80), `CALL` register arguments (30), `CAT` (45) and the `SCREEN$` tape forms (25), about 180 in total, plus the remaining maths squeezes (COS from SIN, fewer EXP terms, a smaller VAL digit loop; about 130, each needing the full mpmath run).
+**Warning: the remainder is about 300 bytes short.** With the v0.7 budgets the finished ROM would need 16,425 bytes, 41 over 16,384, or about **297 bytes over** once the 256-byte margin is kept (the v0.6 projection was about 1,180 over). It can be closed by dropping array parameters by reference (about 80), `CALL` register arguments (30), `CAT` (45) and the `SCREEN$` tape forms (25), about 180 in total, plus the remaining maths squeezes (COS from SIN, fewer EXP terms, a smaller VAL digit loop; about 130, each needing the full mpmath run).
 
 The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print logic costs about 100 bytes more than a plain 32-column printer, so the change of display gained roughly 200 bytes overall. Adding an 8×8 font at `$3D00` would bring the total to 16,142, leaving a margin of 242 (1.5%). That is too thin, so the font is left out for now (§12).
 

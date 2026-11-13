@@ -33,7 +33,7 @@ def T(rows):
     return [r.rstrip('\x7f').rstrip() for r in rows]
 
 def booted():
-    s = Spectrum(ROM); s.frame(80); return s
+    s = Spectrum(ROM); s.frame(150); return s
 
 # 1. boot screen against the mock-up layout
 def t_boot():
@@ -104,7 +104,7 @@ def t_keys():
 
 # 3. SA-BYTES: record MIC, decode, timing; round trip through LD-BYTES
 def save_block(rom, data, flag=0xFF):
-    s = Spectrum(rom); s.frame(80)
+    s = Spectrum(rom); s.frame(150)
     s.load(0x8000, data)
     s.mic_start(3)
     s.call(SYM['SA_BYTES'], limit=900_000_000, IX=0x8000, DE=len(data), AF=flag << 8)
@@ -125,7 +125,7 @@ def t_save():
     check('SA-BYTES output decodes to flag+data+parity', blocks and blocks[0] == want,
           '%d blocks, %d bytes' % (len(blocks), len(blocks[0]) if blocks else 0))
     pil = [x for x in p[:3000] if 1800 < x < 2600]
-    i = 3223 - 1
+    i = next(k for k in range(3000, 3400) if p[k] < 1000)   # first sync half
     s1, s2 = p[i], p[i + 1]
     bits = p[i + 2:i + 2 + 16 * 300]
     b0 = [x for x in bits if x < 1280]; b1 = [x for x in bits if x >= 1280]
@@ -140,7 +140,7 @@ def t_save():
     return p, want
 
 def load_block(rom, pulses, length, flag=0xFF, verify=False, ref=None):
-    s = Spectrum(rom); s.frame(80)
+    s = Spectrum(rom); s.frame(150)
     s.tape([NOTOGGLE | 35000] + pulses + [NOTOGGLE | 3500000])
     af = (flag << 8) | (0 if verify else 1)
     r = s.call(0x0556, limit=900_000_000, IX=0x8000, DE=length, AF=af)
@@ -165,7 +165,7 @@ def t_load():
 
 # 4. black-box comparisons with the reference ROM
 def edge_B(rom, P, b0=0):
-    s = Spectrum(rom); s.frame(80)
+    s = Spectrum(rom); s.frame(150)
     s.tape([P, NOTOGGLE | 3500000], play=False)
     import rig
     rig.lib.z_ear_play(1)

@@ -29,12 +29,12 @@ T_RUN        equ $9A
 T_LIST       equ $9B
 T_NEW        equ $9C
 T_BORDER     equ $9D
-T_INK        equ $9E
-T_PAPER      equ $9F
-T_FLASH      equ $A0
-T_BRIGHT     equ $A1
-T_INVERSE    equ $A2
-T_OVER       equ $A3
+T_OVER       equ $9E
+T_INVERSE    equ $9F
+T_BRIGHT     equ $A0
+T_FLASH      equ $A1
+T_PAPER      equ $A2
+T_INK        equ $A3
 T_POKE       equ $A4
 T_WAIT       equ $A5
 T_RANDOMIZE  equ $A6
@@ -142,12 +142,12 @@ kw_tab:
         defb 'L','I','S','T'+$80
         defb 'N','E','W'+$80
         defb 'B','O','R','D','E','R'+$80
-        defb 'I','N','K'+$80
-        defb 'P','A','P','E','R'+$80
-        defb 'F','L','A','S','H'+$80
-        defb 'B','R','I','G','H','T'+$80
-        defb 'I','N','V','E','R','S','E'+$80
         defb 'O','V','E','R'+$80
+        defb 'I','N','V','E','R','S','E'+$80
+        defb 'B','R','I','G','H','T'+$80
+        defb 'F','L','A','S','H'+$80
+        defb 'P','A','P','E','R'+$80
+        defb 'I','N','K'+$80
         defb 'P','O','K','E'+$80
         defb 'W','A','I','T'+$80
         defb 'R','A','N','D','O','M','I','Z','E'+$80

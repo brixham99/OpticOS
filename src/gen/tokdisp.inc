@@ -30,12 +30,12 @@ st_tab:
         defw st_list
         defw st_new
         defw st_border
-        defw st_ink
-        defw st_paper
-        defw st_flash
-        defw st_bright
-        defw st_inverse
         defw st_over
+        defw st_inverse
+        defw st_bright
+        defw st_flash
+        defw st_paper
+        defw st_ink
         defw st_poke
         defw st_wait
         defw st_randomize

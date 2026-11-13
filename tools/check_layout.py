@@ -56,7 +56,7 @@ MODS = [
   ('Line editor: marker, LIST around it, cursor up/down, EDIT', '24', 1400, r('m_edt_s', 'm_edt_e')),
   ('INPUT, DATA / READ / RESTORE', '25', 200, r('m_in_s', 'm_in_e')),
   ('Graphics: PLOT, DRAW, DRAW TO', '11', 620, r('m_gfx_s', 'm_gfx_e')),
-  ('BEEP, OUT, DPOKE, CALL, SWAP', '10', 300, r('m_msc_s', 'm_msc_e')),
+  ('BEEP, OUT, DPOKE, CALL, SWAP; start-up chime', '10', 300, r('m_msc_s', 'm_msc_e') + r('m_chm_s', 'm_chm_e')),
   ('String and machine functions: INSTR STRING$ HEX$ UPPER$ ERR$ IN USR DPEEK JOY', '18', 450, r('m_sfn_s', 'm_sfn_e') + r('m_sf2_s', 'm_sf2_e')),
   ('Fixed-address stubs (CHAN-OPEN, PR-STRING, PIXEL-ADD, $096F)', '28', 200,
       r('m_stb_s', 'm_stb_e') + r('m_stb_s2', 'm_stb_e2') + r('m_stb_s3', 'm_stb_e3') + 1),

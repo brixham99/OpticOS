@@ -39,7 +39,7 @@ All are from real [Fuse](https://fuse-emulator.sourceforge.net/) with traps and 
 
 - A drop-in 16K ROM for the 48K Spectrum, on emulators such as Fuse (not yet tried on real hardware).
 - **64-column text** in an original 4×8 font, with colours (`INK PAPER FLASH BRIGHT INVERSE OVER`, also inside PRINT), scrolling and `PRINT AT`/`TAB`.
-- **Graphics and sound:** `PLOT`, `DRAW dx,dy`, `DRAW TO x,y` on the full 256×192 screen, and `BEEP duration, pitch`.
+- **Graphics and sound:** `PLOT`, `DRAW dx,dy`, `DRAW TO x,y` on the full 256×192 screen, and `BEEP duration, pitch`. At a cold start it plays the BBC Micro's two power-on tones in reverse: 523 Hz for 0.3 s, then 122 Hz for 0.9 s (spec §6.7).
 - **OpticBASIC with no line numbers:**
   - named procedures and functions with parameters, dynamic `LOCAL` and recursion; procedures are called by bare name
   - block `IF` / `ELSEIF` / `ELSE` / `ENDIF`, `WHILE` / `WEND`, `REPEAT` / `UNTIL`, `FOR` / `NEXT`, and `TRY` / `CATCH` / `ENDTRY` error handling
@@ -102,11 +102,11 @@ Fuse needs `--no-traps` so that its tape traps don't bypass the OpticOS tape rou
 
 ## ROM byte usage (after Phase 5b)
 
-15,669 of 16,384 bytes are placed, leaving **715 free**. The largest parts:
+15,693 of 16,384 bytes are placed, leaving **691 free**. The largest parts:
 
 | Part | Bytes |
 |---|---:|
-| Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,343 |
+| Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,344 |
 | Tokeniser, keyword table, LIST | 1,740 |
 | Floating-point core | 1,424 |
 | Expression evaluator and functions | 1,326 |
@@ -121,11 +121,11 @@ Fuse needs `--no-traps` so that its tape traps don't bypass the OpticOS tape rou
 | Font (96 glyphs at 4×8) | 384 |
 | Tape commands: SAVE / LOAD / VERIFY | 379 |
 | Graphics: PLOT, DRAW | 238 |
-| BEEP, OUT, DPOKE, CALL, SWAP | 196 |
+| BEEP, OUT, DPOKE, CALL, SWAP, start-up chime | 216 |
 | INPUT, DATA / READ / RESTORE | 170 |
 | Everything else (restarts, keyboard, tape signal, beeper, fixed-address stubs) | 1,233 |
 
-On the [spec's budget](docs/spec.md#82-budget) after Nathan's cuts the remaining planned features are about 270 bytes too big for the ROM once a 256-byte safety margin is kept. [docs/phase5](docs/phase5/README.md) proposes how to close the gap.
+On the [spec's budget](docs/spec.md#82-budget) after Nathan's cuts the remaining planned features are about 300 bytes too big for the ROM once a 256-byte safety margin is kept. [docs/phase5](docs/phase5/README.md) proposes how to close the gap.
 
 ## The boot screen
 

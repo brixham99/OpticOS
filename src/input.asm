@@ -105,4 +105,18 @@ st_restore:
         ret
 st_data equ st_rem
 m_in_e:
+; chime: the start-up sound, the BBC Micro's two power-on tones in reverse
+; order: its BELL (pitch 101 = C5, 523.25 Hz, 6/20 s) first, then the
+; uninitialised SN76489's tone (4 MHz / 32 / 1023 = 122.2 Hz, about 0.9 s).
+; BEEPER: HL = 437500 / f - 30, DE = f * seconds.
+m_chm_s:
+chime:  ld de,157               ; 523.25 Hz x 0.3 s
+        ld hl,806
+        call BEEPER
+        halt                    ; a short gap, as between the BBC's tones
+        halt
+        ld de,110               ; 122.2 Hz x 0.9 s
+        ld hl,3550
+        jp BEEPER
+m_chm_e:
 

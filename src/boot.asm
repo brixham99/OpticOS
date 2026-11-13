@@ -98,6 +98,7 @@ bt_nb:  ld (hl),a
         ld de,0                 ; seed RND from FRAMES
         call fp_randomize
         call ws_init
+        call chime
         jp console
 
 banner: defm "OpticOS (c) 2026 Optica Technolog"

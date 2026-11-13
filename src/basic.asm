@@ -558,7 +558,7 @@ sp_lp:  rst $18
         jr z,sp_at
         cp T_TAB
         jr z,sp_tab
-        sub T_INK               ; INK PAPER FLASH BRIGHT INVERSE OVER n;
+        sub T_OVER              ; OVER INVERSE BRIGHT FLASH PAPER INK n;
         cp 6
         jr c,sp_col
         call ev_expr
@@ -570,7 +570,8 @@ sp_lp:  rst $18
         jr sp_lp
 sp_str: call s_print
         jr sp_lp
-sp_col: add a,16                ; as control codes 16-21
+sp_col: cpl                     ; as control codes 21-16 (21 - index)
+        add a,22
         push af
         rst $20
         call ev_u8

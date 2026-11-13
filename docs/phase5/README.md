@@ -28,6 +28,10 @@ Names are string expressions, padded to 10 characters, and `""` means "the first
 - **INPUT and READ share one variable-list loop**, and the tape commands share the name parser and the signature writer. LOAD reuses the legacy loader's header search, which gained a verify flag (+7 bytes). The new code was placed in the gaps after the error messages and after the line editor.
 - I did not do the remaining maths items from the phase 2 list (STR$ small-integer path, compare, COS from SIN, EXP terms, VAL, register xorshift; about 290 bytes in total). Each one needs the 3,000-case mpmath run and the RNG statistics checked again. Since the ROM still has room for the next features, they are better done when the space is actually needed.
 
+## Start-up chime
+
+As Nathan asked, the cold start now plays the BBC Micro's two power-on tones with the same pitches and durations, in reverse order. The BBC's tones are first the uninitialised SN76489, about 122 Hz for about 0.9 s, then the default BELL (pitch 101, duration 6), which is 523.25 Hz for 0.3 s. OpticOS plays 523.25 Hz for 0.3 s, a 40 ms gap, then 122.2 Hz for 0.9 s, using two BEEPER calls after the boot screen is drawn. That is 23 bytes, with no data table: the values are immediate operands. The rig measures 523.3 Hz / 0.30 s and 121.9 Hz / 0.90 s. Sources and figures are in spec §6.7. The chime makes the cold start about 1.25 s longer, so the rigs now wait 150 frames, not 80, before typing. The SA-BYTES timing test now finds the sync pulse rather than counting to a fixed index, because the chime leaves the speaker bit in the other state, which adds one edge. Bounce Ball and Mire Mare still load.
+
 ## Bytes
 
 | | Bytes |
@@ -120,13 +124,15 @@ Tried and rejected: sending small integers through the float path in STR$ would 
 | `IN(port)`, `OUT port, b`, `USR(addr)` (returns BC), `CALL addr`, `DPEEK(addr)`, `DPOKE addr, w`, `JOY` (Kempston port 31) | |
 | `SWAP a, b` | Numbers, integers, strings or array elements of the same type. Swapping strings re-points each heap block at its new owner. |
 
+**Clean-room note.** The first 5b commit (5fc484a) failed the 12-byte similarity check, and I pushed it before noticing. The six new colour keywords sat in the keyword table in the same order as in the Sinclair ROM's token table (INK PAPER FLASH BRIGHT INVERSE OVER), so their spellings formed matching 12-byte runs. The follow-up commit reverses their token order (OVER … INK, with PRINT mapping them to control codes 21 − index), and the check passes again. No code was copied; the match was keyword names in a shared order.
+
 ## Bytes
 
-ROM: **15,669 placed, 715 free** (14,899 / 1,485 after 5a). The new code is 238 (graphics) + 196 (BEEP, OUT, DPOKE, CALL, SWAP) + 386 (functions) + 49 (PRINT colours, colour statements, the console's colour reset) + 129 (keywords and dispatch entries), less the 222 bytes saved. The dispatch tables moved out of the full gap J2 into the last section.
+ROM: **15,693 placed, 691 free** (14,899 / 1,485 after 5a). The new code is 238 (graphics) + 196 (BEEP, OUT, DPOKE, CALL, SWAP) + 386 (functions) + 50 (PRINT colours, colour statements, the console's colour reset) + 129 (keywords and dispatch entries), less the 222 bytes saved, plus 23 for the start-up chime. The dispatch tables moved out of the full gap J2 into the last section.
 
 ## Budget (spec §8.2, v0.7)
 
-With the cuts, the remaining features (CASE, EXIT, `ERROR n, msg$`, CLEAR, RUN/RESTORE/SAVE AUTO with a PROC name, SCREEN$ tape forms, CAT, KEY, FREE, array parameters, CALL register arguments) are budgeted at about 730 bytes. The finished ROM would then be 16,401 bytes, **about 273 bytes over once the 256-byte margin is kept**. In v0.6 that figure was about 1,180. My proposal to close it: drop array parameters by reference (80), CALL register arguments (30), CAT (45) and the SCREEN$ tape forms (25), and do the remaining maths squeezes (about 130).
+With the cuts, the remaining features (CASE, EXIT, `ERROR n, msg$`, CLEAR, RUN/RESTORE/SAVE AUTO with a PROC name, SCREEN$ tape forms, CAT, KEY, FREE, array parameters, CALL register arguments) are budgeted at about 730 bytes. The finished ROM would then be 16,425 bytes, **about 297 bytes over once the 256-byte margin is kept**. In v0.6 that figure was about 1,180. My proposal to close it: drop array parameters by reference (80), CALL register arguments (30), CAT (45) and the SCREEN$ tape forms (25), and do the remaining maths squeezes (about 130).
 
 ## Tests
 

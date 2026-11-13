@@ -4,7 +4,7 @@ table{border-collapse:collapse;margin:.6em 0;width:100%;font-size:8.8pt}td,th{bo
 pre{background:#f4f4f7;border:1px solid #dde;padding:6px;font-size:8.3pt;white-space:pre-wrap;page-break-inside:avoid}code{font-family:'DejaVu Sans Mono',monospace;font-size:92%}
 @page{size:A4;margin:16mm 14mm}</style></head><body>
 <h1>OpticOS: design specification</h1>
-<p><strong>Version 0.7, 13 November 2026.</strong> The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. <strong>v0.6</strong> (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). <strong>v0.7</strong> (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built.
+<p><strong>Version 0.7, 13 November 2026.</strong> The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. <strong>v0.6</strong> (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). <strong>v0.7</strong> (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7).
 Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>OpticOS (c) 2026 Optica Technology</code>.</p>
 <p>This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.</p>
 <hr />
@@ -886,6 +886,38 @@ row:  ld   a,(de)      ;  7
 </tbody>
 </table>
 <p>Rows 1–23 are white ink on black paper, and the border is black. <strong><code>]</code> followed by a space is the OpticOS direct-mode prompt everywhere.</strong> It appears at boot and again whenever a command finishes or an error is reported. The prompt and its space use two of the 64 columns, so a console line holds up to 61 characters plus the cursor. The colour bar is an ordinary screen row, so it scrolls away with the console text. The mock-up is <code>assets/opticos_boot.png</code>, and the rig's boot test compares the ROM's screen with it pixel for pixel.</p>
+<p><strong>Start-up sound (v0.7, Nathan's request).</strong> Once the boot screen is drawn, and before the first prompt accepts keys, OpticOS plays the BBC Micro's two power-on tones <strong>in reverse order</strong>, through the standard <code>BEEPER</code> routine (<code>chime</code>, 20 bytes of code, plus a 3-byte call from the boot code). The BBC sound is described, not copied. Its sources:</p>
+<ul>
+<li>The low first tone is not produced by software. It is the SN76489 sound chip's power-on state, playing until the MOS initialises the 6522 VIA and silences the chip. Users on stardot ("Default sn76489 sound chip state", stardot.org.uk/forums/viewtopic.php?t=16106) measured about 900 ms of it, then about 50 ms of silence. The MDFS archive ("Only one beep", mdfsnet.f9.co.uk, 2009) explains the same thing. Its pitch is about <strong>122 Hz</strong>, the chip's lowest tone: 4 MHz / (32 × 1023) = 122.2 Hz.</li>
+<li>The high second tone is an ordinary BELL (VDU 7). It sits after the RAM size ("16K" or "32K") in the start-up message, which is why only a hard reset beeps. The default BELL is SOUND pitch <strong>101</strong>, for duration <strong>6</strong> (twentieths of a second, so 0.3 s). Source: <em>Acorn Electron Advanced User Guide</em>, OSBYTE &amp;D5/&amp;D6, where the BBC MOS 1.2 defaults are the same. On the BBC User Guide's pitch scale (53 = middle C, 4 steps per semitone), pitch 101 is the C an octave above middle C, <strong>523.25 Hz</strong>.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>BBC Micro (cold boot)</th>
+<th>OpticOS (reversed)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First</td>
+<td>about 122 Hz, about 0.9 s</td>
+<td>523.25 Hz, 0.3 s (BEEPER DE=157, HL=806)</td>
+</tr>
+<tr>
+<td>Gap</td>
+<td>about 50 ms</td>
+<td>two frames (40 ms, <code>HALT</code> ×2)</td>
+</tr>
+<tr>
+<td>Second</td>
+<td>523.25 Hz, 0.3 s</td>
+<td>122.2 Hz, 0.9 s (DE=110, HL=3550)</td>
+</tr>
+</tbody>
+</table>
+<p>The rig measures 523.3 Hz for 0.30 s, then 121.9 Hz for 0.90 s. The chime adds about 1.25 s to the cold start, with interrupts off while BEEPER runs. FRAMES does not advance during it, and keys pressed during it are not seen. The rigs now wait 150 frames, not 80, after power-on, and tape loading is unaffected because <code>LOAD ""</code> is typed after the prompt appears. Warm starts (NEW) do not play the sound.</p>
 <hr />
 <h2>7. Interpreter design</h2>
 <h3>7.1 The tokeniser</h3>
@@ -894,14 +926,14 @@ row:  ld   a,(de)      ;  7
 <p>The prepass runs at RUN, or at the first CONT after a load or edit. It takes about 30–60 ms per KB of program. In one linear pass it:</p>
 <ol>
 <li>Records every <code>DEF PROC</code> and <code>DEF FN</code> in a <strong>symbol table</strong> in a reserved RAM area just above the program: hash, name pointer and line address, 5 bytes each. It reports duplicates.</li>
-<li>Matches blocks with a small temporary stack and <strong>patches the link slots</strong>:
-   - <code>IF</code> → its <code>ELSEIF</code>, <code>ELSE</code> or <code>ENDIF</code>
-   - <code>ELSE</code> → <code>ENDIF</code>
-   - <code>WHILE</code> ↔ <code>WEND</code>
-   - <code>REPEAT</code> ← <code>UNTIL</code>
-   - <code>CASE</code> → each <code>WHEN</code> → <code>ENDCASE</code>
-   - <code>TRY</code> → <code>CATCH</code> → <code>ENDTRY</code>
-   - <code>DEF</code> → its end, so that execution can skip over definitions it falls into</li>
+<li>Matches blocks with a small temporary stack and <strong>patches the link slots</strong>:</li>
+<li><code>IF</code> → its <code>ELSEIF</code>, <code>ELSE</code> or <code>ENDIF</code></li>
+<li><code>ELSE</code> → <code>ENDIF</code></li>
+<li><code>WHILE</code> ↔ <code>WEND</code></li>
+<li><code>REPEAT</code> ← <code>UNTIL</code></li>
+<li><code>CASE</code> → each <code>WHEN</code> → <code>ENDCASE</code></li>
+<li><code>TRY</code> → <code>CATCH</code> → <code>ENDTRY</code></li>
+<li><code>DEF</code> → its end, so that execution can skip over definitions it falls into</li>
 <li>Reports structural errors before anything runs, for example "ENDIF without IF, line 40".</li>
 </ol>
 <p>At run time, a false <code>IF</code>, an exiting <code>WHILE</code> or a skipped <code>DEF</code> costs one pointer load. There are no scans.</p>
@@ -1045,10 +1077,10 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 </tr>
 <tr>
 <td>2</td>
-<td>Boot banner plus the call to print it</td>
+<td>Boot banner plus the call to print it, and the call to the start-up chime</td>
 <td style="text-align: right;">40</td>
-<td style="text-align: right;">61</td>
-<td style="text-align: right;">61</td>
+<td style="text-align: right;">64</td>
+<td style="text-align: right;">64</td>
 </tr>
 <tr>
 <td>3</td>
@@ -1101,10 +1133,10 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 </tr>
 <tr>
 <td>10</td>
-<td>Sound and machine statements: BEEPER, BEEP, OUT, DPOKE, CALL, SWAP (SOUND dropped)</td>
+<td>Sound and machine statements: BEEPER, BEEP, start-up chime, OUT, DPOKE, CALL, SWAP (SOUND dropped)</td>
 <td style="text-align: right;">160</td>
-<td style="text-align: right;">278</td>
-<td style="text-align: right;">278</td>
+<td style="text-align: right;">298</td>
+<td style="text-align: right;">298</td>
 </tr>
 <tr>
 <td>11</td>
@@ -1152,7 +1184,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <td>19</td>
 <td>Interpreter core (EXIT, ERROR n,msg$, CLEAR, RUN/RESTORE procname, array parameters, CALL registers to come)</td>
 <td style="text-align: right;">1,550</td>
-<td style="text-align: right;">2,195</td>
+<td style="text-align: right;">2,196</td>
 <td style="text-align: right;">2,505</td>
 </tr>
 <tr>
@@ -1215,23 +1247,23 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <td></td>
 <td><strong>Total</strong></td>
 <td style="text-align: right;"><strong>15,374</strong></td>
-<td style="text-align: right;"><strong>15,669</strong></td>
-<td style="text-align: right;"><strong>16,401</strong></td>
+<td style="text-align: right;"><strong>15,693</strong></td>
+<td style="text-align: right;"><strong>16,425</strong></td>
 </tr>
 <tr>
 <td></td>
 <td><strong>Margin (of 16,384)</strong></td>
 <td style="text-align: right;"><strong>1,010</strong></td>
-<td style="text-align: right;"><strong>715 free now</strong></td>
-<td style="text-align: right;"><strong>−17 (over)</strong></td>
+<td style="text-align: right;"><strong>691 free now</strong></td>
+<td style="text-align: right;"><strong>−41 (over)</strong></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Rebalance after phase 3 (v0.3).</strong> The maths (items 12–14, +882 bytes) and the interpreter (items 15–22, +1,450 bytes) came out larger than the v0.2 estimates. As agreed, the size reduction is left to phase 5, and the budgets above now record what was built, with room kept for the features each module still lacks. The ROM built so far fits, with 2,543 bytes free (well above the 256-byte margin rule). The free space is in seven gaps between fixed addresses, the largest being 613 bytes, so later modules must be split to fit.</p>
 <p><strong>Rebalance after phase 4 (v0.4).</strong> The full-screen editor (1,400) is replaced by a Sinclair-style line editor, built in 585 bytes and budgeted at 600. That recovers 800 bytes of the overrun. The ROM as built has 1,958 bytes free, spread over seven gaps (the largest now 397 bytes).</p>
 <p><strong>Rebalance in phase 5a (v0.6).</strong> ASN and ACS were dropped (−87 bytes with their keywords). INPUT, DATA/READ/RESTORE and SAVE/LOAD/VERIFY with CODE were built in 501 bytes (212 + 289), less than their budgets. The v0.4 projection had not counted the keyword table for the keywords still to come, so row 15–17 now includes about 270 bytes for them, and row 26 includes room for a few more messages.</p>
-<p><strong>Rebalance in phase 5b (v0.7).</strong> Nathan's cuts (decisions 8–11) remove MODE 32, UDG printing, CIRCLE, LABEL/GOTO, SOUND, SCREEN$(r,c), ATTR, POINT, FIND, CONT, ERRLINE and ERRPROC$ from the plan. The squeezes so far saved 222 bytes: GET-CHAR, NEXT-CHAR and an "integer expression" helper moved into the free restarts <code>$18</code>, <code>$20</code> and <code>$30</code>, so about 80 three-byte <code>CALL</code>s became one-byte <code>RST</code>s (186); RND keeps its state in registers (21); a shared "number 0–255" helper (15). Graphics, colours, BEEP, the string and machine functions and SWAP were then built in 820 bytes plus their keywords. One planned squeeze was tried and rejected: sending small integers through the float path in STR$ saves 36 bytes but makes printing an integer about 15 times slower (about 80,000 T-states).</p>
-<p><strong>Warning: the remainder is about 270 bytes short.</strong> With the v0.7 budgets the finished ROM would need 16,401 bytes, 17 over 16,384, or about <strong>273 bytes over</strong> once the 256-byte margin is kept (the v0.6 projection was about 1,180 over). It can be closed by dropping array parameters by reference (about 80), <code>CALL</code> register arguments (30), <code>CAT</code> (45) and the <code>SCREEN$</code> tape forms (25), about 180 in total, plus the remaining maths squeezes (COS from SIN, fewer EXP terms, a smaller VAL digit loop; about 130, each needing the full mpmath run).</p>
+<p><strong>Rebalance in phase 5b (v0.7).</strong> Nathan's cuts (decisions 8–11) remove MODE 32, UDG printing, CIRCLE, LABEL/GOTO, SOUND, SCREEN$(r,c), ATTR, POINT, FIND, CONT, ERRLINE and ERRPROC$ from the plan. The squeezes so far saved 222 bytes: GET-CHAR, NEXT-CHAR and an "integer expression" helper moved into the free restarts <code>$18</code>, <code>$20</code> and <code>$30</code>, so about 80 three-byte <code>CALL</code>s became one-byte <code>RST</code>s (186); RND keeps its state in registers (21); a shared "number 0–255" helper (15). Graphics, colours, BEEP, the string and machine functions and SWAP were then built in 820 bytes plus their keywords. The start-up chime (§6.7) adds 23 bytes. One planned squeeze was tried and rejected: sending small integers through the float path in STR$ saves 36 bytes but makes printing an integer about 15 times slower (about 80,000 T-states).</p>
+<p><strong>Warning: the remainder is about 300 bytes short.</strong> With the v0.7 budgets the finished ROM would need 16,425 bytes, 41 over 16,384, or about <strong>297 bytes over</strong> once the 256-byte margin is kept (the v0.6 projection was about 1,180 over). It can be closed by dropping array parameters by reference (about 80), <code>CALL</code> register arguments (30), <code>CAT</code> (45) and the <code>SCREEN$</code> tape forms (25), about 180 in total, plus the remaining maths squeezes (COS from SIN, fewer EXP terms, a smaller VAL digit loop; about 130, each needing the full mpmath run).</p>
 <p>The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print logic costs about 100 bytes more than a plain 32-column printer, so the change of display gained roughly 200 bytes overall. Adding an 8×8 font at <code>$3D00</code> would bring the total to 16,142, leaving a margin of 242 (1.5%). That is too thin, so the font is left out for now (§12).</p>
 <h3>8.3 Benchmarks</h3>
 <ul>
@@ -1432,11 +1464,11 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <li><strong>Emulator.</strong> Fuse 1.6.0 (<code>fuse-emulator-sdl</code> and <code>libspectrum8</code> debs in <code>/workspace/debs</code>), driven by <code>ultimate/miremare/tools/fusectl.py</code>, which gives a private Xvfb, xdotool keys and screenshots. Load the ROM with:
   <code>fuse-sdl --machine 48 --rom-48 /workspace/newrom/build/opticos.rom --no-traps --no-fastload file.tap</code>
   Fuse's tape traps assume the Sinclair loader internals, so the real-signal path (<code>--no-traps</code>) is the authority. A second pass with traps on records whether fast loading happens to work.</li>
-<li><strong>Headless rig.</strong> <code>z80core.c</code> / <code>libz80core.so</code> (copies in <code>spectrum-ball/tools</code> and <code>miremare/tools</code>), driven from Python through <code>spectest.py</code> and <code>headless.py</code>. Today the rig injects game code directly and <strong>does not implement IX/IY (DD/FD prefixes)</strong> or EAR input. Phase 0 extends it with:
-  1. the DD/FD/DDCB/FDCB opcodes (needed for LD-BYTES, whose contract is IX-based)
-  2. a ROM-boot mode from <code>$0000</code> with a 16K ROM write-protect
-  3. an EAR input pulse stream generated from a TAP (the standard timings) and a MIC/EAR output recorder that turns pulses back into TAP
-  4. memory-contention timing that is accurate enough for edge-loop tests.</li>
+<li><strong>Headless rig.</strong> <code>z80core.c</code> / <code>libz80core.so</code> (copies in <code>spectrum-ball/tools</code> and <code>miremare/tools</code>), driven from Python through <code>spectest.py</code> and <code>headless.py</code>. Today the rig injects game code directly and <strong>does not implement IX/IY (DD/FD prefixes)</strong> or EAR input. Phase 0 extends it with:</li>
+<li>the DD/FD/DDCB/FDCB opcodes (needed for LD-BYTES, whose contract is IX-based)</li>
+<li>a ROM-boot mode from <code>$0000</code> with a 16K ROM write-protect</li>
+<li>an EAR input pulse stream generated from a TAP (the standard timings) and a MIC/EAR output recorder that turns pulses back into TAP</li>
+<li>memory-contention timing that is accurate enough for edge-loop tests.</li>
 </ul>
 <h3>10.2 Build checks (<code>make check</code>)</h3>
 <ol>
@@ -1569,5 +1601,4 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <li><strong>Both squeezes are accepted</strong>: the remaining maths items, checked with the full 3,000-case run and the RND statistics, and shared argument parsing and RST helpers in the interpreter (§8.2).</li>
 </ol>
 <p><em>End of specification v0.7.</em></p>
-</body>
-</html>
+</body></html>
