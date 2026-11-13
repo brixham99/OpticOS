@@ -1,6 +1,6 @@
 # OpticOS: design specification
 
-**Version 0.1 (draft for Nathan's approval), 13 November 2026**
+**Version 0.2, 13 November 2026.** The six design decisions in §12 were agreed the same day.
 Project, ROM and future repo name: **OpticOS**. Boot banner: `OpticOS (c) 2026 Optica Technology`.
 
 This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.
@@ -103,7 +103,7 @@ Each one is either the real routine or a 3-byte `JP` stub at the original addres
 | `$1601` | CHAN-OPEN | A = stream (−3..15) | RST 16 users | stub |
 | `$203C` | PR-STRING | DE = address, BC = length | Common | stub |
 | `$22AA` | PIXEL-ADD | B = y, C = x, gives HL = address, A = bit | Some games | stub |
-| `$2D2B`/`$2DA2` | STACK-BC / FP-TO-BC | Only if the calculator stack is emulated. **Recommended: no** (§12). | | 0 |
+| `$2D2B`/`$2DA2` | STACK-BC / FP-TO-BC | Not provided. The calculator stack is not emulated (§12). | | 0 |
 
 The LD-EDGE timing is matched by black-box measurement: we feed pulses of known length and compare the returned B with the reference ROM in the rig. We do not read its code. The per-iteration loop time and the starting B values in LD-BYTES must match closely, so that turbo loaders which call `$05E7` with their own thresholds still work.
 
@@ -114,12 +114,12 @@ The LD-EDGE timing is matched by black-box measurement: we feed pulses of known 
 | Existing Sinclair BASIC programs | Type-ins and BASIC games | None. The legacy loader runs only the loader subset. |
 | Deep ROM calls (the calculator, `$0C0A` PO-MSG, `$1C82`-type syntax routines, mid-routine jumps) | A minority of games, and many utilities | Stubs for the top dozen (above). The rest are documented as unsupported. |
 | RST `$28` calculator byte-code | A few games and demos | Raise an error instead of crashing |
-| Sinclair 8×8 font at `$3D00` | Games that print with the ROM font, or set `CHARS=$3C00` and draw their own text | Option A (recommended): accept that it breaks. `MODE 32` uses pixel-doubled glyphs. Option B: an 8×8 font at `$3D00` costs +768 bytes (decision 1, §12). |
+| Sinclair 8×8 font at `$3D00` | Games that print with the ROM font, or set `CHARS=$3C00` and draw their own text | Accepted: it breaks. `MODE 32` uses pixel-doubled glyphs. There is no 8×8 font at `$3D00` for now; it may be revisited in Phase 5 if the margin allows (§12). |
 | ROM checksums, or using ROM bytes as random data or sound | Copy protection and rare effects | None (different but harmless) |
 | Sinclair's 32-column print layout | Loaders that `PRINT AT` assuming 32 columns, through the legacy shim | The legacy shim forces `MODE 32` while it runs |
 | ZX Printer (`LPRINT`/`COPY`) | Negligible | Dropped |
 
-### 3.4 Legacy loader shim (recommended)
+### 3.4 Legacy loader shim
 
 Almost every commercial tape starts with a short BASIC loader. Both of our own test tapes do. Here are the Bounce Ball and Mire Mare loaders, decoded from the TAPs:
 
@@ -136,9 +136,9 @@ The shim is a very small interpreter for Sinclair-tokenised programs. It loads t
 
 Anything else stops with "Legacy BASIC: unsupported statement". The cost is about 650 bytes. Sinclair's token numbers for these keywords are a published interface, so recognising them is fine.
 
-### 3.5 Recommendation
+### 3.5 Policy (agreed)
 
-Keep the tape format and the entry-point table above, put a `RET` at `$096F`, and include the legacy shim. Drop RST `$28`, the calculator stack and the 8×8 ROM font unless the margin allows the font in Phase 5.
+Keep the tape format and the entry-point table above, put a `RET` at `$096F`, and include the legacy shim. Do not emulate RST `$28` or the calculator stack. There is no 8×8 ROM font for now; it may be revisited in Phase 5 if the margin allows (§12).
 
 ---
 
@@ -436,7 +436,7 @@ That is 53 T per row (69 with the swap), so **424–552 T for the 8 rows**. Setu
 - If `CHARS` holds its default value, glyphs are the 4-pixel font with each pixel doubled horizontally, using a 16-byte nibble-to-byte table. That is chunky but readable, and it costs no font storage.
 - If a program has pointed `CHARS` at an 8×8 font in RAM, as games and the legacy shim might, that font is used directly.
 
-The cost is about **110 bytes**: the table plus the extra paths. The alternative is a full 8×8 ROM font at `$3D00`, at **+768 bytes**. It would look better in MODE 32 and restore `$3D00` compatibility, but it leaves only about 240 bytes of margin (decision 1).
+The cost is about **110 bytes**: the table plus the extra paths. A full 8×8 ROM font at `$3D00` would look better in MODE 32 and restore `$3D00` compatibility, but at **+768 bytes** it would leave only about 240 bytes of margin, so it is not included for now. It may be revisited in Phase 5 if the margin allows (§12).
 
 ### 6.4 Attributes at 64 columns: colour-clash policy
 
@@ -620,7 +620,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 | | **Total** | **15,374** |
 | | **Margin (of 16,384)** | **1,010 (6.2%)** |
 
-The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print logic costs about 100 bytes more than a plain 32-column printer, so the change of display gained roughly 200 bytes overall. Adding the optional 8×8 font at `$3D00` would bring the total to 16,142, leaving a margin of 242 (1.5%). That is too thin unless something is cut.
+The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print logic costs about 100 bytes more than a plain 32-column printer, so the change of display gained roughly 200 bytes overall. Adding an 8×8 font at `$3D00` would bring the total to 16,142, leaving a margin of 242 (1.5%). That is too thin, so the font is left out for now (§12).
 
 ### 8.3 Benchmarks
 
@@ -733,19 +733,21 @@ A "session" means one long working block, as with Mire Mare.
 | **2. Maths** | Float core, conversions, byte-code runner, transcendentals, RND | Maths library plus the mpmath test report | 2 sessions |
 | **3. Interpreter** | Tokeniser and detokeniser, prepass, evaluator, statements, PROC/FN/LOCAL, loops, TRY, strings and GC, arrays, graphics, sound, tape commands, console-based direct mode | Sample programs run. Benchmark report against Sinclair. | 3–4 sessions |
 | **4. Editor** | Full-screen 64×24 editor, keys, wrap, find, clipboard, status bar, error jump | Editor test suite. Demo GIF. | 2 sessions |
-| **5. Polish** | CASE, size squeeze, decision on the 8×8 font, user manual (PDF, in the Mire Mare style), example tape, a check on a real TV via Nathan | `opticos.rom` v1.0, manual, examples. The repo is **OpticOS**, created only with Nathan's go-ahead. | 1–2 sessions |
+| **5. Polish** | CASE, size squeeze, a possible revisit of the 8×8 font if the margin allows, user manual (PDF, in the Mire Mare style), example tape, a check on a real TV via Nathan | `opticos.rom` v1.0, manual, examples. The repo is **OpticOS**, created only with Nathan's go-ahead. | 1–2 sessions |
 
 The total is about **12–14 sessions**, which is larger than Mire Mare. Phase 1 is a useful stopping point on its own: it proves the hardware layer and tape compatibility before any BASIC exists.
 
 ---
 
-## 12. Open decisions for Nathan
+## 12. Decisions (agreed 13 Nov 2026)
 
-1. **8×8 font at `$3D00` (+768 bytes)?** *Recommendation: no.* Ship the 4-pixel font only and get MODE 32 by pixel doubling. Revisit in Phase 5 if the margin allows. Without it, games that draw text from the ROM font show garbage.
-2. **Include the legacy loader shim (about 650 bytes)?** *Recommendation: yes.* Without it, almost no commercial tape, including Bounce Ball and Mire Mare, loads with `LOAD ""`.
-3. **Error handling: TRY/CATCH or ON ERROR?** *Recommendation: TRY/CATCH/ENDTRY plus `ERROR n`.* It is structured, it fits the no-line-number style, and it costs about the same.
-4. **Procedure call syntax: bare names (`move`) or BBC-style (`PROC move`)?** *Recommendation: bare names.* They look modern, the prepass resolves them, and the cost is a small lookup on the first identifier of a statement.
-5. **Emulate the RST `$28` calculator?** *Recommendation: no.* It would cost 600 bytes or more, and few games use it. RST `$28` raises a clean error instead.
-6. **Variable scoping: dynamic LOCAL (BBC-style) or true lexical scope?** *Recommendation: dynamic.* Lexical scope would need per-PROC symbol tables, at about 300 bytes plus a slower lookup.
+Nathan agreed all six recommendations on 13 November 2026.
 
-*End of specification v0.1.*
+1. **No 8×8 font at `$3D00` for now.** Ship the 4-pixel font only and get MODE 32 by pixel doubling. Revisit in Phase 5 if the margin allows. Without it, games that draw text from the ROM font show garbage.
+2. **Include the legacy loader shim (about 650 bytes).** Without it, almost no commercial tape, including Bounce Ball and Mire Mare, loads with `LOAD ""`.
+3. **Error handling is `TRY`/`CATCH`/`ENDTRY` plus `ERROR n`.** It is structured, it fits the no-line-number style, and it costs about the same as `ON ERROR`.
+4. **Procedures are called by bare name** (`move`, not `PROC move`). They look modern, the prepass resolves them, and the cost is a small lookup on the first identifier of a statement.
+5. **Do not emulate the RST `$28` calculator.** It would cost 600 bytes or more, and few games use it. RST `$28` raises a clean error instead.
+6. **`LOCAL` is dynamic, in the BBC style**, not true lexical scope. Lexical scope would need per-PROC symbol tables, at about 300 bytes plus a slower lookup.
+
+*End of specification v0.2.*
