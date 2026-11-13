@@ -4,7 +4,7 @@
 
 *A clean-room replacement 16K ROM for the 48K ZX Spectrum.*
 
-**OpticOS** is a new operating environment and BASIC, **OpticBASIC**, for the Sinclair ZX Spectrum. It boots from a 16,384-byte ROM, just as the original did, but the language has no line numbers: you write named procedures and functions in a full-screen editor, on a 64-column display that uses a condensed 4-pixel font.
+**OpticOS** is a new operating environment and BASIC, **OpticBASIC**, for the Sinclair ZX Spectrum. It boots from a 16,384-byte ROM, just as the original did, but the language has no line numbers: you write named procedures and functions with a Sinclair-style line editor, on a 64-column display that uses a condensed 4-pixel font.
 
 The boot message reads:
 
@@ -12,28 +12,108 @@ The boot message reads:
 OpticOS (c) 2026 Optica Technology
 ```
 
-Status: **Phase 4 complete** (Sinclair-style line editor). Phase 1 brought boot, screen, keyboard, tape and the legacy loader: the ROM boots in Fuse and in the headless rig, and loads ordinary game tapes with `LOAD ""` from a real tape signal, with traps off. Phase 2 added clean-room floating point. Phase 3 adds the tokenised interpreter without line numbers: variables, strings, arrays, IF/ELSEIF/ELSE/ENDIF, WHILE, REPEAT, FOR, PROCs called by bare name, FNs, dynamic LOCAL, TRY/CATCH/ERROR and an indenting LIST. Phase 4 adds a ZX-style line editor: `AUTO` to type lines, a `>` marker on the current line in LIST, cursor up/down to move it and EDIT to change it. The design is in [`docs/spec.md`](docs/spec.md). The reports are in [`docs/phase1/`](docs/phase1/README.md), [`docs/phase2/`](docs/phase2/README.md) and [`docs/phase3/`](docs/phase3/README.md) and [`docs/phase4/`](docs/phase4/README.md), and the maths API is in [`docs/maths.md`](docs/maths.md).
+**Status: Phases 0–4 complete.** The ROM boots, loads ordinary game tapes, runs structured OpticBASIC programs, and has a Sinclair-style line editor. Phase 5 (size squeeze and the remaining statements) is next. The design is in the [specification (PDF)](docs/spec.pdf) ([Markdown](docs/spec.md)); §4.8 lists what is built and what is not yet.
 
-## Building
+| Phase | What it delivered | Report |
+|---|---|---|
+| 0–1 | Test rig, boot, 64-column screen, keyboard, tape, compatibility entry points, legacy loader (`LOAD ""` loads real game tapes, traps off) | [docs/phase1](docs/phase1/README.md) |
+| 2 | Clean-room floating point: + − × ÷, SQR, SIN/COS/TAN/ATN, EXP/LN, STR$/VAL, RND | [docs/phase2](docs/phase2/README.md), [maths API](docs/maths.md) |
+| 3 | Tokenised interpreter with no line numbers | [docs/phase3](docs/phase3/README.md) |
+| 4 | ZX-style line editor: current-line marker, EDIT, AUTO | [docs/phase4](docs/phase4/README.md) |
+
+## Screenshots
+
+All are from real [Fuse](https://fuse-emulator.sourceforge.net/) with traps and loader acceleration off.
+
+| Boot | Direct mode |
+|---|---|
+| ![Boot screen in Fuse](docs/phase1/fuse_boot.png) | ![PRINT in direct mode](docs/phase2/fuse_hello.png) |
+| **A structured program, LIST and RUN** | **The line editor: marker and EDIT** |
+| ![LIST and RUN of a program](docs/phase3/fuse_program.png) | ![Editing the current line](docs/phase4/fuse_edit.png) |
+
+## What works today
+
+- A drop-in 16K ROM for the 48K Spectrum, on emulators such as Fuse (not yet tried on real hardware).
+- **64-column text** in an original 4×8 font, with colours, scrolling and `PRINT AT`/`TAB`.
+- **OpticBASIC with no line numbers:**
+  - named procedures and functions with parameters, dynamic `LOCAL` and recursion; procedures are called by bare name
+  - block `IF` / `ELSEIF` / `ELSE` / `ENDIF`, `WHILE` / `WEND`, `REPEAT` / `UNTIL`, `FOR` / `NEXT`, and `TRY` / `CATCH` / `ENDTRY` error handling
+  - floats, 16-bit integers (`a%`), strings up to 255 characters with a garbage-collected heap, and arrays of up to 3 dimensions
+  - the usual maths and string functions, plus `INKEY$`, `FRAMES`, `MAX`, `MIN`, hex (`&FF`) and binary (`%1010`) literals
+  - an indenting `LIST`: the indentation is not stored but recomputed from the block structure
+- **Keywords are typed letter by letter** and tokenised on entry. The keyword legends on the keys are ignored.
+- **Tape compatibility.** The standard ROM tape format and entry points (`LD-BYTES`, `SA-BYTES`, `BEEPER`, the RST vectors and others) are kept, so `LOAD ""` loads ordinary games, including ones with a BASIC loader, through a small legacy shim.
+- **Clean-room implementation.** OpticOS contains no Sinclair, Amstrad or Tasword code or artwork. A build check confirms that no run of 12 or more bytes is shared with the original ROM.
+
+Still to come (Phase 5): `INPUT`, `DATA`/`READ`, `SAVE`/`VERIFY`, graphics (`PLOT`, `DRAW`, `CIRCLE`), `BEEP`, `CASE`, `EXIT`, `SWAP`, `INSTR`, `STRING$`, `HEX$`, `UPPER$`, `ERR$`, and `MODE 32`/UDGs from BASIC.
+
+## A short example
 
 ```
-make                # or ./build.sh : assembles build/opticos.rom (16,384 bytes) with pasmo
+] AUTO
++ DEF fib(n)
++ IF n<2 THEN RETURN n
++ RETURN fib(n-1)+fib(n-2)
++ ENDFN
++ FOR i=1 TO 10
++ PRINT fib(i);" ";
++ NEXT
++
+] RUN
+1 1 2 3 5 8 13 21 34 55
+```
+
+`AUTO` starts line entry, and the empty line at the end stops it. Anything typed at the `]` prompt runs at once.
+
+## The line editor
+
+There is no full-screen editor. Editing follows the ZX BASIC pattern: the program has a **current line**, shown with `>` in a LIST, and you edit it in place.
+
+| Key | Action |
+|---|---|
+| `AUTO`, then ENTER on an empty line | Start, then stop, entering lines. Each new line goes in after the current one. |
+| `LIST` | List the program with `>` on the current line |
+| CAPS+7 / CAPS+6 | Move the marker up / down and relist around it |
+| CAPS+1 (EDIT) | Copy the current line into the input line (prompt `*`), then ENTER to replace it |
+| EDIT, EDIT, ENTER | Delete the current line |
+| CAPS+5 / CAPS+8 | Cursor left / right in the input line (up to 126 characters, two rows) |
+| CAPS+0 | Delete the character to the left of the cursor |
+| SYMBOL SHIFT + key | The red symbol on the key (`"` `=` `+` `<` `;` …) |
+| CAPS+SPACE | BREAK |
+
+When a program stops with an error, the failing line becomes the current line, so EDIT brings it straight up.
+
+## Building and running
+
+```
+make                # or ./build.sh: assembles build/opticos.rom (16,384 bytes) with pasmo and checks the layout
 make check          # headless rig tests (add REF=/path/to/48.rom for the reference comparisons)
-fuse-sdl --machine 48 --rom-48 build/opticos.rom --no-traps
+fuse-sdl --machine 48 --rom-48 build/opticos.rom --no-traps --no-detect-loader --no-accelerate-loader
 ```
 
-`build/` is gitignored. You need `pasmo` 0.5.3, `gcc` and Python 3 with Pillow.
+Fuse needs `--no-traps` so that its tape traps don't bypass the OpticOS tape routines. The two loader flags make tapes load in real time, which is how the tests run. `build/` is gitignored. You need `pasmo` 0.5.3, `gcc` and Python 3 with Pillow.
 
-## Planned features
+## ROM byte usage (after Phase 4)
 
-- A drop-in 16K ROM image for the 16K and 48K Spectrum, for real hardware and for emulators such as Fuse.
-- **OpticBASIC**, a structured BASIC with no line numbers: named procedures and functions with parameters and `LOCAL`, block `IF` / `ELSEIF` / `ELSE` / `ENDIF`, `WHILE`, `REPEAT`, `FOR`, `CASE`, labels in place of line-number `GOTO`, and `TRY` / `CATCH` error handling.
-- **64-column text** as the default, using an original 4×8 condensed font (in the spirit of Tasword Two, but drawn from scratch), with a `MODE 32` switch.
-- A **full-screen editor**. Keywords are typed letter by letter and tokenised; there is no single-key keyword entry.
-- **Tape compatibility.** The standard ROM tape encoding is kept, so ordinary TAP and TZX files load, and files saved by OpticOS load on other tools.
-- **Machine-code compatibility** at the cheap, well-known entry points: the RST vectors, IM 1, NMI, `LD-BYTES`, `SA-BYTES` and `BEEPER`, among others. Existing BASIC programs are not expected to run, aside from a small legacy loader subset used by tape loaders.
-- A speed target of at least 3× Sinclair BASIC on integer loops, using a 16-bit integer fast path.
-- **Clean-room implementation.** OpticOS contains no Sinclair, Amstrad or Tasword code or artwork.
+14,426 of 16,384 bytes are placed, leaving **1,958 free**. The largest parts:
+
+| Part | Bytes |
+|---|---:|
+| Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,434 |
+| Floating-point core | 1,424 |
+| Tokeniser, keyword table, LIST | 1,575 |
+| Expression evaluator and functions | 1,362 |
+| Transcendental functions | 1,320 |
+| Variables, arrays, string heap and GC | 1,286 |
+| Legacy loader shim | 838 |
+| Number ↔ text conversion | 738 |
+| 64-column printing and the screen | 578 |
+| Errors and messages | 490 |
+| Input line and line editor | 654 |
+| Font (96 glyphs at 4×8) | 384 |
+| Everything else (restarts, keyboard, tape, beeper, fixed-address stubs) | 1,343 |
+
+On the [spec's budget](docs/spec.md#82-budget) the full planned feature list is still about 1 KB too big for the ROM once a 256-byte safety margin is kept. Phase 5 starts by shrinking the code to make room.
 
 ## The boot screen
 

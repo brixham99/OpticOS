@@ -1,6 +1,6 @@
 # OpticOS: design specification
 
-**Version 0.4, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaces the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalances the budget again.
+**Version 0.5, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brings the document in line with the ROM as built through phase 4: a status table (§4.8), the memory map, the phased plan and the BREAK rule.
 Project, ROM and future repo name: **OpticOS**. Boot banner: `OpticOS (c) 2026 Optica Technology`.
 
 This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.
@@ -26,7 +26,7 @@ This document covers design and planning only. The Z80 snippets in it are there 
 - Emulating the RST `$28` calculator byte-code interface.
 - 128K paging, AY sound, the ZX Printer, Interface 1 and Microdrive. The `$0008` hook stays, so a later shadow ROM could still page in.
 - An inline assembler like BBC BASIC's. It is too expensive in 16K. `CALL` and `USR` cover machine code.
-- `MERGE`, `DATA` arrays on tape, `DEF FN` in the Sinclair style, `RENUM` and `AUTO`. None of these make sense without line numbers.
+- `MERGE`, `DATA` arrays on tape, `DEF FN` in the Sinclair style, `RENUM` and line-numbering `AUTO`. None of these make sense without line numbers. (OpticOS reuses the word `AUTO` for its line-entry mode, §6.5.)
 
 ### 1.3 Clean-room rules
 
@@ -280,7 +280,7 @@ CAT                            ' list tape headers until BREAK
 
 ### 4.6 Error handling
 
-`TRY` pushes a frame holding the stack pointer and the address of its `CATCH`. An error, whether raised by the ROM or by `ERROR n`, unwinds the control stack to the nearest TRY frame. Along the way it restores LOCALs and drops FOR, WHILE and PROC frames, then continues after `CATCH`. Without a TRY, execution stops and the message is printed with the line's position, for example `Division by zero, line 57`. That line becomes the current line, so EDIT brings it up at once. BREAK (CAPS+SPACE) is error 1. It can be caught, but a second BREAK within 1 second cannot.
+`TRY` pushes a frame holding the stack pointer and the address of its `CATCH`. An error, whether raised by the ROM or by `ERROR n`, unwinds the control stack to the nearest TRY frame. Along the way it restores LOCALs and drops FOR, WHILE and PROC frames, then continues after `CATCH`. Without a TRY, execution stops and the message is printed with the line's position, for example `Division by zero, line 57`. That line becomes the current line, so EDIT brings it up at once. BREAK (CAPS+SPACE) is error 1. As built, BREAK and STOP cannot be caught by TRY.
 
 ### 4.7 Sample programs
 
@@ -341,6 +341,27 @@ UNTIL g% = secret%
 
 ---
 
+### 4.8 Implementation status (as built through phase 4)
+
+Everything in §4.1–§4.7 is the target language. This table shows what the ROM actually does after phase 4. Phase 5 works through the "not yet" column (§11).
+
+| Area | Built | Not yet |
+|---|---|---|
+| Structure | `DEF name(params)` … `ENDPROC`, `DEF name(params)` … `RETURN v` … `ENDFN`, one-line `DEF name(p) = expr` (the words `PROC` and `FN` after `DEF` are optional, and `FN` is optional in a call), dynamic `LOCAL`, recursion, bare-name PROC calls, `END`, `STOP`, `REM`, `'` | `LABEL` / `GOTO`, passing arrays by reference |
+| Control flow | one-line and block `IF` / `ELSEIF` / `ELSE` / `ENDIF`, `WHILE` / `WEND`, `REPEAT` / `UNTIL`, `FOR` … `NEXT [v]`, `TRY` / `CATCH` / `ENDTRY`, `ERROR n` | `CASE`, `EXIT`, `ERROR n, msg$` |
+| Data | `LET` or bare assignment, `DIM` (up to 3 dimensions, base 0), `RANDOMIZE` | `SWAP`, `DATA` / `READ` / `RESTORE`, `CLEAR` |
+| Screen | `CLS`, `PRINT` / `?` with `;` `,` `'` `AT` `TAB`, `INK`, `PAPER`, `BORDER` | `INPUT`, `FLASH` / `BRIGHT` / `INVERSE` / `OVER`, colours inside PRINT, `MODE 32` from BASIC, `UDG`, graphics |
+| Sound and machine | `POKE`, `WAIT` | `BEEP`, `SOUND`, `DPOKE`, `OUT`, `CALL` |
+| Tape | `LOAD ""` (OpticOS or legacy program) | `SAVE`, `VERIFY`, `CODE` / `SCREEN$` forms, `CAT` |
+| Direct mode | `RUN`, `LIST`, `NEW`, `AUTO`, `EDIT` key, any statement | `RUN label`, `LIST name`, `CONT`, `FIND`, `FREE` |
+| Functions | `ABS SGN INT SQR EXP LN LOG SIN COS TAN ATN ASN ACS PI RND RND(n) MAX MIN LEN LEFT$ RIGHT$ MID$ CHR$ ASC STR$ VAL PEEK ERR TRUE FALSE INKEY$ FRAMES` | `INSTR STRING$ HEX$ UPPER$ KEY JOY DPEEK IN USR FREE POINT ATTR SCREEN$ ERR$ ERRLINE ERRPROC$` |
+
+Differences from the text above, as built:
+
+- BREAK cannot be caught by TRY (nor can STOP); it always returns to the prompt.
+- An uncaught error prints `message, line n` on the screen and makes that line current. There is no status bar.
+- The DEF table built by the prepass lies just above the program (§7.2), and every program edit clears the variables.
+
 ## 5. Program storage
 
 ### 5.1 Line format
@@ -352,7 +373,7 @@ UNTIL g% = secret%
 ```
 
 - `len` (1 byte, 3–255) appears at **both ends** of the line. Walking forward is `ptr += len` and walking backward is `ptr -= (ptr-1)^`. Both are O(1), so the editor never needs line numbers. The overhead is 3 bytes per line, against Sinclair's 5 (number, length and ENTER).
-- The program ends with a `$00` sentinel.
+- The program starts at `$5DD0` (PROG) and ends with a `$00` sentinel.
 - **Indentation is not stored.** The tokeniser strips leading spaces. LIST and the editor recompute indentation from the block keywords, at 2 spaces per level, while they display. The program always looks tidy and no bytes are wasted.
 - Spaces inside a line are kept only where they are needed to separate words, so that LIST shows a canonical spacing.
 
@@ -737,12 +758,12 @@ A "session" means one long working block, as with Mire Mare.
 
 | Phase | Content | Deliverables | Effort |
 |---|---|---|---|
-| **0. Rig** | Add IX/IY, ROM boot, EAR in and out, and the screen-to-text decoder to the headless core. Build skeleton, link script, checks. | `tools/rig/`, `make check`, an empty 16K image | 1 session |
-| **1. Boot, screen, keyboard, tape** | Reset and RAM test, ISR, keyboard, 4-pixel font artwork, 64-column print and scroll, MODE 32, channels and RST 16, BEEPER, SA/LD-BYTES at fixed addresses, the stubs, **the legacy shim**, and a minimal console. | A ROM that boots to the banner in Fuse. Bounce Ball and Mire Mare load and play via `LOAD ""` with no traps. Font sheet PNG. | 3 sessions |
-| **2. Maths** | Float core, conversions, byte-code runner, transcendentals, RND | Maths library plus the mpmath test report | 2 sessions |
-| **3. Interpreter** | Tokeniser and detokeniser, prepass, evaluator, statements, PROC/FN/LOCAL, loops, TRY, strings and GC, arrays, graphics, sound, tape commands, console-based direct mode | Sample programs run. Benchmark report against Sinclair. | 3–4 sessions |
-| **4. Editor** | Full-screen 64×24 editor, keys, wrap, find, clipboard, status bar, error jump | Editor test suite. Demo GIF. | 2 sessions |
-| **5. Polish** | CASE, size squeeze, a possible revisit of the 8×8 font if the margin allows, user manual (PDF, in the Mire Mare style), example tape, a check on a real TV via Nathan | `opticos.rom` v1.0, manual, examples. The repo is **OpticOS**, created only with Nathan's go-ahead. | 1–2 sessions |
+| **0. Rig** (done) | Add IX/IY, ROM boot, EAR in and out, and the screen-to-text decoder to the headless core. Build skeleton, link script, checks. | `tools/rig/`, `make check`, an empty 16K image | 1 session |
+| **1. Boot, screen, keyboard, tape** (done) | Reset and RAM test, ISR, keyboard, 4-pixel font artwork, 64-column print and scroll, MODE 32, channels and RST 16, BEEPER, SA/LD-BYTES at fixed addresses, the stubs, **the legacy shim**, and a minimal console. | A ROM that boots to the banner in Fuse. Bounce Ball and Mire Mare load and play via `LOAD ""` with no traps. Font sheet PNG. | 3 sessions |
+| **2. Maths** (done) | Float core, conversions, byte-code runner, transcendentals, RND | Maths library plus the mpmath test report | 2 sessions |
+| **3. Interpreter** (done) | Tokeniser and detokeniser, prepass, evaluator, statements, PROC/FN/LOCAL, loops, TRY, strings and GC, arrays, console-based direct mode. Graphics, sound and tape commands moved to phase 5. | Sample programs run. Benchmark report against Sinclair. | 3–4 sessions |
+| **4. Editor** (done) | Sinclair-style line editor (v0.4): current-line marker, cursor up/down relist, EDIT, AUTO, two-row input line, error jump | Editor test suite, Fuse screenshots | 1 session |
+| **5. Polish** | Size squeeze to fit the full feature list (§8.2), then the remaining §4.8 items in priority order: INPUT, DATA/READ, SAVE/VERIFY, graphics, BEEP, string functions, ERR$, CASE, EXIT, SWAP, MODE 32/UDG; a possible revisit of the 8×8 font if the margin allows, user manual (PDF, in the Mire Mare style), example tape, a check on a real TV via Nathan | `opticos.rom` v1.0, manual, examples. The repo is **OpticOS**, created only with Nathan's go-ahead. | 1–2 sessions |
 
 The total is about **12–14 sessions**, which is larger than Mire Mare. Phase 1 is a useful stopping point on its own: it proves the hardware layer and tape compatibility before any BASIC exists.
 
@@ -760,4 +781,4 @@ Nathan agreed all six recommendations on 13 November 2026.
 6. **`LOCAL` is dynamic, in the BBC style**, not true lexical scope. Lexical scope would need per-PROC symbol tables, at about 300 bytes plus a slower lookup.
 7. **No full-screen editor** (Nathan, later on 13 Nov 2026, for phase 4). Use the ZX BASIC pattern instead: a current-line marker moved with the cursor keys over a LIST, and EDIT to bring that line into the input line (§6.5).
 
-*End of specification v0.4.*
+*End of specification v0.5.*
