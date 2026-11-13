@@ -51,7 +51,7 @@ st_save:
         ld de,HDRBUF+1
         ld bc,10
         ldir
-        call tk
+        rst $18
         cp T_CODE
         jr z,ss_c
         call tp_sig             ; a program: signature, lines, sentinel
@@ -64,14 +64,12 @@ st_save:
         ld bc,$8000             ; param 1: no auto-start
         xor a
         jr ss_go
-ss_c:   call skip1
-        call ev_expr
-        call pop_int
+ss_c:   rst $20
+        rst $30
         push de
         ld a,','
         call expect
-        call ev_expr
-        call pop_int
+        rst $30
         ex de,hl                ; HL = length
         pop de                  ; DE = start
         ld bc,$8000
@@ -105,17 +103,16 @@ sl_go:  ld (LG_VF),a
         call tp_name
         ld hl,0
         ld (LG_DEST),hl
-        call tk
+        rst $18
         cp T_CODE
         jr nz,sl_p
-        call skip1
-        call tk
+        rst $20
+        rst $18
         cp 13
         jr z,sl_c
         cp ':'
         jr z,sl_c
-        call ev_expr
-        call pop_int
+        rst $30
         ld (LG_DEST),de
 sl_c:   ld a,3
 sl_f:   ld (LG_WANT),a

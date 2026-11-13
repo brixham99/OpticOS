@@ -28,10 +28,10 @@ run_st: ld a,$7F                ; BREAK = CAPS SHIFT + SPACE
         rst 8
         defb ERR_BREAK
 rs_go:  call stmt
-rs_after: call tk
+rs_after: rst $18
         cp ':'
         jr nz,ra_1
-        call skip1
+        rst $20
         jr run_st
 ra_1:   cp 13
         jr z,next_line
@@ -55,7 +55,7 @@ go_next: pop af
 go_st:  pop af                  ; continue with the statement at CH_ADD
         jr run_st
 ; stmt: one statement at CH_ADD
-stmt:   call tk
+stmt:   rst $18
         cp ':'
         ret z
         cp 13
@@ -69,7 +69,7 @@ stmt:   call tk
         cp T_NSTMT
         jp nc,err_syn
         push af
-        call skip1
+        rst $20
         pop af
         add a,a
         ld l,a
@@ -98,7 +98,7 @@ si_pc:  ld hl,(CH_ADD)
         jr nc,proc_call
         rst 8
         defb ERR_NOPRC
-st_let: call tk
+st_let: rst $18
         cp 1
         jp nz,err_syn
 st_let2: call var_ref
@@ -155,21 +155,21 @@ fr_save: inc hl
         ret
 ; args: optional "(a, b)" or bare "a, b" -> values pushed, B = count
 args:   ld b,0
-        call tk
+        rst $18
         call is_end
         ret z
         cp '('
         push af
         jr nz,ag_l
-        call skip1
+        rst $20
 ag_l:   push bc
         call ev_expr
         pop bc
         inc b
-        call tk
+        rst $18
         cp ','
         jr nz,ag_e
-        call skip1
+        rst $20
         jr ag_l
 ag_e:   pop af
         ret nz
@@ -206,11 +206,11 @@ bd_0:   ld (CH_ADD),hl
         ld (BAF),hl
         ld (BAP),hl
         call id_skip
-        call tk
+        rst $18
         cp '('
         jr nz,bd_l
-        call skip1
-bd_l:   call tk
+        rst $20
+bd_l:   rst $18
         cp 1
         jr nz,bd_e
         ld a,(BCN)
@@ -231,10 +231,10 @@ bd_l:   call tk
         ld de,5
         add hl,de
         ld (BAP),hl
-        call tk
+        rst $18
         cp ','
         jr nz,bd_e
-        call skip1
+        rst $20
         jr bd_l
 bd_e:   cp ')'
         call z,skip1
@@ -274,7 +274,7 @@ fn_call: call sym_find
         cp '='
         jr nz,fc_ml
         pop hl                  ; DEF f(x) = expression
-        call skip1
+        rst $20
         call ev_expr
         jr fn_unw
 fc_ml:  ld hl,(CURLN)
@@ -543,7 +543,9 @@ pp_end: pop af                  ; the sentinel must be next
 
 ; ---------------------------------------------------- statements
 st_print:
-sp_lp:  call tk
+        ld hl,(ATTR_P)          ; temporary colours start as the permanent ones
+        ld (ATTR_T),hl
+sp_lp:  rst $18
         call is_end
         jp z,pr_eol
         cp ';'
@@ -556,6 +558,9 @@ sp_lp:  call tk
         jr z,sp_at
         cp T_TAB
         jr z,sp_tab
+        sub T_INK               ; INK PAPER FLASH BRIGHT INVERSE OVER n;
+        cp 6
+        jr c,sp_col
         call ev_expr
         call ev_pop
         call is_str
@@ -565,23 +570,31 @@ sp_lp:  call tk
         jr sp_lp
 sp_str: call s_print
         jr sp_lp
-sp_semi: call skip1
-        call tk
+sp_col: add a,16                ; as control codes 16-21
+        push af
+        rst $20
+        call ev_u8
+        pop af
+        rst 16
+        ld a,e
+        rst 16
+        jr sp_lp
+sp_semi: rst $20
+        rst $18
         call is_end
         ret z
         jr sp_lp
 sp_com: ld a,6
         rst 16
         jr sp_semi
-sp_nl:  call skip1
+sp_nl:  rst $20
         call pr_eol
-        call tk
+        rst $18
         call is_end
         ret z
         jr sp_lp
-sp_at:  call skip1
-        call ev_expr
-        call pop_u8
+sp_at:  rst $20
+        call ev_u8
         ld a,22
         rst 16
         ld a,e
@@ -590,11 +603,10 @@ sp_at:  call skip1
         ld a,e
         rst 16
         jr sp_lp
-sp_tab: call skip1
+sp_tab: rst $20
         ld a,'('
         call expect
-        call ev_expr
-        call pop_u8
+        call ev_u8
         call rparen
         ld a,23
         rst 16
@@ -620,7 +632,7 @@ si_go:  push de
         call fp_tst0
         pop de
         push af
-        call tk
+        rst $18
         cp T_THEN
         jr z,si_one
         pop af
@@ -638,7 +650,7 @@ si_br:  call lk_chk
         ld (CH_ADD),hl
         call rd_link
         jr si_go
-si_one: call skip1              ; IF ... THEN statements [ELSE statements]
+si_one: rst $20              ; IF ... THEN statements [ELSE statements]
         pop af
         jp nz,go_st
         ld hl,(CH_ADD)
@@ -708,7 +720,7 @@ st_until: call rd_link
         ret nz
         call lk_chk
         jp go_after
-st_for: call tk
+st_for: rst $18
         cp 1
         jp nz,err_syn
         call var_ref
@@ -727,10 +739,10 @@ st_for: call tk
         ld a,T_TO
         call expect
         call ev_expr
-        call tk
+        rst $18
         cp T_STEP
         jr nz,sf_one
-        call skip1
+        rst $20
         call ev_expr
         jr sf_fr
 sf_one: ld de,1
@@ -778,7 +790,7 @@ st_next: ld hl,(CSP)
         ld a,(hl)
         cp F_FOR
         jp nz,err_next
-        call tk
+        rst $18
         cp 1
         jr nz,sn_go
         push hl
@@ -855,7 +867,7 @@ st_endproc:
         jp nz,err_endp
         jp fr_ret
 st_return:
-        call tk
+        rst $18
         call is_end
         jr nz,sr_v
         ld hl,(CSP)             ; is it a PROC?
@@ -889,15 +901,15 @@ fr_len: ld e,a
         pop hl
         add hl,de
         ret
-st_local: call tk
+st_local: rst $18
         cp 1
         jp nz,err_syn
         call var_ref
         call loc_save
-        call tk
+        rst $18
         cp ','
         ret nz
-        call skip1
+        rst $20
         jr st_local
 st_try: call rd_link
         push de
@@ -933,8 +945,7 @@ st_catch: call cs_pop           ; finished the TRY part: drop its frame
 st_endtry: ret
 err_struc: rst 8
         defb ERR_STRUC
-st_error: call ev_expr
-        call pop_u8
+st_error: call ev_u8
         ld a,e
 err_a:  ld (ERR_NR),a
         ld sp,(ERR_SP)
@@ -943,7 +954,7 @@ st_end: pop af
         jp run_end
 st_stop: rst 8
         defb ERR_STOP
-st_dim: call tk
+st_dim: rst $18
         cp 1
         jp nz,err_syn
         call var_find
@@ -959,8 +970,7 @@ st_dim: call tk
         ld b,0
 sd_l:   push hl
         push bc
-        call ev_expr
-        call pop_int
+        rst $30
         or a
         jp nz,err_subs
         inc de
@@ -981,12 +991,12 @@ sd_l:   push hl
         ld a,b
         cp 4
         jp nc,err_subs
-        call tk
+        rst $18
         pop hl
         cp ','
         jr nz,sd_e
         push hl
-        call skip1
+        rst $20
         pop hl
         jr sd_l
 sd_e:   push bc
@@ -1017,10 +1027,10 @@ sd_e:   push bc
         sla c
         ld b,0
         ldir
-        call tk
+        rst $18
         cp ','
         ret nz
-        call skip1
+        rst $20
         jp st_dim
 err_redim: rst 8
         defb ERR_REDIM
@@ -1039,8 +1049,7 @@ st_auto: ld hl,EMODE            ; AUTO: typed lines go into the program
         ret
 st_new: call p_new
         jp st_end
-st_border: call ev_expr
-        call pop_u8
+st_border: call ev_u8
         ld a,e
         and 7
         out ($FE),a
@@ -1049,12 +1058,19 @@ st_border: call ev_expr
         add a,a
         ld (BORDCR),a
         ret
-st_ink: ld c,16
-        db $11                  ; ld de,nn: skips "ld c,17"
+st_ink: ld c,16                 ; each db $11 (ld de,nn) skips the next "ld c,n"
+        db $11
 st_paper: ld c,17
+        db $11
+st_flash: ld c,18
+        db $11
+st_bright: ld c,19
+        db $11
+st_inverse: ld c,20
+        db $11
+st_over: ld c,21
         push bc
-        call ev_expr
-        call pop_u8
+        call ev_u8
         pop bc
         ld a,e
         ld hl,ATTR_P
@@ -1062,15 +1078,13 @@ st_paper: ld c,17
         ld a,(ATTR_P)
         ld (ATTR_T),a
         ret
-st_poke: call ev_expr
-        call pop_int
+st_poke: rst $30
         push de
         call argn
         pop hl
         ld (hl),e
         ret
-st_wait: call ev_expr
-        call pop_int
+st_wait: rst $30
 sw_l:   ld a,d
         or e
         ret z
@@ -1090,11 +1104,10 @@ sw_n:   dec de
         jr sw_l
 st_randomize:
         ld de,0
-        call tk
+        rst $18
         call is_end
         jr z,sr_go
-        call ev_expr
-        call pop_int
+        rst $30
 sr_go:  jp fp_randomize
 
 ; ---------------------------------------------------- program lines (editor)

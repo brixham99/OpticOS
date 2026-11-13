@@ -26,7 +26,7 @@ lv_s:   ld c,(hl)
         cp c
         jr nz,lv_s
         push de
-        call skip1
+        rst $20
         pop de
         pop hl
         push hl
@@ -99,14 +99,14 @@ d_mul:  defw ev_una
         defw op_mod
         defb 0
 
-ev_una: call tk
+ev_una: rst $18
         cp '-'
         jr z,eu_neg
         cp '+'
         jr z,eu_pl
         cp T_NOT
         jr nz,ev_pow
-        call skip1
+        rst $20
         call ev_una
         call pop_int
         ld a,e
@@ -116,18 +116,18 @@ ev_una: call tk
         cpl
         ld d,a
         jp push_int
-eu_pl:  call skip1
+eu_pl:  rst $20
         jr ev_una
-eu_neg: call skip1
+eu_neg: rst $20
         call ev_una
         call ev_top
         call num_chk
         jp fp_neg
 ev_pow: call ev_prim
-        call tk
+        rst $18
         cp '^'
         ret nz
-        call skip1
+        rst $20
         call ev_una
         ld bc,fp_pow
         jr bin_n
@@ -416,10 +416,10 @@ err_strl: rst 8
         defb ERR_STRL
 
 ; ---------------------------------------------------- primaries
-ev_prim: call tk
+ev_prim: rst $18
         cp '('
         jr nz,ep_1
-        call skip1
+        rst $20
         call ev_expr
 rparen: ld a,')'
         jp expect
@@ -476,7 +476,7 @@ ep_3:   cp T_FN
         cp T_PI-T_SQR
         jr nc,ep_o
         push af                 ; numeric function of one argument
-        call skip1
+        rst $20
         call ev_una
         call ev_top
         call num_chk
@@ -484,10 +484,10 @@ ep_3:   cp T_FN
         ld de,fnu_tab
         jr ep_j
 ep_o:   sub T_PI-T_SQR
-        cp T_MIN-T_PI+1
+        cp T_JOY-T_PI+1
         jp nc,err_syn
         push af
-        call skip1
+        rst $20
         pop af
         call ev_top
         ld de,fno_tab
@@ -502,8 +502,8 @@ ep_j:   push hl
         ld l,a
         ex (sp),hl
         ret
-ep_fn:  call skip1
-        call tk
+ep_fn:  rst $20
+        rst $18
         cp 1
         jp nz,err_syn
         call var_find
@@ -544,7 +544,7 @@ arg1s:  ld a,'('                ; ( string
         jp str_chk
 argn:   ld a,','                ; , number -> DE (0-255 checked: A = 0)
         call expect
-        call ev_expr
+ev_u8:  call ev_expr
 pop_u8: call pop_int
         or d
         jp nz,err_arg
@@ -559,10 +559,10 @@ fp_pi:  ex de,hl                ; HL = destination
         ret
 f_rnd:  call ev_push
         call fp_rnd
-        call tk
+        rst $18
         cp '('
         ret nz
-        call skip1
+        rst $20
         call ev_expr
         call rparen
         call ev_2               ; RND(n): 1 + INT(RND * n)
@@ -642,7 +642,7 @@ f_mids: call arg1s              ; MID$(s$, start [, length])
         jp z,err_arg
         push de
         ld e,255
-        call tk
+        rst $18
         cp ','
         call z,argn
         call rparen
@@ -771,10 +771,10 @@ f_min:  ld c,1
         ld a,'('
         call expect
         call ev_expr
-mx_l:   call tk
+mx_l:   rst $18
         cp ','
         jr nz,fm_e
-        call skip1
+        rst $20
         call ev_expr
         call ev_2
         call num_chk

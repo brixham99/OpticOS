@@ -25,17 +25,26 @@ RST8:   jp err_rst
 RST16:  jp print_a
 ; ---------------------------------------------------------------- $0018
         org $0018
-RST24:  ret                     ; reserved: interpreter GET-CHAR (phase 3)
+RST24:
+tk:     ld hl,(CH_ADD)          ; GET-CHAR: A = current token
+        ld a,(hl)
+        ret
 ; ---------------------------------------------------------------- $0020
         org $0020
-RST32:  ret                     ; reserved: interpreter NEXT-CHAR (phase 3)
+RST32:
+skip1:  ld hl,(CH_ADD)          ; NEXT-CHAR: step over a one-byte token
+        inc hl
+        ld (CH_ADD),hl
+        ret
 ; ---------------------------------------------------------------- $0028
         org $0028
 RST40:  rst 8                   ; the Sinclair calculator is not provided
         defb ERR_CALC
 ; ---------------------------------------------------------------- $0030
         org $0030
-RST48:  ret                     ; reserved: workspace allocate (phase 3)
+RST48:
+ev_int: call ev_expr            ; an expression as a 16-bit integer -> DE
+        jp pop_int
 m_rst_e:
 
 ; ---------------------------------------------------------------- $0038
@@ -60,11 +69,13 @@ m_nmi_e:
 secB:
         include "boot.asm"
         include "keyboard.asm"
+        include "misc.asm"
 secB_end:
 
 ; ---------------------------------------------------------------- $03B5
         org $03B5
         include "sound.asm"
+        include "strfn.asm"
 secC_end:
 
 ; ---------------------------------------------------------------- $04C2
@@ -116,6 +127,10 @@ secI_end:
         include "expr.asm"
         include "vars.asm"
         include "tokenise.asm"
+        include "strfn2.asm"
+m_tkd_s:
+        include "gen/tokdisp.inc"
+m_tkd_e:
 secK_end:
 
 ; ---------------------------------------------------------------- $3E80

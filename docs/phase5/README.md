@@ -80,3 +80,63 @@ My recommendation: do both squeezes (about 590), drop SCREEN$/ATTR/POINT, FIND/C
 ## Not done yet
 
 In spec priority order: graphics (`PLOT`, `DRAW`, `CIRCLE`), `BEEP` / `SOUND`, `INSTR`, `STRING$`, `HEX$`, `UPPER$`, `ERR$`, `CASE`, `EXIT`, `SWAP`, `MODE 32` / UDGs from BASIC, the colour statements inside PRINT, and the machine statements (`CALL`, `USR`, `OUT`, `IN`, `DPEEK` / `DPOKE`, `KEY`, `JOY`). `SAVE … AUTO`, `SCREEN$` tape forms and `CAT` are also still to do.
+
+---
+
+# Phase 5b: Nathan's cuts, the squeezes, graphics and functions
+
+![Fuse: PLOT and DRAW TO in eight colours, a border drawn with relative DRAW, and a PRINT with INK, PAPER and BRIGHT inside it](fuse_graphics.png)
+
+Real Fuse again (`tools/fuse_phase5.py`). The program fans out lines with `DRAW TO`, cycling `INK`, draws a border with relative `DRAW`, prints a caption with `PRINT AT 11,20; INK 7; PAPER 1; BRIGHT 1;…`, and plays three notes with `BEEP`. Colour clash in the 8×8 attribute cells is as on any Spectrum.
+
+## Decisions recorded (spec §12, items 8–12)
+
+- Dropped: `MODE 32` and UDG printing, `CIRCLE`, `LABEL` / `GOTO` (no `GOSUB`; PROCs replace it), `SCREEN$(r,c)`, `ATTR`, `POINT`, `FIND`, `CONT`, `ERRLINE`, `ERRPROC$`, `SOUND`.
+- Labels become PROC names: `RUN name`, `RESTORE name` (the first DATA after that DEF) and `SAVE "x" AUTO name`. These are specified but **not built yet**.
+- The legacy shim is kept whole. It already prints at 64 columns and doubles the `PRINT AT` column, so it needed no 32-column path. Bounce Ball and Mire Mare still load (phase 1 tests, 35/35).
+
+## Squeezes
+
+| Squeeze | Saved |
+|---|---:|
+| GET-CHAR (`tk`), NEXT-CHAR (`skip1`) and "expression → integer" moved into the unused restarts `$18`, `$20`, `$30`; about 80 three-byte `CALL`s became one-byte `RST`s (also faster) | 186 |
+| RND: the same xorshift (13, 17, 5) with its state in registers instead of a memory buffer (identical numbers) | 21 |
+| A shared "number 0–255" entry, `ev_u8` | 15 |
+| **Total** | **222** |
+
+Tried and rejected: sending small integers through the float path in STR$ would save 36 bytes, but printing an integer becomes about 15 times slower (about 80,000 T-states, 23 ms per number). I judged that a bad trade against the integer speed goal and reverted it. The other maths items (COS from SIN, fewer EXP terms, a smaller VAL digit loop; about 130 bytes) are not done yet. Each needs the full mpmath run. The compare routine turned out to be compact already, so the estimated 70 bytes from it are not there.
+
+## What was added
+
+| | |
+|---|---|
+| `PLOT x,y` | 256×192, origin bottom left (y 0–191). `OVER 1` flips the pixel, `INVERSE 1` clears it, and the 8×8 cell takes the current colours. |
+| `DRAW dx,dy` / `DRAW TO x,y` | Lines from the last point (COORDS), stepping along the longer axis. Going off the screen is *Value outside range*. |
+| `FLASH`, `BRIGHT`, `INVERSE`, `OVER` | New statements, alongside `INK` and `PAPER` |
+| Colours inside PRINT | `PRINT INK 2; PAPER 6; "x"`. INK, PAPER, FLASH and BRIGHT last until the statement ends. INVERSE and OVER inside PRINT stay set, because the print routine has only permanent bits for them. |
+| `BEEP duration, pitch` | Sinclair semantics: pitch in semitones from middle C, f = 261.63·2^(p/12), through BEEPER. Middle C measures 261–262 Hz in the rig, and the octave 523 Hz. Pitch is limited to about −24…69 (the period must fit 16 bits). |
+| `INSTR(a$, b$ [, start])` | Position or 0. `""` is found at the start position. |
+| `STRING$(n, s$)`, `HEX$(n)` (4 digits), `UPPER$(s$)`, `ERR$` | `ERR$` is the last error's message, or `""` if there was none. |
+| `IN(port)`, `OUT port, b`, `USR(addr)` (returns BC), `CALL addr`, `DPEEK(addr)`, `DPOKE addr, w`, `JOY` (Kempston port 31) | |
+| `SWAP a, b` | Numbers, integers, strings or array elements of the same type. Swapping strings re-points each heap block at its new owner. |
+
+## Bytes
+
+ROM: **15,669 placed, 715 free** (14,899 / 1,485 after 5a). The new code is 238 (graphics) + 196 (BEEP, OUT, DPOKE, CALL, SWAP) + 386 (functions) + 49 (PRINT colours, colour statements, the console's colour reset) + 129 (keywords and dispatch entries), less the 222 bytes saved. The dispatch tables moved out of the full gap J2 into the last section.
+
+## Budget (spec §8.2, v0.7)
+
+With the cuts, the remaining features (CASE, EXIT, `ERROR n, msg$`, CLEAR, RUN/RESTORE/SAVE AUTO with a PROC name, SCREEN$ tape forms, CAT, KEY, FREE, array parameters, CALL register arguments) are budgeted at about 730 bytes. The finished ROM would then be 16,401 bytes, **about 273 bytes over once the 256-byte margin is kept**. In v0.6 that figure was about 1,180. My proposal to close it: drop array parameters by reference (80), CALL register arguments (30), CAT (45) and the SCREEN$ tape forms (25), and do the remaining maths squeezes (about 130).
+
+## Tests
+
+| Suite | Result |
+|---|---|
+| `tools/rig/test_phase5.py` | 42/42 (22 new): PLOT at the corners and in range, DRAW and DRAW TO paths and end points, COORDS, OVER and INVERSE, range errors, colours inside PRINT ending with the statement, BRIGHT/FLASH, BEEP frequency and length measured from the speaker signal, INSTR (6 cases), STRING$, HEX$, UPPER$, ERR$ in a CATCH, DPOKE/DPEEK, USR and CALL on poked code, IN/JOY, SWAP of numbers and strings (then the string is changed), SWAP type mismatch |
+| Phase 1, 3, 4 | 35/35, 49/49, 13/13 |
+| `test_maths.py --n 3000` | 0 failures; RND 3,000 values, mean 0.4954, chi-square 11.25 (9 dof), repeatable |
+| zexall, similarity check | OK |
+
+## Not done yet
+
+CASE / WHEN / OTHERWISE, EXIT, `ERROR n, msg$`, CLEAR, `RUN name`, `RESTORE name`, `SAVE … AUTO name`, `SCREEN$` tape forms, CAT, `KEY(k$)`, FREE, array parameters, CALL register arguments.

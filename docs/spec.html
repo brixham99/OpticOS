@@ -4,7 +4,7 @@ table{border-collapse:collapse;margin:.6em 0;width:100%;font-size:8.8pt}td,th{bo
 pre{background:#f4f4f7;border:1px solid #dde;padding:6px;font-size:8.3pt;white-space:pre-wrap;page-break-inside:avoid}code{font-family:'DejaVu Sans Mono',monospace;font-size:92%}
 @page{size:A4;margin:16mm 14mm}</style></head><body>
 <h1>OpticOS: design specification</h1>
-<p><strong>Version 0.6, 13 November 2026.</strong> The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. <strong>v0.6</strong> (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2).
+<p><strong>Version 0.7, 13 November 2026.</strong> The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. <strong>v0.6</strong> (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). <strong>v0.7</strong> (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built.
 Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>OpticOS (c) 2026 Optica Technology</code>.</p>
 <p>This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.</p>
 <hr />
@@ -13,7 +13,7 @@ Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>
 <ol>
 <li><strong>A drop-in 16,384-byte ROM image</strong> for the 48K (and 16K) Spectrum that boots on real hardware, in Fuse and in our headless rig.</li>
 <li><strong>OpticBASIC, a modern structured BASIC with no line numbers.</strong> It has named procedures and functions with parameters and <code>LOCAL</code>, block <code>IF/ELSEIF/ELSE/ENDIF</code>, <code>WHILE</code>, <code>REPEAT</code>, <code>FOR</code>, <code>CASE</code>, labels in place of line-number <code>GOTO</code>, and <code>TRY/CATCH</code> error handling.</li>
-<li><strong>64-column text as the default</strong> (a condensed 4-pixel font in the spirit of Tasword Two) for PRINT and the editor, with a <code>MODE 32</code> switch.</li>
+<li><strong>64-column text as the default</strong> (a condensed 4-pixel font in the spirit of Tasword Two) for PRINT and the editor. (A <code>MODE 32</code> switch was dropped in v0.7, decision 8.)</li>
 <li><strong>A Sinclair-style line editor</strong> (v0.4: a full-screen editor was dropped to save ROM). A movable current-line marker, EDIT to change a line, AUTO to type new ones. You type keywords letter by letter and a tokeniser converts them. There is no single-key keyword entry.</li>
 <li><strong>Tape compatibility.</strong> OpticOS uses the standard ROM tape encoding (pilot, sync, bit timings, flag and parity bytes, the 17-byte header layout), so ordinary TAP and TZX files load and OpticOS saves load on other tools.</li>
 <li><strong>Machine-code compatibility where it is cheap.</strong> RST vectors, IM 1 at <code>$0038</code>, NMI at <code>$0066</code>, LD-BYTES at <code>$0556</code>, SA-BYTES at <code>$04C2</code>, BEEPER at <code>$03B5</code> and a handful of others keep their addresses and register contracts.</li>
@@ -71,8 +71,8 @@ Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>
 <td><code>$0066</code>. If <code>NMIADD</code> (<code>$5CB0</code>) is non-zero, jump to it. Otherwise <code>RETN</code>.</td>
 </tr>
 <tr>
-<td>Screen</td>
-<td>Bitmap <code>$4000–$57FF</code> in the usual third/row/line interleave. Attributes <code>$5800–$5AFF</code>.</td>
+<td>Screen and graphics</td>
+<td><code>CLS</code>, <code>PRINT</code> / <code>?</code> with <code>;</code> <code>,</code> <code>'</code> <code>AT</code> <code>TAB</code>, <code>INK</code>, <code>PAPER</code>, <code>FLASH</code>, <code>BRIGHT</code>, <code>INVERSE</code>, <code>OVER</code> (as statements and inside PRINT, where INK, PAPER, FLASH and BRIGHT last until the statement ends; INVERSE and OVER stay set), <code>BORDER</code>, <code>INPUT</code>, <code>PLOT x,y</code>, <code>DRAW dx,dy</code>, <code>DRAW TO x,y</code> (256×192, origin bottom left; OVER flips and INVERSE clears pixels; each plotted cell takes the current colours)</td>
 </tr>
 <tr>
 <td>RAM size</td>
@@ -311,7 +311,7 @@ Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>
 <tr>
 <td>Sinclair's 32-column print layout</td>
 <td>Loaders that <code>PRINT AT</code> assuming 32 columns, through the legacy shim</td>
-<td>The legacy shim forces <code>MODE 32</code> while it runs</td>
+<td>As built, the legacy shim prints at 64 columns and doubles the <code>PRINT AT</code> column, so a 32-column layout keeps its shape at half width (no 32-column print path is needed)</td>
 </tr>
 <tr>
 <td>ZX Printer (<code>LPRINT</code>/<code>COPY</code>)</td>
@@ -447,7 +447,7 @@ DEF FN name[(params)]          … RETURN expr … ENDFN
 DEF FN name(params) = expr                 ' one-line form
 LOCAL v, w$, k%, arr()                     ' first lines of a PROC or FN only
 name [args]   or   name(args)              ' call a PROC (bare name)
-LABEL name    /   GOTO name                ' escape hatch, same PROC only
+' (LABEL / GOTO dropped in v0.7, decision 9: use PROCs; there is no GOSUB)
 END   STOP   REM   '
 </code></pre>
 <p>Parameters are passed by value. Arrays are passed by reference using <code>a()</code>. Scoping is <strong>dynamic, BBC-style</strong>: <code>LOCAL</code> and parameters save the old value on the control stack and restore it at <code>ENDPROC</code>, <code>ENDFN</code> or error unwind. Recursion is supported.</p>
@@ -473,7 +473,7 @@ TRY … CATCH … ENDTRY
 ERROR n [, msg$]                           ' raise an error
 </code></pre>
 <p><strong>Data</strong></p>
-<p><code>[LET] v = expr</code>, <code>DIM</code>, <code>SWAP a, b</code>, <code>DATA</code>, <code>READ</code>, <code>RESTORE [label]</code>, <code>CLEAR [ramtop]</code>, <code>RANDOMIZE [n]</code></p>
+<p><code>[LET] v = expr</code>, <code>DIM</code>, <code>SWAP a, b</code>, <code>DATA</code>, <code>READ</code>, <code>RESTORE [procname]</code> (v0.7: the first DATA after that DEF; not built yet), <code>CLEAR [ramtop]</code>, <code>RANDOMIZE [n]</code></p>
 <p><strong>Screen and text</strong></p>
 <table>
 <thead>
@@ -503,26 +503,18 @@ ERROR n [, msg$]                           ' raise an error
 <td><code>BORDER n</code></td>
 <td></td>
 </tr>
-<tr>
-<td><code>MODE 64</code> / <code>MODE 32</code></td>
-<td>Switches the text width. Also clears the screen and homes the cursor.</td>
-</tr>
-<tr>
-<td><code>UDG c$, b0, …, b7</code></td>
-<td>Defines a UDG. <code>UDG("A")</code> returns its address.</td>
-</tr>
 </tbody>
 </table>
-<p>Columns in <code>AT</code> and <code>TAB</code> are <strong>0–63 in MODE 64</strong> and 0–31 in MODE 32. Rows are 0–23. Row 23 is available to PRINT as long as no <code>INPUT</code> is pending.</p>
+<p>Columns in <code>AT</code> and <code>TAB</code> are <strong>0–63</strong>. Rows are 0–23. Row 23 is available to PRINT as long as no <code>INPUT</code> is pending.</p>
 <p><strong>Graphics</strong> (256×192 pixels, origin bottom-left; y = 0–191, since OpticOS keeps no permanent lower screen; INPUT temporarily uses row 23)</p>
-<p><code>PLOT x,y</code>, <code>DRAW dx,dy</code> (relative, Bresenham), <code>DRAW TO x,y</code> (absolute), <code>CIRCLE x,y,r</code> (integer midpoint). There are no Sinclair arcs: <code>DRAW dx,dy,angle</code> is a non-goal.</p>
+<p><code>PLOT x,y</code>, <code>DRAW dx,dy</code> (relative, Bresenham), <code>DRAW TO x,y</code> (absolute). (<code>CIRCLE</code> was dropped in v0.7, decision 8.) There are no Sinclair arcs: <code>DRAW dx,dy,angle</code> is a non-goal.</p>
 <p><strong>Sound</strong></p>
-<p><code>BEEP dur, pitch</code> works as on Sinclair, with pitch in semitones from middle C. <code>SOUND period, cycles</code> drives the beeper directly with integers.</p>
+<p><code>BEEP dur, pitch</code> works as on Sinclair, with pitch in semitones from middle C. (<code>SOUND</code> was dropped in v0.7, decision 10; machine code can call BEEPER at <code>$03B5</code>.)</p>
 <p><strong>Machine and I/O</strong></p>
 <p><code>POKE a,b</code>, <code>DPOKE a,w</code>, <code>OUT port,b</code>, <code>CALL addr [,a%,bc%,de%,hl%]</code> and <code>WAIT n</code>. <code>WAIT n</code> halts for n frames.</p>
 <p><strong>Tape</strong></p>
 <pre><code>SAVE &quot;name&quot;                    ' program (+ AUTO to autostart)
-SAVE &quot;name&quot; AUTO [label]
+SAVE &quot;name&quot; AUTO procname      ' v0.7: runs that PROC after loading (not built yet)
 SAVE &quot;name&quot; CODE start, len
 SAVE &quot;name&quot; SCREEN$
 LOAD &quot;name&quot; | LOAD &quot;&quot;          ' program (OpticOS or legacy)
@@ -532,7 +524,7 @@ VERIFY …                       ' same forms as LOAD
 CAT                            ' list tape headers until BREAK
 </code></pre>
 <p><strong>Direct-mode commands</strong></p>
-<p><code>RUN [label]</code>, <code>LIST [proc|label]</code>, <code>NEW</code>, <code>CONT</code> (not after an edit), <code>EDIT</code>, <code>FIND "text"</code>, <code>FREE</code>. Any statement can also be typed in direct mode.</p>
+<p><code>RUN [procname]</code> (v0.7: calls it after the prepass; not built yet), <code>LIST</code>, <code>NEW</code>, <code>AUTO</code>, <code>EDIT</code> (key), <code>FREE</code>. (<code>CONT</code> and <code>FIND</code> were dropped in v0.7, decision 10.) Any statement can also be typed in direct mode.</p>
 <h3>4.5 Functions</h3>
 <table>
 <thead>
@@ -559,12 +551,8 @@ CAT                            ' list tape headers until BREAK
 <td><code>PEEK DPEEK IN(port) USR(addr)</code> (returns BC, as Sinclair does), <code>FRAMES</code>, <code>FREE</code></td>
 </tr>
 <tr>
-<td>Screen</td>
-<td><code>POINT(x,y) ATTR(r,c) SCREEN$(r,c)</code>. <code>ATTR</code> takes a text cell and works out the attribute cell under it (§6.4).</td>
-</tr>
-<tr>
 <td>Errors</td>
-<td><code>ERR</code>, <code>ERR$</code>, <code>ERRLINE</code> (line ordinal), <code>ERRPROC$</code></td>
+<td><code>ERR</code>, <code>ERR$</code> (<code>ERRLINE</code>, <code>ERRPROC$</code>, <code>POINT</code>, <code>ATTR</code> and <code>SCREEN$(r,c)</code> were dropped in v0.7, decision 10)</td>
 </tr>
 </tbody>
 </table>
@@ -620,8 +608,8 @@ REPEAT
 UNTIL g% = secret%
 </code></pre>
 <hr />
-<h3>4.8 Implementation status (as built through phase 5a)</h3>
-<p>Everything in §4.1–§4.7 is the target language. This table shows what the ROM actually does after phase 5a (the size pass and the core I/O statements). Phase 5 works through the "not yet" column (§11).</p>
+<h3>4.8 Implementation status (as built through phase 5b)</h3>
+<p>Everything in §4.1–§4.7 is the target language. This table shows what the ROM actually does after phase 5b. Phase 5 works through the "not yet" column (§11).</p>
 <table>
 <thead>
 <tr>
@@ -634,7 +622,7 @@ UNTIL g% = secret%
 <tr>
 <td>Structure</td>
 <td><code>DEF name(params)</code> … <code>ENDPROC</code>, <code>DEF name(params)</code> … <code>RETURN v</code> … <code>ENDFN</code>, one-line <code>DEF name(p) = expr</code> (the words <code>PROC</code> and <code>FN</code> after <code>DEF</code> are optional, and <code>FN</code> is optional in a call), dynamic <code>LOCAL</code>, recursion, bare-name PROC calls, <code>END</code>, <code>STOP</code>, <code>REM</code>, <code>'</code></td>
-<td><code>LABEL</code> / <code>GOTO</code>, passing arrays by reference</td>
+<td>passing arrays by reference</td>
 </tr>
 <tr>
 <td>Control flow</td>
@@ -643,8 +631,8 @@ UNTIL g% = secret%
 </tr>
 <tr>
 <td>Data</td>
-<td><code>LET</code> or bare assignment, <code>DIM</code> (up to 3 dimensions, base 0), <code>RANDOMIZE</code>, <code>DATA</code> / <code>READ</code> / <code>RESTORE</code> (a DATA statement must start its line; items are any expressions; RUN restores)</td>
-<td><code>SWAP</code>, <code>CLEAR</code>, <code>RESTORE label</code></td>
+<td><code>LET</code> or bare assignment, <code>DIM</code> (up to 3 dimensions, base 0), <code>RANDOMIZE</code>, <code>DATA</code> / <code>READ</code> / <code>RESTORE</code> (a DATA statement must start its line; items are any expressions; RUN restores), <code>SWAP a, b</code> (numbers, integers, strings or elements of the same type)</td>
+<td><code>CLEAR</code>, <code>RESTORE procname</code></td>
 </tr>
 <tr>
 <td>Screen</td>
@@ -653,23 +641,23 @@ UNTIL g% = secret%
 </tr>
 <tr>
 <td>Sound and machine</td>
-<td><code>POKE</code>, <code>WAIT</code></td>
-<td><code>BEEP</code>, <code>SOUND</code>, <code>DPOKE</code>, <code>OUT</code>, <code>CALL</code></td>
+<td><code>POKE</code>, <code>DPOKE</code>, <code>WAIT</code>, <code>BEEP dur, pitch</code> (pitch from about −24 to 69), <code>OUT port, b</code>, <code>CALL addr</code></td>
+<td><code>CALL</code> with register arguments</td>
 </tr>
 <tr>
 <td>Tape</td>
 <td><code>SAVE "name"</code>, <code>SAVE "name" CODE start, length</code>, <code>LOAD "name"</code> / <code>LOAD ""</code> (OpticOS or legacy program), <code>LOAD "name" CODE [start]</code>, <code>VERIFY</code> with the same forms</td>
-<td><code>SAVE … AUTO</code>, <code>SCREEN$</code> forms, <code>CAT</code></td>
+<td><code>SAVE … AUTO procname</code>, <code>SCREEN$</code> forms, <code>CAT</code></td>
 </tr>
 <tr>
 <td>Direct mode</td>
 <td><code>RUN</code>, <code>LIST</code>, <code>NEW</code>, <code>AUTO</code>, <code>EDIT</code> key, any statement</td>
-<td><code>RUN label</code>, <code>LIST name</code>, <code>CONT</code>, <code>FIND</code>, <code>FREE</code></td>
+<td><code>RUN procname</code>, <code>FREE</code></td>
 </tr>
 <tr>
 <td>Functions</td>
-<td><code>ABS SGN INT SQR EXP LN LOG SIN COS TAN ATN PI RND RND(n) MAX MIN LEN LEFT$ RIGHT$ MID$ CHR$ ASC STR$ VAL PEEK ERR TRUE FALSE INKEY$ FRAMES</code></td>
-<td><code>INSTR STRING$ HEX$ UPPER$ KEY JOY DPEEK IN USR FREE POINT ATTR SCREEN$ ERR$ ERRLINE ERRPROC$</code></td>
+<td><code>ABS SGN INT SQR EXP LN LOG SIN COS TAN ATN PI RND RND(n) MAX MIN LEN LEFT$ RIGHT$ MID$ CHR$ ASC STR$ VAL PEEK ERR TRUE FALSE INKEY$ FRAMES INSTR(a$,b$[,start]) STRING$(n,s$) HEX$(n) UPPER$(s$) ERR$ IN(port) USR(addr) DPEEK(addr) JOY</code></td>
+<td><code>KEY(k$)</code>, <code>FREE</code></td>
 </tr>
 </tbody>
 </table>
@@ -785,7 +773,7 @@ row:  ld   a,(de)      ;  7
 <li><strong>INVERSE / OVER</strong> use a slower general path. <code>CPL</code> before the merge gives inverse. OVER replaces the merge with <code>and c / xor (hl)</code>.</li>
 <li><strong>Scrolling</strong> moves 23 text rows up one, exactly as in 32-column mode: 5,888 bytes by <code>LDI</code> runs, about 110–125 k T, which is under 2 frames.</li>
 </ul>
-<h3>6.3 MODE 32</h3>
+<h3>6.3 MODE 32 (dropped in v0.7, decision 8; kept for the record)</h3>
 <p><code>MODE 32</code> switches the print routine to a whole-byte path.</p>
 <ul>
 <li>If <code>CHARS</code> holds its default value, glyphs are the 4-pixel font with each pixel doubled horizontally, using a 16-byte nibble-to-byte table. That is chunky but readable, and it costs no font storage.</li>
@@ -905,7 +893,7 @@ row:  ld   a,(de)      ;  7
 <h3>7.2 The prepass (resolver)</h3>
 <p>The prepass runs at RUN, or at the first CONT after a load or edit. It takes about 30–60 ms per KB of program. In one linear pass it:</p>
 <ol>
-<li>Records every <code>DEF PROC</code>, <code>DEF FN</code> and <code>LABEL</code> in a <strong>symbol table</strong> in a reserved RAM area just above the program: hash, name pointer and line address, 5 bytes each. It reports duplicates.</li>
+<li>Records every <code>DEF PROC</code> and <code>DEF FN</code> in a <strong>symbol table</strong> in a reserved RAM area just above the program: hash, name pointer and line address, 5 bytes each. It reports duplicates.</li>
 <li>Matches blocks with a small temporary stack and <strong>patches the link slots</strong>:
    - <code>IF</code> → its <code>ELSEIF</code>, <code>ELSE</code> or <code>ENDIF</code>
    - <code>ELSE</code> → <code>ENDIF</code>
@@ -1043,52 +1031,52 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <th>#</th>
 <th>Module</th>
 <th style="text-align: right;">v0.2 budget</th>
-<th style="text-align: right;">Built after phase 5a</th>
-<th style="text-align: right;">v0.6 budget</th>
+<th style="text-align: right;">Built after phase 5b</th>
+<th style="text-align: right;">v0.7 budget</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>1</td>
-<td>Restarts, NMI, reset, RAM test, system-variable and channel init</td>
+<td>Restarts (now holding GET-CHAR, NEXT-CHAR and an integer-expression helper), NMI, reset, RAM test, system-variable and channel init</td>
 <td style="text-align: right;">380</td>
-<td style="text-align: right;">292</td>
-<td style="text-align: right;">300</td>
+<td style="text-align: right;">297</td>
+<td style="text-align: right;">297</td>
 </tr>
 <tr>
 <td>2</td>
 <td>Boot banner plus the call to print it</td>
 <td style="text-align: right;">40</td>
 <td style="text-align: right;">61</td>
-<td style="text-align: right;">65</td>
+<td style="text-align: right;">61</td>
 </tr>
 <tr>
 <td>3</td>
 <td>Interrupt routine, keyboard scan, debounce and repeat, key tables</td>
 <td style="text-align: right;">520</td>
 <td style="text-align: right;">355</td>
-<td style="text-align: right;">420</td>
+<td style="text-align: right;">355</td>
 </tr>
 <tr>
 <td>4</td>
-<td>64-column print, control codes, AT/TAB, colours, scroll, cursor (INVERSE/OVER/FLASH/BRIGHT to come)</td>
+<td>64-column print, control codes, AT/TAB, colours, scroll, cursor</td>
 <td style="text-align: right;">1,000</td>
 <td style="text-align: right;">578</td>
-<td style="text-align: right;">800</td>
+<td style="text-align: right;">578</td>
 </tr>
 <tr>
 <td>5</td>
-<td>MODE 32</td>
+<td>MODE 32 (dropped, decision 8)</td>
 <td style="text-align: right;">110</td>
 <td style="text-align: right;">–</td>
-<td style="text-align: right;">110</td>
+<td style="text-align: right;">0</td>
 </tr>
 <tr>
 <td>6</td>
-<td>Block-graphics generator and 2-column UDG print</td>
+<td>Block graphics and UDG print (dropped, decision 8)</td>
 <td style="text-align: right;">60</td>
 <td style="text-align: right;">–</td>
-<td style="text-align: right;">60</td>
+<td style="text-align: right;">0</td>
 </tr>
 <tr>
 <td>7</td>
@@ -1102,28 +1090,28 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <td>Tape low level: SA-BYTES, LD-BYTES, edge routines</td>
 <td style="text-align: right;">380</td>
 <td style="text-align: right;">310</td>
-<td style="text-align: right;">330</td>
+<td style="text-align: right;">310</td>
 </tr>
 <tr>
 <td>9</td>
-<td>Tape commands: SAVE/LOAD/VERIFY with CODE (built); SCREEN$, CAT to come</td>
+<td>Tape commands: SAVE/LOAD/VERIFY with CODE (built); SAVE AUTO, SCREEN$, CAT to come</td>
 <td style="text-align: right;">520</td>
-<td style="text-align: right;">404</td>
-<td style="text-align: right;">450</td>
+<td style="text-align: right;">379</td>
+<td style="text-align: right;">489</td>
 </tr>
 <tr>
 <td>10</td>
-<td>Sound: BEEPER (built), BEEP, SOUND</td>
+<td>Sound and machine statements: BEEPER, BEEP, OUT, DPOKE, CALL, SWAP (SOUND dropped)</td>
 <td style="text-align: right;">160</td>
-<td style="text-align: right;">82</td>
-<td style="text-align: right;">160</td>
+<td style="text-align: right;">278</td>
+<td style="text-align: right;">278</td>
 </tr>
 <tr>
 <td>11</td>
-<td>Graphics: PLOT, DRAW, CIRCLE, POINT, ATTR, SCREEN$</td>
+<td>Graphics: PLOT, DRAW, DRAW TO (CIRCLE, POINT, ATTR, SCREEN$ dropped)</td>
 <td style="text-align: right;">620</td>
-<td style="text-align: right;">–</td>
-<td style="text-align: right;">620</td>
+<td style="text-align: right;">238</td>
+<td style="text-align: right;">238</td>
 </tr>
 <tr>
 <td>12</td>
@@ -1137,35 +1125,35 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <td>Number ↔ string, pr_dec / pr_hex</td>
 <td style="text-align: right;">550</td>
 <td style="text-align: right;">788</td>
-<td style="text-align: right;">800</td>
+<td style="text-align: right;">788</td>
 </tr>
 <tr>
 <td>14</td>
-<td>Transcendentals, byte-code runner, coefficient tables (ASN/ACS dropped)</td>
+<td>Transcendentals, byte-code runner, coefficient tables</td>
 <td style="text-align: right;">950</td>
-<td style="text-align: right;">1,243</td>
-<td style="text-align: right;">1,243</td>
+<td style="text-align: right;">1,222</td>
+<td style="text-align: right;">1,222</td>
 </tr>
 <tr>
 <td>15–17</td>
-<td>Tokeniser, LIST auto-indent, keyword table, dispatch tables (about 45 keywords still to add, about 270 bytes)</td>
+<td>Tokeniser, LIST auto-indent, keyword table, dispatch tables (about 11 keywords still to add)</td>
 <td style="text-align: right;">1,500</td>
-<td style="text-align: right;">1,611</td>
-<td style="text-align: right;">1,880</td>
+<td style="text-align: right;">1,740</td>
+<td style="text-align: right;">1,822</td>
 </tr>
 <tr>
 <td>18</td>
-<td>Expression evaluator and functions</td>
+<td>Expression evaluator and functions, including INSTR, STRING$, HEX$, UPPER$, ERR$, IN, USR, DPEEK, JOY (KEY, FREE to come)</td>
 <td style="text-align: right;">850</td>
-<td style="text-align: right;">1,362</td>
-<td style="text-align: right;">1,400</td>
+<td style="text-align: right;">1,712</td>
+<td style="text-align: right;">1,772</td>
 </tr>
 <tr>
 <td>19</td>
-<td>Interpreter core: run loop, statements, prepass, PROC/FN/LOCAL/TRY (EXIT, SWAP, LABEL etc. to come)</td>
+<td>Interpreter core (EXIT, ERROR n,msg$, CLEAR, RUN/RESTORE procname, array parameters, CALL registers to come)</td>
 <td style="text-align: right;">1,550</td>
-<td style="text-align: right;">2,269</td>
-<td style="text-align: right;">2,450</td>
+<td style="text-align: right;">2,195</td>
+<td style="text-align: right;">2,505</td>
 </tr>
 <tr>
 <td>20</td>
@@ -1176,73 +1164,74 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 </tr>
 <tr>
 <td>21–22</td>
-<td>Variables, arrays, string heap and GC, value and control stacks (INSTR etc. to come)</td>
+<td>Variables, arrays, string heap and GC, value and control stacks</td>
 <td style="text-align: right;">1,150</td>
-<td style="text-align: right;">1,297</td>
-<td style="text-align: right;">1,400</td>
+<td style="text-align: right;">1,275</td>
+<td style="text-align: right;">1,275</td>
 </tr>
 <tr>
 <td>23</td>
-<td>I/O statements: INPUT, DATA/READ/RESTORE (built); IN/OUT, CALL/USR, KEY, JOY, DPEEK/DPOKE, FREE to come</td>
+<td>INPUT, DATA/READ/RESTORE</td>
 <td style="text-align: right;">450</td>
-<td style="text-align: right;">212</td>
-<td style="text-align: right;">400</td>
+<td style="text-align: right;">200</td>
+<td style="text-align: right;">200</td>
 </tr>
 <tr>
 <td>24</td>
-<td>Line editor (the 4 bytes of the AUTO keyword are counted in 15–17)</td>
+<td>Line editor</td>
 <td style="text-align: right;">1,400</td>
 <td style="text-align: right;">581</td>
-<td style="text-align: right;">600</td>
+<td style="text-align: right;">581</td>
 </tr>
 <tr>
 <td>25</td>
 <td>Direct mode and console</td>
 <td style="text-align: right;">250</td>
-<td style="text-align: right;">221</td>
-<td style="text-align: right;">250</td>
+<td style="text-align: right;">227</td>
+<td style="text-align: right;">227</td>
 </tr>
 <tr>
 <td>26</td>
 <td>Errors: RST 8 unwind and messages</td>
 <td style="text-align: right;">450</td>
 <td style="text-align: right;">502</td>
-<td style="text-align: right;">560</td>
+<td style="text-align: right;">522</td>
 </tr>
 <tr>
 <td>27</td>
-<td>Legacy loader shim (Sinclair BASIC subset)</td>
+<td>Legacy loader shim (kept whole, decision 11)</td>
 <td style="text-align: right;">650</td>
 <td style="text-align: right;">845</td>
-<td style="text-align: right;">850</td>
+<td style="text-align: right;">845</td>
 </tr>
 <tr>
 <td>28</td>
-<td>Fixed-address stubs and fragmentation loss around fixed points</td>
+<td>Fixed-address stubs</td>
 <td style="text-align: right;">200</td>
 <td style="text-align: right;">78</td>
-<td style="text-align: right;">200</td>
+<td style="text-align: right;">78</td>
 </tr>
 <tr>
 <td></td>
 <td><strong>Total</strong></td>
 <td style="text-align: right;"><strong>15,374</strong></td>
-<td style="text-align: right;"><strong>14,899</strong></td>
-<td style="text-align: right;"><strong>17,306</strong></td>
+<td style="text-align: right;"><strong>15,669</strong></td>
+<td style="text-align: right;"><strong>16,401</strong></td>
 </tr>
 <tr>
 <td></td>
 <td><strong>Margin (of 16,384)</strong></td>
 <td style="text-align: right;"><strong>1,010</strong></td>
-<td style="text-align: right;"><strong>1,485 free now</strong></td>
-<td style="text-align: right;"><strong>−922 (over)</strong></td>
+<td style="text-align: right;"><strong>715 free now</strong></td>
+<td style="text-align: right;"><strong>−17 (over)</strong></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Rebalance after phase 3 (v0.3).</strong> The maths (items 12–14, +882 bytes) and the interpreter (items 15–22, +1,450 bytes) came out larger than the v0.2 estimates. As agreed, the size reduction is left to phase 5, and the budgets above now record what was built, with room kept for the features each module still lacks. The ROM built so far fits, with 2,543 bytes free (well above the 256-byte margin rule). The free space is in seven gaps between fixed addresses, the largest being 613 bytes, so later modules must be split to fit.</p>
 <p><strong>Rebalance after phase 4 (v0.4).</strong> The full-screen editor (1,400) is replaced by a Sinclair-style line editor, built in 585 bytes and budgeted at 600. That recovers 800 bytes of the overrun. The ROM as built has 1,958 bytes free, spread over seven gaps (the largest now 397 bytes).</p>
 <p><strong>Rebalance in phase 5a (v0.6).</strong> ASN and ACS were dropped (−87 bytes with their keywords). INPUT, DATA/READ/RESTORE and SAVE/LOAD/VERIFY with CODE were built in 501 bytes (212 + 289), less than their budgets. The v0.4 projection had not counted the keyword table for the keywords still to come, so row 15–17 now includes about 270 bytes for them, and row 26 includes room for a few more messages.</p>
-<p><strong>Warning: the full feature list still does not fit.</strong> With the v0.6 budgets the finished ROM would need 17,306 bytes, which is 922 over 16,384, or about <strong>1,180 bytes over</strong> once the 256-byte margin is kept. The ROM as built has 1,485 bytes free, so about 1,230 bytes are usable for the remaining features, against about 2,400 bytes of budget. Phase 5 has to close that gap with a mix of squeezing and cuts. Candidate squeezes: the remaining maths items (STR$ small-integer path, compare, COS from SIN, EXP terms, VAL, xorshift; about 290), and shared argument parsing and RST helpers in the evaluator and statements (about 300). Candidate cuts, to be agreed with Nathan: SCREEN$(r,c), ATTR and POINT (about 120), CIRCLE (about 90), MODE 32 and UDG print (170), SOUND (about 40), FIND, CONT, ERRLINE and ERRPROC$ (about 150 with their keywords), LABEL/GOTO (about 100), and a trimmed legacy shim (about 150).</p>
+<p><strong>Rebalance in phase 5b (v0.7).</strong> Nathan's cuts (decisions 8–11) remove MODE 32, UDG printing, CIRCLE, LABEL/GOTO, SOUND, SCREEN$(r,c), ATTR, POINT, FIND, CONT, ERRLINE and ERRPROC$ from the plan. The squeezes so far saved 222 bytes: GET-CHAR, NEXT-CHAR and an "integer expression" helper moved into the free restarts <code>$18</code>, <code>$20</code> and <code>$30</code>, so about 80 three-byte <code>CALL</code>s became one-byte <code>RST</code>s (186); RND keeps its state in registers (21); a shared "number 0–255" helper (15). Graphics, colours, BEEP, the string and machine functions and SWAP were then built in 820 bytes plus their keywords. One planned squeeze was tried and rejected: sending small integers through the float path in STR$ saves 36 bytes but makes printing an integer about 15 times slower (about 80,000 T-states).</p>
+<p><strong>Warning: the remainder is about 270 bytes short.</strong> With the v0.7 budgets the finished ROM would need 16,401 bytes, 17 over 16,384, or about <strong>273 bytes over</strong> once the 256-byte margin is kept (the v0.6 projection was about 1,180 over). It can be closed by dropping array parameters by reference (about 80), <code>CALL</code> register arguments (30), <code>CAT</code> (45) and the <code>SCREEN$</code> tape forms (25), about 180 in total, plus the remaining maths squeezes (COS from SIN, fewer EXP terms, a smaller VAL digit loop; about 130, each needing the full mpmath run).</p>
 <p>The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print logic costs about 100 bytes more than a plain 32-column printer, so the change of display gained roughly 200 bytes overall. Adding an 8×8 font at <code>$3D00</code> would bring the total to 16,142, leaving a margin of 242 (1.5%). That is too thin, so the font is left out for now (§12).</p>
 <h3>8.3 Benchmarks</h3>
 <ul>
@@ -1564,7 +1553,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <p>The total is about <strong>12–14 sessions</strong>, which is larger than Mire Mare. Phase 1 is a useful stopping point on its own: it proves the hardware layer and tape compatibility before any BASIC exists.</p>
 <hr />
 <h2>12. Decisions (agreed 13 Nov 2026)</h2>
-<p>Nathan agreed all six recommendations on 13 November 2026.</p>
+<p>Nathan agreed the first six recommendations on 13 November 2026; decisions 7–12 were made later the same day.</p>
 <ol>
 <li><strong>No 8×8 font at <code>$3D00</code> for now.</strong> Ship the 4-pixel font only and get MODE 32 by pixel doubling. Revisit in Phase 5 if the margin allows. Without it, games that draw text from the ROM font show garbage.</li>
 <li><strong>Include the legacy loader shim (about 650 bytes).</strong> Without it, almost no commercial tape, including Bounce Ball and Mire Mare, loads with <code>LOAD ""</code>.</li>
@@ -1573,7 +1562,12 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <li><strong>Do not emulate the RST <code>$28</code> calculator.</strong> It would cost 600 bytes or more, and few games use it. RST <code>$28</code> raises a clean error instead.</li>
 <li><strong><code>LOCAL</code> is dynamic, in the BBC style</strong>, not true lexical scope. Lexical scope would need per-PROC symbol tables, at about 300 bytes plus a slower lookup.</li>
 <li><strong>No full-screen editor</strong> (Nathan, later on 13 Nov 2026, for phase 4). Use the ZX BASIC pattern instead: a current-line marker moved with the cursor keys over a LIST, and EDIT to bring that line into the input line (§6.5).</li>
+<li><strong>Dropped: <code>MODE 32</code> and UDG printing, <code>CIRCLE</code></strong> (Nathan, 13 Nov 2026, phase 5). The ROM is 64 columns only. The legacy shim prints at 64 columns and doubles <code>PRINT AT</code> columns (§3.3).</li>
+<li><strong>Dropped: <code>LABEL</code> / <code>GOTO</code>, and there is no <code>GOSUB</code>.</strong> PROCs replace them. Where the spec used labels, a PROC name is used instead: <code>RUN name</code> calls that PROC after the prepass; <code>RESTORE name</code> restores to the first DATA line after that DEF; <code>SAVE "x" AUTO name</code> runs that PROC after loading.</li>
+<li><strong>Dropped: <code>SCREEN$(r,c)</code>, <code>ATTR</code>, <code>POINT</code>, <code>FIND</code>, <code>CONT</code>, <code>ERRLINE</code>, <code>ERRPROC$</code> and <code>SOUND</code></strong> (BEEP stays). Also, from phase 5a, <code>ASN</code> and <code>ACS</code>.</li>
+<li><strong>The legacy loader shim stays whole</strong>, with no trim. Bounce Ball and Mire Mare must keep loading with <code>LOAD ""</code> (the phase 1 tests check both).</li>
+<li><strong>Both squeezes are accepted</strong>: the remaining maths items, checked with the full 3,000-case run and the RND statistics, and shared argument parsing and RST helpers in the interpreter (§8.2).</li>
 </ol>
-<p><em>End of specification v0.6.</em></p>
+<p><em>End of specification v0.7.</em></p>
 </body>
 </html>

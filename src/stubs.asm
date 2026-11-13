@@ -23,6 +23,7 @@ co_bad: rst 8
         defb ERR_STRM
 m_stb_e:
         include "basic.asm"
+        include "gfx.asm"
 secJ1_end:
 
         org $203C

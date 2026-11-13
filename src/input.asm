@@ -3,7 +3,7 @@ m_in_s:
 ; ---------------------------------------------------- INPUT ["prompt";] v [, v ...]
 ; Each variable gets its own input line, edited like the console line.
 st_input:
-        call tk
+        rst $18
         cp 6
         jr nz,in_v
         call ev_expr            ; the prompt
@@ -15,7 +15,7 @@ in_v:   ld bc,in_get
 ; v_list: for each variable of a comma list, BC (A = its type) pushes
 ; the value to store
 v_list: push bc
-        call tk
+        rst $18
         cp 1
         jp nz,err_syn
         call var_ref            ; HL = value, A = type
@@ -28,10 +28,10 @@ v_list: push bc
         pop hl
         call val_store
         pop bc
-        call tk
+        rst $18
         cp ','
         ret nz
-        call skip1
+        rst $20
         jr v_list
 in_get: push af
         call con_inp            ; EBUF, CON_LEN
@@ -88,10 +88,10 @@ rd_it:  ld de,(CH_ADD)
         push de
         ld (CH_ADD),hl
         call ev_expr
-        call tk
+        rst $18
         cp ','
         jr nz,rd_e
-        call skip1
+        rst $20
         jr rd_s
 rd_e:   cp 13
         jp nz,err_syn

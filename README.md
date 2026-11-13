@@ -12,7 +12,7 @@ The boot message reads:
 OpticOS (c) 2026 Optica Technology
 ```
 
-**Status: Phases 0–4 complete; Phase 5 under way.** The ROM boots, loads ordinary game tapes, runs structured OpticBASIC programs, and has a Sinclair-style line editor. Phase 5a added `INPUT`, `DATA`/`READ`/`RESTORE` and `SAVE`/`LOAD`/`VERIFY`. The design is in the [specification (PDF)](docs/spec.pdf) ([Markdown](docs/spec.md)); §4.8 lists what is built and what is not yet.
+**Status: Phases 0–4 complete; Phase 5 under way.** The ROM boots, loads ordinary game tapes, runs structured OpticBASIC programs, and has a Sinclair-style line editor. Phase 5 has so far added `INPUT`, `DATA`/`READ`/`RESTORE`, `SAVE`/`LOAD`/`VERIFY`, graphics (`PLOT`, `DRAW`), colours inside PRINT, `BEEP`, string and machine functions, and `SWAP`. The design is in the [specification (PDF)](docs/spec.pdf) ([Markdown](docs/spec.md)); §4.8 lists what is built and what is not yet.
 
 | Phase | What it delivered | Report |
 |---|---|---|
@@ -21,6 +21,7 @@ OpticOS (c) 2026 Optica Technology
 | 3 | Tokenised interpreter with no line numbers | [docs/phase3](docs/phase3/README.md) |
 | 4 | ZX-style line editor: current-line marker, EDIT, AUTO | [docs/phase4](docs/phase4/README.md) |
 | 5a | Size pass (ASN/ACS dropped), INPUT, DATA/READ/RESTORE, SAVE/LOAD/VERIFY with CODE | [docs/phase5](docs/phase5/README.md) |
+| 5b | Squeezes, PLOT/DRAW, FLASH/BRIGHT/INVERSE/OVER and colours in PRINT, BEEP, INSTR/STRING$/HEX$/UPPER$/ERR$, IN/OUT/USR/CALL/DPEEK/DPOKE/JOY, SWAP | [docs/phase5](docs/phase5/README.md#phase-5b-nathans-cuts-the-squeezes-graphics-and-functions) |
 
 ## Screenshots
 
@@ -31,23 +32,27 @@ All are from real [Fuse](https://fuse-emulator.sourceforge.net/) with traps and 
 | ![Boot screen in Fuse](docs/phase1/fuse_boot.png) | ![PRINT in direct mode](docs/phase2/fuse_hello.png) |
 | **A structured program, LIST and RUN** | **The line editor: marker and EDIT** |
 | ![LIST and RUN of a program](docs/phase3/fuse_program.png) | ![Editing the current line](docs/phase4/fuse_edit.png) |
+| **Graphics: PLOT, DRAW, colours** | **INPUT and DATA / READ** |
+| ![PLOT and DRAW demo](docs/phase5/fuse_graphics.png) | ![INPUT and READ](docs/phase5/fuse_input_read.png) |
 
 ## What works today
 
 - A drop-in 16K ROM for the 48K Spectrum, on emulators such as Fuse (not yet tried on real hardware).
-- **64-column text** in an original 4×8 font, with colours, scrolling and `PRINT AT`/`TAB`.
+- **64-column text** in an original 4×8 font, with colours (`INK PAPER FLASH BRIGHT INVERSE OVER`, also inside PRINT), scrolling and `PRINT AT`/`TAB`.
+- **Graphics and sound:** `PLOT`, `DRAW dx,dy`, `DRAW TO x,y` on the full 256×192 screen, and `BEEP duration, pitch`.
 - **OpticBASIC with no line numbers:**
   - named procedures and functions with parameters, dynamic `LOCAL` and recursion; procedures are called by bare name
   - block `IF` / `ELSEIF` / `ELSE` / `ENDIF`, `WHILE` / `WEND`, `REPEAT` / `UNTIL`, `FOR` / `NEXT`, and `TRY` / `CATCH` / `ENDTRY` error handling
   - floats, 16-bit integers (`a%`), strings up to 255 characters with a garbage-collected heap, and arrays of up to 3 dimensions
   - `INPUT`, `DATA` / `READ` / `RESTORE`, and `SAVE` / `LOAD` / `VERIFY` of programs and `CODE` on a standard tape signal
-  - the usual maths and string functions, plus `INKEY$`, `FRAMES`, `MAX`, `MIN`, hex (`&FF`) and binary (`%1010`) literals
+  - the usual maths and string functions plus `INSTR`, `STRING$`, `HEX$`, `UPPER$`, `ERR$`, `INKEY$`, `FRAMES`, `MAX`, `MIN`, hex (`&FF`) and binary (`%1010`) literals
+  - machine access: `PEEK`/`POKE`, `DPEEK`/`DPOKE`, `IN`/`OUT`, `USR`, `CALL`, `JOY` (Kempston), and `SWAP a, b`
   - an indenting `LIST`: the indentation is not stored but recomputed from the block structure
 - **Keywords are typed letter by letter** and tokenised on entry. The keyword legends on the keys are ignored.
 - **Tape compatibility.** The standard ROM tape format and entry points (`LD-BYTES`, `SA-BYTES`, `BEEPER`, the RST vectors and others) are kept, so `LOAD ""` loads ordinary games, including ones with a BASIC loader, through a small legacy shim.
 - **Clean-room implementation.** OpticOS contains no Sinclair, Amstrad or Tasword code or artwork. A build check confirms that no run of 12 or more bytes is shared with the original ROM.
 
-Still to come (Phase 5): graphics (`PLOT`, `DRAW`, `CIRCLE`), `BEEP`, `CASE`, `EXIT`, `SWAP`, `INSTR`, `STRING$`, `HEX$`, `UPPER$`, `ERR$`, and `MODE 32`/UDGs from BASIC.
+Still to come (Phase 5): `CASE`, `EXIT`, `CLEAR`, `KEY`, `FREE`, `CAT`, `RUN name`, `RESTORE name`, `SAVE … AUTO name`. Dropped by decision: `MODE 32`, UDGs, `CIRCLE`, `LABEL`/`GOTO`, `SOUND`, `ASN`/`ACS`, `SCREEN$()`, `ATTR`, `POINT`, `FIND`, `CONT` (spec §12).
 
 ## A short example
 
@@ -95,29 +100,32 @@ fuse-sdl --machine 48 --rom-48 build/opticos.rom --no-traps --no-detect-loader -
 
 Fuse needs `--no-traps` so that its tape traps don't bypass the OpticOS tape routines. The two loader flags make tapes load in real time, which is how the tests run. `build/` is gitignored. You need `pasmo` 0.5.3, `gcc` and Python 3 with Pillow.
 
-## ROM byte usage (after Phase 5a)
+## ROM byte usage (after Phase 5b)
 
-14,899 of 16,384 bytes are placed, leaving **1,485 free**. The largest parts:
+15,669 of 16,384 bytes are placed, leaving **715 free**. The largest parts:
 
 | Part | Bytes |
 |---|---:|
-| Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,417 |
+| Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,343 |
+| Tokeniser, keyword table, LIST | 1,740 |
 | Floating-point core | 1,424 |
-| Tokeniser, keyword table, LIST | 1,611 |
-| Expression evaluator and functions | 1,362 |
-| Transcendental functions | 1,243 |
-| Variables, arrays, string heap and GC | 1,297 |
+| Expression evaluator and functions | 1,326 |
+| Variables, arrays, string heap and GC | 1,275 |
+| Transcendental functions | 1,222 |
 | Legacy loader shim | 845 |
 | Number ↔ text conversion | 738 |
+| Input line and line editor | 690 |
 | 64-column printing and the screen | 578 |
 | Errors and messages | 502 |
-| Input line and line editor | 684 |
-| INPUT, DATA / READ / RESTORE | 182 |
-| Tape commands: SAVE / LOAD / VERIFY | 404 |
+| String and machine functions | 386 |
 | Font (96 glyphs at 4×8) | 384 |
-| Everything else (restarts, keyboard, tape signal, beeper, fixed-address stubs) | 1,228 |
+| Tape commands: SAVE / LOAD / VERIFY | 379 |
+| Graphics: PLOT, DRAW | 238 |
+| BEEP, OUT, DPOKE, CALL, SWAP | 196 |
+| INPUT, DATA / READ / RESTORE | 170 |
+| Everything else (restarts, keyboard, tape signal, beeper, fixed-address stubs) | 1,233 |
 
-On the [spec's budget](docs/spec.md#82-budget) the full planned feature list is still about 1,180 bytes too big for the ROM once a 256-byte safety margin is kept. [docs/phase5](docs/phase5/README.md) lists the options for closing the gap.
+On the [spec's budget](docs/spec.md#82-budget) after Nathan's cuts the remaining planned features are about 270 bytes too big for the ROM once a 256-byte safety margin is kept. [docs/phase5](docs/phase5/README.md) proposes how to close the gap.
 
 ## The boot screen
 

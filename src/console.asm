@@ -12,6 +12,8 @@ console:
         ld (CURCHL),hl
         ei
 con_new:
+        ld hl,(ATTR_P)          ; temporary colours end with the statement
+        ld (ATTR_T),hl
         ld a,(S_POSN)
         or a
         ld a,13

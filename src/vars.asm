@@ -78,13 +78,7 @@ stk_reset:
         ret
 
 ; ---------------------------------------------------- text pointer helpers
-tk:     ld hl,(CH_ADD)          ; A = current token
-        ld a,(hl)
-        ret
-skip1:  ld hl,(CH_ADD)          ; step over a one-byte token
-        inc hl
-        ld (CH_ADD),hl
-        ret
+; tk (RST $18) and skip1 (RST $20) live in the restart area
 expect: ld hl,(CH_ADD)          ; A must be the current (one-byte) token
         cp (hl)
         jp nz,err_syn
@@ -486,8 +480,7 @@ arr_elem:
         push hl                 ; offset
         ld a,'('
         call expect
-ae_lp:  call ev_expr
-        call pop_int
+ae_lp:  rst $30
         or a
         jp nz,err_subs
         pop bc                  ; offset
@@ -506,10 +499,10 @@ ae_lp:  call ev_expr
         pop de
         add hl,de
         push hl
-        call tk
+        rst $18
         cp ','
         jr nz,ae_e
-        call skip1
+        rst $20
         jr ae_lp
 ae_e:   ld a,')'
         call expect

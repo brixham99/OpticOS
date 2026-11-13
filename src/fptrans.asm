@@ -389,62 +389,54 @@ fu_log: call fu_ln
 
 ; ---------------------------------------------------- RND, RANDOMIZE
 ; 32-bit xorshift (13, 17, 5) in RNDS; RND = state / 2^32
-fu_rnd: ld bc,$0D00
-        call xs_sh
-        ld bc,$1101
-        call xs_sh
-        ld bc,$0500
-        call xs_sh
-        ld hl,(RNDS)
+fu_rnd: ld hl,(RNDS)             ; DE:HL = state
+        ld de,(RNDS+2)
+        ld b,13
+        call xs_l
+        ld b,17
+        call xs_r
+        ld b,5
+        call xs_l
+        ld (RNDS),hl
+        ld (RNDS+2),de
         ld (FA+1),hl
-        ld hl,(RNDS+2)
-        ld (FA+3),hl
+        ld (FA+3),de
         xor a
         ld (FA),a
         ld (FA+6),a
         ld a,128
         ld (FA+5),a
         jp fu_norm
-; xs_sh: state ^= state shifted B bits (C = 0 left, 1 right)
-xs_sh:  ld hl,RNDS
-        ld de,T6
-        push bc
-        ld bc,4
-        ldir
+; xs_l / xs_r: DE:HL ^= DE:HL shifted B bits left / right
+xs_l:   push de
+        push hl
+xl_1:   add hl,hl
+        rl e
+        rl d
+        djnz xl_1
+xs_x:   pop bc
+        ld a,l
+        xor c
+        ld l,a
+        ld a,h
+        xor b
+        ld h,a
         pop bc
-xs_1:   ld hl,T6
-        ld a,c
-        or a
-        jr nz,xs_r
-        sla (hl)
-        inc hl
-        rl (hl)
-        inc hl
-        rl (hl)
-        inc hl
-        rl (hl)
-        jr xs_2
-xs_r:   inc hl
-        inc hl
-        inc hl
-        srl (hl)
-        dec hl
-        rr (hl)
-        dec hl
-        rr (hl)
-        dec hl
-        rr (hl)
-xs_2:   djnz xs_1
-        ld hl,RNDS
-        ld de,T6
-        ld b,4
-xs_3:   ld a,(de)
-        xor (hl)
-        ld (hl),a
-        inc hl
-        inc de
-        djnz xs_3
+        ld a,e
+        xor c
+        ld e,a
+        ld a,d
+        xor b
+        ld d,a
         ret
+xs_r:   push de
+        push hl
+xr_1:   srl d
+        rr e
+        rr h
+        rr l
+        djnz xr_1
+        jr xs_x
 ; fp_randomize: DE = seed (0 = use FRAMES)
 fp_randomize:
         ld a,d
