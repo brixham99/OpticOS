@@ -89,6 +89,7 @@ POKE_RET:
         ret                     ; POKE 23739,111 makes channel S output land here
 ; ---------------------------------------------------------------- $0970
         include "print.asm"
+        include "edit.asm"
 secG_end:
 
 ; ---------------------------------------------------------------- $0D6B

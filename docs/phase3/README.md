@@ -1,5 +1,7 @@
 # Phase 3: the OpticBASIC interpreter
 
+*(Since phase 4, program lines are entered with `AUTO` and the line editor instead of the `>` prefix described here; see [`../phase4/`](../phase4/README.md).)*
+
 Phase 3 adds a tokenising interpreter for structured BASIC without line numbers, as set out in [`../spec.md`](../spec.md) §4–§7 and the §12 decisions. The full-screen editor is Phase 4. Until then a program is entered at the `]` prompt one line at a time, with each line starting with `>`:
 
 ```

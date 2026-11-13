@@ -40,18 +40,16 @@ ws_init: ld hl,(RAMTOP)
         add hl,de
         ld (TKB),hl
         ld (HTOP),hl
-        ld hl,STATIC
-        ld b,52
+        ld hl,STATIC            ; A%-Z% and the editor variables
+        ld b,CON_LEN+1-STATIC
 wi_z:   ld (hl),0
         inc hl
         djnz wi_z
-p_new:  ld hl,OPROG
+p_new:  ld hl,0
+        ld (CURL),hl
+        ld hl,OPROG
         ld (PEND),hl
-        ld (hl),0
-        inc hl
-        ld (VARSB),hl
-        ld a,1
-        ld (PPF),a
+        jp p_fix
 ; clr_vars: forget every variable and string (A%-Z% are kept)
 clr_vars:
         ld hl,(VARSB)

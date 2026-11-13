@@ -1031,17 +1031,12 @@ st_run: ld a,1                  ; prepass always (it clears the variables)
         call stk_reset
         ld hl,OPROG
         jp go_line
-st_list: xor a
-        ld (LSTLV),a
-        ld hl,OPROG
-sl_l:   ld a,(hl)
-        or a
-        ret z
-        push hl
-        call list_line
-        pop hl
-        call nxl
-        jr sl_l
+st_list: ld hl,OPROG            ; the whole program, marker included
+        ld b,0
+        jp lst
+st_auto: ld hl,EMODE            ; AUTO: typed lines go into the program
+        set 0,(hl)
+        ret
 st_new: call p_new
         jp st_end
 st_border: call ev_expr
@@ -1110,28 +1105,143 @@ st_load: call tk                ; LOAD "": a tape program (legacy)
         jp nz,err_syn
         jp lg_cmd_load
 
-; ---------------------------------------------------- console hooks
-; con_line: LINEBUF holds a typed line (0-terminated)
+; ---------------------------------------------------- program lines (editor)
+; p_ins: insert the tokenised line at TKB before line HL -> HL = it
+p_ins:  push hl
+        call clr_vars
+        pop hl
+        ld (TMP),hl
+        ld de,(PEND)
+        ex de,hl
+        or a
+        sbc hl,de
+        inc hl
+        push hl                 ; bytes to move up (sentinel included)
+        ld hl,(TKB)
+        ld c,(hl)
+        ld b,0
+        ld hl,(PEND)
+        push hl
+        add hl,bc
+        push hl
+        ld de,67
+        add hl,de
+        ld de,(HP)
+        call cphd               ; it must stay clear of the heap
+        jp nc,err_nomem
+        pop de
+        ld (PEND),de
+        pop hl
+        pop bc
+        lddr
+        ld de,(TMP)
+        ld hl,(TKB)
+        ld c,(hl)
+        ld b,0
+        ldir
+        ld hl,(TMP)
+        jr p_fix
+; p_del: delete line HL (HL kept)
+p_del:  ld c,(hl)
+        ld b,0
+        push hl
+        push bc
+        ld hl,(PEND)
+        or a
+        sbc hl,bc
+        ld (PEND),hl
+        pop bc
+        pop de
+        push de
+        or a
+        sbc hl,de
+        inc hl
+        push hl
+        ld h,d
+        ld l,e
+        add hl,bc
+        pop bc
+        ldir
+        pop hl
+; p_fix: after a change: sentinel, empty DEF table, variables cleared
+p_fix:  push hl
+        ld hl,(PEND)
+        xor a
+        ld (hl),a
+        inc hl
+        ld (hl),a
+        inc hl
+        ld (hl),a
+        inc hl
+        ld (VARSB),hl
+        inc a
+        ld (PPF),a
+        call clr_vars
+        pop hl
+        ret
+; con_line: EBUF holds an entered line (0-terminated, length CON_LEN).
+; Edit pending: it replaces the current line (empty: deletes it).
+; AUTO mode: it goes in after the current line (empty: AUTO ends).
+; Otherwise it runs at once.
 con_line:
         call stk_reset
         ld hl,0
         ld (CURLN),hl
-        ld hl,LINEBUF
-cl_sp:  ld a,(hl)
-        cp ' '
-        inc hl
-        jr z,cl_sp
-        dec hl
-        or a
+        ld a,(CON_LEN)
+        ld c,a
+        ld hl,EMODE
+        bit 1,(hl)
+        jr nz,cl_rep
+        bit 0,(hl)
+        jr nz,cl_ins
+        inc c
+        dec c
         ret z
-        cp '>'
-        jr z,cl_add
         ld de,(TKB)
-        call tokenise
+        call cl_tok
         jp run_direct
-cl_add: inc hl                  ; "> line": add it to the program
-        ld de,(TKB)
+cl_ins: inc c
+        dec c
+        jr nz,ci_go
+        res 0,(hl)
+        ret
+ci_go:  call cl_ptk
+        ld hl,(CURL)
+        ld a,h
+        or l
+        ld hl,OPROG
+        jr z,cin_1
+        ld hl,(CURL)
+        call nxl
+cin_1:   call p_ins
+cl_cur: ld (CURL),hl
+        jp elist
+cl_rep: res 1,(hl)
+        inc c
+        dec c
+        jr nz,cr_go
+        ld hl,(CURL)            ; empty: delete the line
+        call p_del
+        call prv
+        jr cl_cur
+cr_go:  call cl_ptk
+        ld hl,(CURL)
+        call p_del
+        call p_ins
+        jr cl_cur
+; cl_ptk: tokenise EBUF as a program line at TKB: [length] tokens [length]
+cl_ptk: ld de,(TKB)
         inc de
+        call cl_tok
+        ld a,l
+        ld de,(TKB)
+        ld (de),a
+        dec hl
+        add hl,de
+        ld (hl),a
+        ret
+; cl_tok: tokenise EBUF to DE -> HL = bytes from TKB + 1 (at most 255)
+cl_tok: ld hl,EBUF
         call tokenise
         ld hl,(TKB)
         ex de,hl
@@ -1141,37 +1251,7 @@ cl_add: inc hl                  ; "> line": add it to the program
         ld a,h
         or a
         jp nz,err_nomem
-        ld a,l
-        ld (de),a
-        dec hl
-        add hl,de
-        ld (hl),a
-        ld hl,(PEND)
-        ld c,a
-        ld b,0
-        push hl
-        add hl,bc
-        push hl
-        ld de,67
-        add hl,de
-        ld de,(HP)
-        call cphd               ; it must stay clear of the heap
-        jp nc,err_nomem
-        pop hl
-        ld (PEND),hl
-        ld (hl),b
-        inc hl
-        ld (hl),b
-        inc hl
-        ld (hl),b
-        inc hl
-        ld (VARSB),hl
-        pop de
-        ld hl,(TKB)
-        ldir
-        ld a,1
-        ld (PPF),a
-        jp clr_vars
+        ret
 ; con_err: RST 8 lands here (SP = ERR_SP).  A TRY on the control stack
 ; catches the error; otherwise it is reported with its line.
 con_err:
@@ -1212,6 +1292,7 @@ ce_rep: ld sp,(RAMTOP)
         ld a,h
         or l
         jp z,console
+        ld (CURL),hl            ; the marker moves to the failing line
         ex de,hl
         ld hl,OPROG             ; line number = position in the program
         ld bc,1

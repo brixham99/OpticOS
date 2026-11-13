@@ -1,7 +1,6 @@
 ; console.asm - phase 1 minimal console: a one-line editor with a blinking
-; 4x8 cursor block after the "] " prompt.  Lines go to con_line (basic.asm):
-; "> text" adds a program line, anything else runs at once.
-CON_LEN equ $5B4F
+; 4x8 cursor block.  The input line (up to 126 characters, two rows) is
+; edited with left/right, DELETE and insert; ENTER hands it to con_line.
 m_con_s:
 console:
         ld sp,(RAMTOP)
@@ -17,60 +16,163 @@ con_new:
         or a
         ld a,13
         call nz,pr_out
-        ld a,']'                ; the OpticOS direct-mode prompt
-        call pr_out
-        ld a,' '
-        call pr_out
         xor a
         ld (CON_LEN),a
+        ld (EIDX),a
+con_pr: ld a,(EMODE)            ; prompt: ] direct, + AUTO, * EDIT
+        and 3
+        ld e,a
+        ld d,0
+        ld hl,prm_t
+        add hl,de
+        ld a,(hl)
+        rst 16
+        ld a,' '
+        rst 16
+        call pos_lin
+        ld (ESTART),hl
+k_rd:   call redraw
 con_key:
         call con_getkey
         cp 13
-        jr z,con_enter
+        jp z,con_enter
+        cp 7
+        jp z,con_edit
+        cp 11
+        jp z,c_up
+        cp 10
+        jp z,c_down
+        ld hl,EIDX
+        cp 8
+        jr z,c_left
+        cp 9
+        jr z,c_right
         cp 12
-        jr z,con_del
+        jr z,c_del
         cp 32
         jr c,con_key
         cp 128
         jr nc,con_key
+        push af                 ; insert at the cursor
+        ld a,(CON_LEN)
+        cp EMAX
+        jr nc,ci_x
+        sub (hl)
         ld c,a
+        ld b,0
         ld a,(CON_LEN)
-        cp 61                   ; prompt + 61 characters + cursor = 64
-        jr nc,con_key
         ld e,a
-        ld d,0
-        ld hl,LINEBUF
+        ld d,b
+        ld hl,EBUF
         add hl,de
-        ld (hl),c
-        inc a
-        ld (CON_LEN),a
+        ld d,h
+        ld e,l
+        dec hl
         ld a,c
-        call pr_out
+        or a
+        jr z,ci_1
+        lddr
+ci_1:   pop af
+        ld (de),a
+        ld hl,CON_LEN
+        inc (hl)
+        ld hl,EIDX
+c_right: ld a,(CON_LEN)
+        cp (hl)
+        jr z,con_key
+        inc (hl)
+        jr k_rd
+ci_x:   pop af
         jr con_key
-con_del:
-        ld a,(CON_LEN)
+c_left: ld a,(hl)
         or a
         jr z,con_key
-        dec a
-        ld (CON_LEN),a
-        ld a,8
-        call pr_out
-        ld a,' '
-        call pr_out
-        ld a,8
-        call pr_out
-        jr con_key
+        dec (hl)
+        jr k_rd
+c_del:  ld a,(hl)               ; DELETE: the character left of the cursor
+        or a
+        jr z,con_key
+        dec (hl)
+        ld hl,CON_LEN
+        dec (hl)
+        ld a,(hl)
+        ld hl,EIDX
+        sub (hl)
+        ld c,a
+        ld b,0
+        ld e,(hl)
+        ld d,b
+        ld hl,EBUF
+        add hl,de
+        ld d,h
+        ld e,l
+        inc hl
+        or a
+        jp z,k_rd
+        ldir
+        jp k_rd
+prm_t:  defb "]+**"
 con_enter:
         ld a,(CON_LEN)
         ld e,a
         ld d,0
-        ld hl,LINEBUF
+        ld hl,EBUF
         add hl,de
-        ld (hl),0
+        ld (hl),d
+        ld hl,(ESTART)
+        add hl,de
+        call lin_pos
         ld a,13
-        call pr_out
+        rst 16
         call con_line
         jp con_new
+; redraw: print the input line from ESTART, then put the cursor at EIDX
+redraw: ld hl,(ESTART)
+        call lin_pos
+        ld a,(CON_LEN)
+        ld b,a
+        inc b
+        ld hl,EBUF
+        jr rd_n
+rd_l:   ld a,(hl)
+        rst 16
+        inc hl
+rd_n:   djnz rd_l
+        ld a,' '
+        rst 16
+        call pos_lin            ; the text may have scrolled up
+        ld a,(CON_LEN)
+        ld e,a
+        ld d,0
+        inc de
+        or a
+        sbc hl,de
+        ld (ESTART),hl
+        ld a,(EIDX)
+        ld e,a
+        add hl,de
+; lin_pos: HL = row*64 + column -> S_POSN
+lin_pos: ld a,l
+        and 63
+        add hl,hl
+        add hl,hl
+        ld l,a
+        ld (S_POSN),hl
+        ret
+; pos_lin: S_POSN -> HL = row*64 + column
+pos_lin: ld hl,(S_POSN)
+        ld a,l
+        ld l,h
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        or l
+        ld l,a
+        ret
 
 con_ok: ld a,ERR_OK
         ld (ERR_NR),a

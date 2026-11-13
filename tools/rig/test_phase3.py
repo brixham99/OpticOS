@@ -58,7 +58,7 @@ PROG = ['REM structured demo', 'DEF fib(n)', 'IF n<2 THEN RETURN n', 'RETURN fib
         'x=&10+%11', 'WHILE x>17', 'x=x-1', 'WEND', 'TRY', 'show "fib",x-12', 'CATCH', 'PRINT "err ";ERR', 'ENDTRY']
 LISTED = ['REM structured demo', 'DEF fib(n)', '  IF n<2 THEN RETURN n', '  RETURN fib(n-1)+fib(n-2)', 'ENDFN',
           'DEF show(a$,n)', '  LOCAL i', '  FOR i=1 TO n', '    PRINT a$;" ";i;" ";fib(i)', '  NEXT', 'ENDPROC',
-          'x=$10+%11', 'WHILE x>17', '  x=x-1', 'WEND', 'TRY', '  show "fib",x-12', 'CATCH', '  PRINT "err ";ERR', 'ENDTRY']
+          'x=$10+%11', 'WHILE x>17', '  x=x-1', 'WEND', 'TRY', '  show "fib",x-12', 'CATCH', '  PRINT "err ";ERR', '>ENDTRY']
 case('LIST indents and spacing', PROG, 'LIST', LISTED)
 case('demo program', PROG, 'RUN', ['fib 1 1', 'fib 2 1', 'fib 3 2', 'fib 4 3', 'fib 5 5'])
 
@@ -80,7 +80,7 @@ ok = rows[-1:] == ['Calculator not supported']; res['RST $28 clean error'] = ok
 print('%-28s %s' % ('RST $28 clean error', 'ok' if ok else 'FAIL %r' % rows))
 if not ok: fails.append('RST $28')
 # a long-running loop: time per iteration
-b.line('NEW'); b.line('>FOR i=1 TO 1000: a=a+i: NEXT'); b.line('>PRINT a')
+b.line('NEW'); b.enter(['FOR i=1 TO 1000: a=a+i: NEXT', 'PRINT a'])
 t0 = s.regs() and __import__('rig').lib.z_tstates(); b.line('RUN'); t1 = __import__('rig').lib.z_tstates()
 res['FOR loop T-states per iteration'] = (t1 - t0) // 1000
 print('FOR 1000 iterations: %d T-states each' % ((t1 - t0) // 1000))

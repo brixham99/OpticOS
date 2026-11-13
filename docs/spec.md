@@ -1,6 +1,6 @@
 # OpticOS: design specification
 
-**Version 0.3, 13 November 2026.** The six design decisions in §12 were agreed the same day. v0.3 rebalances the §8.2 budget after phase 3.
+**Version 0.4, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaces the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalances the budget again.
 Project, ROM and future repo name: **OpticOS**. Boot banner: `OpticOS (c) 2026 Optica Technology`.
 
 This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.
@@ -14,7 +14,7 @@ This document covers design and planning only. The Z80 snippets in it are there 
 1. **A drop-in 16,384-byte ROM image** for the 48K (and 16K) Spectrum that boots on real hardware, in Fuse and in our headless rig.
 2. **OpticBASIC, a modern structured BASIC with no line numbers.** It has named procedures and functions with parameters and `LOCAL`, block `IF/ELSEIF/ELSE/ENDIF`, `WHILE`, `REPEAT`, `FOR`, `CASE`, labels in place of line-number `GOTO`, and `TRY/CATCH` error handling.
 3. **64-column text as the default** (a condensed 4-pixel font in the spirit of Tasword Two) for PRINT and the editor, with a `MODE 32` switch.
-4. **A full-screen editor**. You type keywords letter by letter and a tokeniser converts them. There is no single-key keyword entry.
+4. **A Sinclair-style line editor** (v0.4: a full-screen editor was dropped to save ROM). A movable current-line marker, EDIT to change a line, AUTO to type new ones. You type keywords letter by letter and a tokeniser converts them. There is no single-key keyword entry.
 5. **Tape compatibility.** OpticOS uses the standard ROM tape encoding (pilot, sync, bit timings, flag and parity bytes, the 17-byte header layout), so ordinary TAP and TZX files load and OpticOS saves load on other tools.
 6. **Machine-code compatibility where it is cheap.** RST vectors, IM 1 at `$0038`, NMI at `$0066`, LD-BYTES at `$0556`, SA-BYTES at `$04C2`, BEEPER at `$03B5` and a handful of others keep their addresses and register contracts.
 7. **Speed.** The target is at least 3× Sinclair BASIC on integer loops, using a 16-bit integer fast path and pre-resolved control flow.
@@ -58,7 +58,7 @@ The routine does not use IY. It addresses the system variables directly. A game 
 1. Pushes AF, BC, DE and HL.
 2. Increments the 24-bit `FRAMES` counter (`$5C78`).
 3. Scans the keyboard into `KSTATE`-style debounce slots. It writes `LAST_K` (`$5C08`) and sets bit 5 of `FLAGS` (`$5C3B`), with `REPDEL` and `REPPER` auto-repeat.
-4. Toggles the editor cursor every 16 frames when the editor is active.
+4. (The input-line cursor blinks every 16 frames, timed from FRAMES by the console.)
 5. Pops the registers, then `EI` and `RET`.
 
 The budget is about 1,000 T-states on a typical frame and no more than 1,600.
@@ -280,7 +280,7 @@ CAT                            ' list tape headers until BREAK
 
 ### 4.6 Error handling
 
-`TRY` pushes a frame holding the stack pointer and the address of its `CATCH`. An error, whether raised by the ROM or by `ERROR n`, unwinds the control stack to the nearest TRY frame. Along the way it restores LOCALs and drops FOR, WHILE and PROC frames, then continues after `CATCH`. Without a TRY, execution stops and the editor opens on the offending line. The message is shown on the status bar, for example `6 Number too big, line 57 in PROC move`. BREAK (CAPS+SPACE) is error 1. It can be caught, but a second BREAK within 1 second cannot.
+`TRY` pushes a frame holding the stack pointer and the address of its `CATCH`. An error, whether raised by the ROM or by `ERROR n`, unwinds the control stack to the nearest TRY frame. Along the way it restores LOCALs and drops FOR, WHILE and PROC frames, then continues after `CATCH`. Without a TRY, execution stops and the message is printed with the line's position, for example `Division by zero, line 57`. That line becomes the current line, so EDIT brings it up at once. BREAK (CAPS+SPACE) is error 1. It can be caught, but a second BREAK within 1 second cannot.
 
 ### 4.7 Sample programs
 
@@ -374,7 +374,7 @@ UNTIL g% = secret%
 
 ### 5.3 How the editor addresses lines
 
-The editor keeps a **(pointer, ordinal)** pair for the top line on screen and for the cursor line. Moving up or down one line is a single `len` step and ±1 on the ordinal. Jumping to an ordinal (from an error, `FIND` or `LIST name`) walks from the nearest known pair. Ordinals exist only for display. They are never stored and never used in GOTO.
+The editor keeps one pointer, to the current line. Moving up or down is a single `len` step in either direction. Error messages give a line's position (its ordinal, counted from the start) for display only. Ordinals are never stored and never used in GOTO.
 
 ### 5.4 RAM layout (48K)
 
@@ -383,8 +383,9 @@ $4000-$57FF  bitmap            $5800-$5AFF  attributes
 $5B00-$5BFF  edit-line buffer and tokeniser workspace (free for machine code once BASIC has stopped)
 $5C00-$5CB5  system variables (compatible subset at Sinclair addresses, §9)
 $5CB6-$5CCA  channel table (K, S, R; Sinclair layout, so 23739 = channel S output, low byte)
-$5CCB-$5D4F  OpticOS extended system variables: 32 hash heads (64), A%-Z% (52), editor state (16) …
-$5D50        PROG     -> program lines … $00
+$5CCB-$5D4F  OpticOS extended system variables: 32 hash heads (64), A%-Z% (52), editor state (7) …
+$5D50-$5DCF  input line (126 characters + terminator)
+$5DD0        PROG     -> program lines … $00, then the DEF table
              VARS     -> variable records (grow up)
              (free)
              STRHEAP  <- string heap (grows down from STKBOT)
@@ -448,45 +449,35 @@ One attribute byte covers an 8×8 cell, which is **two 64-column characters** (c
 - **The cursor** is drawn by XOR-ing a 4×8 nibble block, not by FLASH, because FLASH would blink both characters in the cell. The ISR toggles it every 16 frames.
 - `ATTR(r,c)` returns the attribute of cell `(r, c>>1)` in MODE 64.
 
-### 6.5 Editor layout (64×24)
+### 6.5 The line editor (agreed for phase 4, v0.4)
 
-```
-row  0-22 : program text, 23 rows x 64 columns, auto-indented (2 spaces per level)
-row 23    : status bar (inverse):
-            EDIT  L  ln 57/212  col 17  PROC move           FREE 31204
-```
+There is no full-screen editor. Editing follows the Sinclair pattern: a **current line**, marked `>` when listed, which you move with the cursor keys and copy into the input line with EDIT.
 
-- Long lines (up to 255 tokenised bytes, about 300 characters listed) **wrap**. Code 127 appears in column 63 as a wrap mark, and the continuation rows are indented by the line's indent + 4.
-- **Console screen.** Direct mode and running programs use a separate 64×24 scrolling console. The editor screen is redrawn from the program when you go back to it, so no shadow buffer is needed. `CAPS+1` (EDIT) switches between the two. With an empty program, boot lands in the console.
+- **The current line** is held as a pointer to the line (`CURL`), not as a number. 0 means "above the first line". It is set by entering, editing or deleting a line, by the cursor keys, and by an uncaught error (the failing line becomes current). NEW and LOAD reset it.
+- **LIST** lists the whole program with `>` in front of the current line. **Cursor up/down** (CAPS+7 / CAPS+6) move the marker one line and relist about ten lines either side of it, on a cleared screen. Moving up from the first line goes above it, so the next inserted line goes at the top.
+- **The input line** holds up to 126 characters (two rows at 64 columns), with a cursor. CAPS+5 / CAPS+8 move left and right, characters are inserted at the cursor, and DELETE (CAPS+0) removes the character to its left. The prompt shows the mode: `]` direct, `+` AUTO, `*` editing a line.
+- **EDIT** (CAPS+1) detokenises the current line into the input line, without its indentation, and the prompt becomes `*`. ENTER tokenises the line and puts it in place of the current line. Pressing EDIT again empties the input line, so **EDIT, EDIT, ENTER deletes the current line**, and the line before it becomes current.
+- **Entering new lines: AUTO.** Typed lines run at once, unless the `AUTO` command has been given. In AUTO mode (prompt `+`) each line typed goes in **after the current line** and becomes the current line, so a program is typed from top to bottom. An empty line ends AUTO mode. This replaces the temporary `>` prefix of phase 3.
+- After any change to the program, the lines around the marker are relisted, as on the Spectrum.
+- Every change to the program clears the variables and forces a new prepass. The variables sit just above the program and the DEF table, and string back-pointers point into them, so keeping them would cost more than it is worth.
 
-### 6.6 Typing and keys
+### 6.6 Keys
 
-Keywords are typed **letter by letter**, which is the recommendation. The tokeniser recognises them when you leave a line. The keyword legends on the keys are ignored, which frees the whole keyboard for typing.
+Keywords are typed **letter by letter**. The tokeniser recognises them when the line is entered, and the keyword legends on the keys are ignored.
 
 | Key | Action |
 |---|---|
-| Letters and digits | Lower case. **C** mode (caps lock) gives upper case. |
+| Letters and digits | Lower case. CAPS SHIFT gives upper case. |
 | SYMBOL SHIFT + key | The red symbol printed on the key (`"`, `=`, `+`, `<`, `;` …), as on Sinclair |
-| CAPS + SYMBOL, then a key | **E (extended) mode**, one shot: `[ ] { } \ | ~` on SS-style keys Y U F G D S A, and the editor functions below |
-| CAPS+5/6/7/8 | Cursor left, down, up, right |
-| CAPS+0 | Delete left. In E mode, delete right. |
-| CAPS+2 | Caps lock |
-| CAPS+3 / CAPS+4 | Page up / page down (23 rows) |
-| CAPS+1 (EDIT) | Switch between the editor and the console |
-| CAPS+9 | Graphics mode (block graphics and UDGs) |
-| ENTER | Split the line, or add a new line below |
-| E + 5 / E + 8 | Start / end of line |
-| E + 6 / E + 7 | End / start of program |
-| E + D | Delete the line (into a one-line clipboard) |
-| E + I | Insert the clipboard line above the cursor |
-| E + F / E + N | Find: prompt on the status bar / find next |
-| E + J | Join with the next line |
-| E + R | RUN (go to the console and run) |
+| CAPS + SYMBOL, then a key | E mode, one shot: `[ ] { } \ | ~` on keys Y U F G D S A |
+| CAPS+5 / CAPS+8 | Cursor left / right in the input line |
+| CAPS+7 / CAPS+6 | Move the current-line marker up / down and relist |
+| CAPS+0 | Delete the character left of the cursor |
+| CAPS+1 (EDIT) | Copy the current line into the input line; a second press empties it |
+| ENTER | Run the line, or (in AUTO or EDIT) put it into the program |
 | CAPS+SPACE | BREAK |
 
-**Insert and delete.** The current line is detokenised into the edit buffer at `$5B00`, where editing is plain text. When the cursor leaves the line, or ENTER is pressed, the buffer is re-tokenised and swapped into the program with one block move (`LDIR`/`LDDR`) of everything above it. Any edit sets `DIRTY`, which forces a prepass and a variable clear on the next RUN and disables CONT. The tokeniser always accepts the line. Syntax and block errors come from the prepass or at run time, and jump straight to the line.
-
-**Direct commands** are typed on the console: `RUN`, `LIST`, `NEW`, `SAVE`, `LOAD`, `VERIFY`, `CAT`, `CONT`, `FIND`, `FREE`, or any statement.
+**Direct commands** are typed at the `]` prompt: `RUN`, `LIST`, `NEW`, `AUTO`, `LOAD ""`, or any statement.
 
 ### 6.7 Boot screen
 
@@ -602,7 +593,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 
 ### 8.2 Budget
 
-| # | Module | v0.2 budget | Built after phase 3 | v0.3 budget |
+| # | Module | v0.2 budget | Built after phase 4 | v0.4 budget |
 |---|---|---:|---:|---:|
 | 1 | Restarts, NMI, reset, RAM test, system-variable and channel init | 380 | 292 | 300 |
 | 2 | Boot banner plus the call to print it | 40 | 61 | 65 |
@@ -618,23 +609,25 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 | 12 | Float core | 1,100 | 1,424 | 1,424 |
 | 13 | Number ↔ string, pr_dec / pr_hex | 550 | 788 | 800 |
 | 14 | Transcendentals, byte-code runner, coefficient tables | 950 | 1,320 | 1,320 |
-| 15–17 | Tokeniser, LIST auto-indent, keyword table, dispatch tables | 1,500 | 1,569 | 1,600 |
+| 15–17 | Tokeniser, LIST auto-indent, keyword table, dispatch tables | 1,500 | 1,575 | 1,600 |
 | 18 | Expression evaluator and functions | 850 | 1,362 | 1,400 |
 | 19 | Interpreter core: run loop, statements, prepass, PROC/FN/LOCAL/TRY (EXIT etc. to come) | 1,550 | 2,286 | 2,450 |
 | 20 | CASE / WHEN / OTHERWISE | 150 | – | 150 |
 | 21–22 | Variables, arrays, string heap and GC, value and control stacks (INSTR etc. to come) | 1,150 | 1,288 | 1,400 |
 | 23 | I/O and miscellaneous statements (INPUT, DATA/READ, IN/OUT, CALL/USR, KEY, JOY …) | 450 | – | 450 |
-| 24 | Full-screen editor | 1,400 | – | 1,400 |
+| 24 | Line editor: marker, LIST around it, cursor keys, EDIT, AUTO, 126-character input line, line insert/delete (v0.3 budgeted 1,400 for a full-screen editor) | 1,400 | 585 | 600 |
 | 25 | Direct mode and console | 250 | 221 | 250 |
 | 26 | Errors: RST 8 unwind and messages | 450 | 490 | 520 |
 | 27 | Legacy loader shim (Sinclair BASIC subset) | 650 | 838 | 850 |
 | 28 | Fixed-address stubs and fragmentation loss around fixed points | 200 | 78 | 200 |
-| | **Total** | **15,374** | **13,841** | **17,913** |
-| | **Margin (of 16,384)** | **1,010** | **2,543 free now** | **−1,529 (over)** |
+| | **Total** | **15,374** | **14,426** | **17,113** |
+| | **Margin (of 16,384)** | **1,010** | **1,958 free now** | **−729 (over)** |
 
 **Rebalance after phase 3 (v0.3).** The maths (items 12–14, +882 bytes) and the interpreter (items 15–22, +1,450 bytes) came out larger than the v0.2 estimates. As agreed, the size reduction is left to phase 5, and the budgets above now record what was built, with room kept for the features each module still lacks. The ROM built so far fits, with 2,543 bytes free (well above the 256-byte margin rule). The free space is in seven gaps between fixed addresses, the largest being 613 bytes, so later modules must be split to fit.
 
-**Warning: the full feature list no longer fits.** With the v0.3 budgets the finished ROM would need 17,913 bytes, which is 1,529 over 16,384, or about **1,785 bytes over** once the 256-byte margin is kept. Phase 5 therefore has to save about 1.8 KB, by shrinking the maths and interpreter, cutting features, or both. The likely sources are: the byte-code runner used more widely in the maths (about 300–400); the evaluator and statement code tightened, for example shared argument parsing and RST-based helpers (about 400–600); a smaller legacy shim (about 200); shorter error texts made from keyword tokens (about 150); and dropping or simplifying the MODE 32, CASE or SOUND items if that is still not enough.
+**Rebalance after phase 4 (v0.4).** The full-screen editor (1,400) is replaced by a Sinclair-style line editor, built in 585 bytes and budgeted at 600. That recovers 800 bytes of the overrun. The ROM as built has 1,958 bytes free, spread over seven gaps (the largest now 397 bytes).
+
+**Warning: the full feature list still does not fit.** With the v0.4 budgets the finished ROM would need 17,113 bytes, which is 729 over 16,384, or about **985 bytes over** once the 256-byte margin is kept. Phase 5 has to save about 1 KB, by shrinking the maths and interpreter, cutting features, or both. The likely sources are: the byte-code runner used more widely in the maths (about 300–400); the evaluator and statement code tightened, for example shared argument parsing and RST-based helpers (about 400–600); a smaller legacy shim (about 200); shorter error texts made from keyword tokens (about 150); and dropping or simplifying the MODE 32, CASE or SOUND items if that is still not enough.
 
 The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print logic costs about 100 bytes more than a plain 32-column printer, so the change of display gained roughly 200 bytes overall. Adding an 8×8 font at `$3D00` would bring the total to 16,142, leaving a margin of 242 (1.5%). That is too thin, so the font is left out for now (§12).
 
@@ -765,5 +758,6 @@ Nathan agreed all six recommendations on 13 November 2026.
 4. **Procedures are called by bare name** (`move`, not `PROC move`). They look modern, the prepass resolves them, and the cost is a small lookup on the first identifier of a statement.
 5. **Do not emulate the RST `$28` calculator.** It would cost 600 bytes or more, and few games use it. RST `$28` raises a clean error instead.
 6. **`LOCAL` is dynamic, in the BBC style**, not true lexical scope. Lexical scope would need per-PROC symbol tables, at about 300 bytes plus a slower lookup.
+7. **No full-screen editor** (Nathan, later on 13 Nov 2026, for phase 4). Use the ZX BASIC pattern instead: a current-line marker moved with the cursor keys over a LIST, and EDIT to bring that line into the input line (§6.5).
 
-*End of specification v0.2.*
+*End of specification v0.4.*
