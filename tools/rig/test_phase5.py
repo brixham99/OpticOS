@@ -188,9 +188,9 @@ def deep(defs, call, step):
     return b.run(defs + ['k=1', 'TRY', 'REPEAT', call + ': k=k+%d' % step, 'UNTIL k>5000', 'CATCH', 'PRINT k-%d;" ";ERR$' % step, 'ENDTRY'],
                  limit=40_000_000_000)[-1].split(' ', 1)
 fd = deep(['DEF FN g(n)', 'IF n<=0 THEN RETURN 0', 'RETURN 1+g(n-1)', 'ENDFN'], 'x=g(k)', 5)
-check('recursive FN in an expression: over 100 deep (was 11)', (int(fd[0]) >= 100, fd[1]), (True, 'No room'))
+check('recursive FN in an expression: over 50 deep (was 11)', (int(fd[0]) >= 50, fd[1]), (True, 'No room'))
 pd = deep(['DEF PROC d(n)', 'IF n>0 THEN d n-1', 'ENDPROC'], 'd k', 5)
-check('recursive PROC: over 250 deep (was 51)', (int(pd[0]) >= 250, pd[1]), (True, 'No room'))
+check('recursive PROC: over 130 deep (was 51)', (int(pd[0]) >= 130, pd[1]), (True, 'No room'))
 check('fact(33) works (34! overflows a number)', b.run(['DEF FN f(n)', 'IF n<=1 THEN RETURN 1', 'RETURN n*f(n-1)', 'ENDFN', 'PRINT f(33)'])[-1], '8.68331763E+36')
 
 fails = [k for k, v in res.items() if not v]

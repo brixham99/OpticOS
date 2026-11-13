@@ -248,7 +248,7 @@ Every keyword and function OpticBASIC has, in alphabetical order. *n*, *x* and *
 
 **CHR$** *n* — The character with code *n* (0–255). `CHR$ 65` is "A".
 
-**CLEAR** [*n*] — Forget all variables, open loops and procedure calls. With *n*, also move RAMTOP (the top of BASIC's memory) to *n*, leaving the memory above it free for machine code: `CLEAR 59999`. *n* must leave room for BASIC's stacks between the variables and *n*: 9,216 bytes on a 48K machine, 2,048 on 16K. Use CLEAR at the top level of a program, not inside a procedure.
+**CLEAR** [*n*] — Forget all variables, open loops and procedure calls. With *n*, also move RAMTOP (the top of BASIC's memory) to *n*, leaving the memory above it free for machine code: `CLEAR 59999`. *n* must leave room for BASIC's stacks between the variables and *n*: 4,864 bytes on a 48K machine, 2,048 on 16K. Use CLEAR at the top level of a program, not inside a procedure.
 
 **CLS** — Clear the screen to the current paper colour, and print from the top.
 
@@ -615,7 +615,7 @@ OpticOS keeps the main ROM entry points that games and utilities call, with the 
 | `$5DF0` (24048) | Start of the program, then the procedure table and the variables, growing upwards |
 | … | Free memory (see `FREE`) |
 | below the stacks | The string heap, growing downwards |
-| RAMTOP − 9,216 | The typed-line buffer (256 bytes), value stack (768), control stack (4,096), machine stack (4,096); on a 16K machine 256, 512, 768 and 512 bytes, 2,048 in all |
+| RAMTOP − 4,864 | The typed-line buffer (256 bytes), value stack (512), control stack (2,048), machine stack (2,048); on a 16K machine 256, 512, 768 and 512 bytes, 2,048 in all |
 | RAMTOP (`$FF57`) | The last byte BASIC uses; move it with `CLEAR n` |
 | `$FF58–$FFFF` | 168 bytes kept free, where Sinclair keeps its UDGs |
 
@@ -656,12 +656,12 @@ The other Sinclair system variables are used for OpticOS's own purposes, so do n
 
 | | |
 |---|---|
-| Program size | All of free memory: about 32,000 bytes on a 48K machine with nothing else loaded, and about 6,500 on 16K |
+| Program size | All of free memory: about 36,000 bytes on a 48K machine with nothing else loaded, and about 6,500 on 16K |
 | Line length | 126 characters typed; the stored line up to 255 bytes |
 | Names | Up to 32 characters, all significant |
 | Strings | Up to 255 characters |
 | Arrays | Up to 3 dimensions |
-| Nesting | Recursion goes deep on a 48K machine: a recursive function inside an expression about 116 calls, a procedure with one parameter about 290, and one with a LOCAL as well about 175. Beyond that the report is "No room". On 16K the stacks are smaller (about 50 for a procedure). |
+| Nesting | Recursion goes deep on a 48K machine: a recursive function inside an expression about 56 calls, a procedure with one parameter about 140, and one with a LOCAL as well about 85. Beyond that the report is "No room". On 16K the stacks are smaller (about 50 for a procedure). |
 | ERROR message | 28 characters |
 
 ## Differences from Sinclair BASIC

@@ -25,7 +25,7 @@ err_next: rst 8
 ; ---------------------------------------------------- workspace
 ; Below RAMTOP: machine stack, control stack, value stack, the tokenised
 ; direct line (256), then the string heap grows down.  The stack sizes
-; depend on the RAM (v0.10): 48K 4096 / 4096 / 768, 16K 512 / 768 / 512.
+; depend on the RAM (v0.10): 48K 2048 / 2048 / 512 (halved in v0.11), 16K 512 / 768 / 512.
 ws_init: call ws_lay
         ld de,OPROG
         jr ws_ld
@@ -60,7 +60,7 @@ ws_sel: ld bc,ws_t48
         ret c
         ld bc,ws_t16
         ret
-ws_t48: defb -36,-16,-16,-3    ; 48K: 9216 in all; 4096, 4096, 768
+ws_t48: defb -19,-8,-8,-2      ; 48K: 4864 in all; 2048, 2048, 512
 ws_t16: defb -8,-2,-3,-2       ; 16K: 2048 in all; 512, 768, 512
 ; ws_ld: clear A%-Z% and the editor variables; the program ends at DE
 ws_ld:  ld hl,STATIC

@@ -349,7 +349,7 @@ TRY … CATCH … ENDTRY
 <p><strong>CASE</strong> <em>x</em> <strong>OF</strong> — Start a CASE block (chapter 5). <code>CASE k% OF</code></p>
 <p><strong>CATCH</strong> — Starts the part of a TRY block that runs if an error happened (chapter 7).</p>
 <p><strong>CHR$</strong> <em>n</em> — The character with code <em>n</em> (0–255). <code>CHR$ 65</code> is "A".</p>
-<p><strong>CLEAR</strong> [<em>n</em>] — Forget all variables, open loops and procedure calls. With <em>n</em>, also move RAMTOP (the top of BASIC's memory) to <em>n</em>, leaving the memory above it free for machine code: <code>CLEAR 59999</code>. <em>n</em> must leave room for BASIC's stacks between the variables and <em>n</em>: 9,216 bytes on a 48K machine, 2,048 on 16K. Use CLEAR at the top level of a program, not inside a procedure.</p>
+<p><strong>CLEAR</strong> [<em>n</em>] — Forget all variables, open loops and procedure calls. With <em>n</em>, also move RAMTOP (the top of BASIC's memory) to <em>n</em>, leaving the memory above it free for machine code: <code>CLEAR 59999</code>. <em>n</em> must leave room for BASIC's stacks between the variables and <em>n</em>: 4,864 bytes on a 48K machine, 2,048 on 16K. Use CLEAR at the top level of a program, not inside a procedure.</p>
 <p><strong>CLS</strong> — Clear the screen to the current paper colour, and print from the top.</p>
 <p><strong>CODE</strong> — Used in SAVE, LOAD and VERIFY for blocks of memory (chapter 8).</p>
 <p><strong>COS</strong> <em>x</em> — Cosine of <em>x</em> radians.</p>
@@ -838,8 +838,8 @@ PRINT USR 60000
 <td>The string heap, growing downwards</td>
 </tr>
 <tr>
-<td>RAMTOP − 9,216</td>
-<td>The typed-line buffer (256 bytes), value stack (768), control stack (4,096), machine stack (4,096); on a 16K machine 256, 512, 768 and 512 bytes, 2,048 in all</td>
+<td>RAMTOP − 4,864</td>
+<td>The typed-line buffer (256 bytes), value stack (512), control stack (2,048), machine stack (2,048); on a 16K machine 256, 512, 768 and 512 bytes, 2,048 in all</td>
 </tr>
 <tr>
 <td>RAMTOP (<code>$FF57</code>)</td>
@@ -999,7 +999,7 @@ PRINT USR 60000
 <tbody>
 <tr>
 <td>Program size</td>
-<td>All of free memory: about 32,000 bytes on a 48K machine with nothing else loaded, and about 6,500 on 16K</td>
+<td>All of free memory: about 36,000 bytes on a 48K machine with nothing else loaded, and about 6,500 on 16K</td>
 </tr>
 <tr>
 <td>Line length</td>
@@ -1019,7 +1019,7 @@ PRINT USR 60000
 </tr>
 <tr>
 <td>Nesting</td>
-<td>Recursion goes deep on a 48K machine: a recursive function inside an expression about 116 calls, a procedure with one parameter about 290, and one with a LOCAL as well about 175. Beyond that the report is "No room". On 16K the stacks are smaller (about 50 for a procedure).</td>
+<td>Recursion goes deep on a 48K machine: a recursive function inside an expression about 56 calls, a procedure with one parameter about 140, and one with a LOCAL as well about 85. Beyond that the report is "No room". On 16K the stacks are smaller (about 50 for a procedure).</td>
 </tr>
 <tr>
 <td>ERROR message</td>
