@@ -4,7 +4,7 @@ table{border-collapse:collapse;margin:.6em 0;width:100%;font-size:8.8pt}td,th{bo
 pre{background:#f4f4f7;border:1px solid #dde;padding:6px;font-size:8.3pt;white-space:pre-wrap;page-break-inside:avoid}code{font-family:'DejaVu Sans Mono',monospace;font-size:92%}
 @page{size:A4;margin:16mm 14mm}</style></head><body>
 <h1>OpticOS: design specification</h1>
-<p><strong>Version 0.8, 13 November 2026.</strong> The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. <strong>v0.6</strong> (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). <strong>v0.7</strong> (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). <strong>v0.8</strong> (phase 5c) records the last cuts as decision 13 (array parameters by reference, <code>CALL</code> register arguments, <code>CAT</code>, the OpticBASIC <code>SCREEN$</code> tape forms, <code>JOY</code>), builds CASE, EXIT, <code>ERROR n, msg$</code>, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2).
+<p><strong>Version 0.9, 13 November 2026.</strong> The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. <strong>v0.6</strong> (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). <strong>v0.7</strong> (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). <strong>v0.8</strong> (phase 5c) records the last cuts as decision 13 (array parameters by reference, <code>CALL</code> register arguments, <code>CAT</code>, the OpticBASIC <code>SCREEN$</code> tape forms, <code>JOY</code>), builds CASE, EXIT, <code>ERROR n, msg$</code>, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2). <strong>v0.9</strong> removes the last UDG mentions (§4.7, §5.4, §6.1, §9), records <code>TAB(c)</code> as built, lengthens the boot banner to <code>OpticOS (c) 2026 Optica Technology Design</code>, records the measured nesting limits (§4.8), corrects §6.1 (codes 128–255 print as <code>?</code>; no block graphics) and points to the user manual (<code>docs/manual</code>).
 Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>OpticOS (c) 2026 Optica Technology Design</code>.</p>
 <p>This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.</p>
 <hr />
@@ -489,7 +489,7 @@ ERROR n [, msg$]                           ' raise an error
 <td>Clears with ATTR_P</td>
 </tr>
 <tr>
-<td><code>PRINT [AT r,c;] [TAB c;] items</code></td>
+<td><code>PRINT [AT r,c;] [TAB(c);] items</code></td>
 <td><code>;</code> means no gap. <code>,</code> jumps to the next 16-column zone. <code>'</code> starts a new line.</td>
 </tr>
 <tr>
@@ -559,30 +559,26 @@ VERIFY …                       ' same forms as LOAD
 <h3>4.6 Error handling</h3>
 <p><code>TRY</code> pushes a frame holding the stack pointer and the address of its <code>CATCH</code>. An error, whether raised by the ROM or by <code>ERROR n</code>, unwinds the control stack to the nearest TRY frame. Along the way it restores LOCALs and drops FOR, WHILE and PROC frames, then continues after <code>CATCH</code>. Without a TRY, execution stops and the message is printed with the line's position, for example <code>Division by zero, line 57</code>. That line becomes the current line, so EDIT brings it up at once. BREAK (CAPS+SPACE) is error 1. As built, BREAK and STOP cannot be caught by TRY.</p>
 <h3>4.7 Sample programs</h3>
-<p><strong>Bouncing ball</strong> (64-column text with UDG graphics)</p>
-<pre><code>' Bouncing ball demo for OpticOS
-DEF PROC init
-  BORDER 0: PAPER 0: INK 7: CLS
-  UDG &quot;A&quot;, $3C,$7E,$FF,$FF,$FF,$FF,$7E,$3C
-  x% = 10: y% = 5: dx% = 1: dy% = 1
-ENDPROC
-
+<p><strong>Bouncing ball</strong> (64-column text; UDGs were dropped in v0.7, so the ball is the letter O)</p>
+<pre><code>' Bouncing ball: SPACE stops it
 DEF PROC move
-  PRINT AT y%, x%; &quot;  &quot;;
+  PRINT AT y%, x%; &quot; &quot;;
   x% = x% + dx%: y% = y% + dy%
-  IF x% &lt;= 0 OR x% &gt;= 62 THEN dx% = -dx%: BEEP 0.01, 24
-  IF y% &lt;= 0 OR y% &gt;= 22 THEN dy% = -dy%: BEEP 0.01, 12
-  PRINT AT y%, x%; INK 6; CHR$(144);
+  IF x% &lt;= 0 OR x% &gt;= 63 THEN dx% = -dx%: BEEP 0.01, 24
+  IF y% &lt;= 1 OR y% &gt;= 22 THEN dy% = -dy%: BEEP 0.01, 12
+  PRINT AT y%, x%; &quot;O&quot;;
 ENDPROC
-
-init
-REPEAT
+BORDER 1: PAPER 0: INK 5: CLS
+PRINT AT 0, 0; &quot;Bouncing ball - SPACE to stop&quot;
+x% = 10: y% = 5: dx% = 1: dy% = 1
+FOR n% = 1 TO 300
   move
   WAIT 1
-UNTIL KEY(&quot; &quot;)
-PRINT AT 23, 0; &quot;Bye!&quot;
+  IF KEY(&quot; &quot;) THEN EXIT FOR
+NEXT
+PRINT AT 23, 0; &quot;Bounces done: &quot;; n%;
 </code></pre>
-<p>The UDG takes two text columns, so x% steps through 0–62.</p>
+<p>The ball takes one text column, so x% runs through 0–63. This version is in the user manual and is run by its test script.</p>
 <p><strong>Guess the number, with error handling and a recursive function</strong></p>
 <pre><code>DEF FN fact(n)
   IF n &lt;= 1 THEN RETURN 1
@@ -608,7 +604,7 @@ REPEAT
 UNTIL g% = secret%
 </code></pre>
 <hr />
-<h3>4.8 Implementation status (as built through phase 5b)</h3>
+<h3>4.8 Implementation status (as built, phase 5 complete)</h3>
 <p>Everything in §4.1–§4.7 is the target language. This table shows what the ROM actually does after phase 5b. Phase 5 works through the "not yet" column (§11).</p>
 <table>
 <thead>
@@ -666,6 +662,8 @@ UNTIL g% = secret%
 <li>BREAK cannot be caught by TRY (nor can STOP); it always returns to the prompt.</li>
 <li>An uncaught error prints <code>message, line n</code> on the screen and makes that line current. There is no status bar.</li>
 <li>The DEF table built by the prepass lies just above the program (§7.2), and every program edit clears the variables.</li>
+<li><code>TAB</code> takes its column in brackets, <code>TAB(c)</code>; <code>TAB c</code> is a syntax error.</li>
+<li>Nesting is limited by the fixed stacks below RAMTOP (machine stack 512 bytes, control stack 768, value stack 320). Measured: a recursive FN used inside an expression nests 12 deep (<code>fact(12)</code> works, <code>fact(13)</code> stops with "No room"), and a recursive PROC with one parameter about 50 deep.</li>
 </ul>
 <h2>5. Program storage</h2>
 <h3>5.1 Line format</h3>
@@ -743,7 +741,8 @@ $5DF0        PROG     -&gt; program lines … $00, then the DEF table
              (free)
              STRHEAP  &lt;- string heap (grows down from STKBOT)
              STKBOT   -&gt; control stack and machine stack (grow down from RAMTOP)
-RAMTOP (default $FF57) +1 -&gt; UDGs (21 x 8 = 168 bytes) to P_RAMT $FFFF
+RAMTOP (default $FF57) +1 -&gt; 168 bytes kept free to P_RAMT $FFFF, where Sinclair keeps its UDGs
+             (the UDG variable points here for machine code; OpticOS does not print UDGs)
 </code></pre>
 <p>The legacy shim loads a Sinclair program at <code>$5CCB</code> over the extended variables. That is safe because the shim only uses the compatible variables. Returning to OpticOS after legacy mode triggers a warm reset.</p>
 <hr />
@@ -753,8 +752,7 @@ RAMTOP (default $FF57) +1 -&gt; UDGs (21 x 8 = 168 bytes) to P_RAMT $FFFF
 <li><strong>Format.</strong> 96 characters (32–127), each 4 pixels wide by 8 rows. <strong>Two glyphs are packed per byte row</strong>: characters <code>32+2k</code> and <code>33+2k</code> share 8 bytes, with the even code in the high nibble and the odd code in the low nibble. That makes 48 pairs × 8 bytes = <strong>384 bytes</strong>, at <code>$3E80–$3FFF</code>, aligned so that a pair's 8 bytes never cross a 256-byte page (so <code>INC E</code> steps through them).</li>
 <li><strong>Design grid.</strong> Glyphs are 3 pixels wide with a fourth blank column, so neighbours have a gap. Row 0 is blank (line spacing), capitals and digits use rows 1–5, and descenders use rows 6–7. Lower case uses a 4-row x-height. The artwork is original and drawn by us in <code>font4.txt</code> (ASCII art), in the spirit of Tasword Two, not copied from it (§1.3).</li>
 <li><strong>The copyright sign.</strong> Code 127 is the <strong>editor cursor/wrap block</strong>, not ©. A © is illegible at 3 pixels wide, so <strong>the font has no © glyph</strong> and the banner uses ASCII <code>(c)</code>.</li>
-<li><strong>Block graphics 128–143</strong> are generated in code from the bits of the code. Each quadrant is 2 pixels × 4 rows. No table is needed.</li>
-<li><strong>UDGs 144–164</strong> are 8×8. In MODE 64 a UDG fills one whole screen byte, which is <strong>2 text columns</strong>. It is printed at the next even column and advances 2 columns, so it always lines up with one attribute cell.</li>
+<li><strong>Codes 128–255 print as <code>?</code></strong> (as built, checked in v0.9). Block graphics 128–143 were planned, generated in code, but were not built, and UDG printing was dropped in v0.7 (decision 8). The 168 bytes above RAMTOP are still kept free, as on Sinclair, for machine code that expects them.</li>
 </ul>
 <h3>6.2 The fast print routine</h3>
 <p>The screen byte is <code>col &gt;&gt; 1</code>. An even column means the high nibble, so the destination mask is M = <code>$F0</code>, and an odd column gives M = <code>$0F</code>. The glyph nibble sits on the side given by <code>(code-32) &amp; 1</code>. If that side differs from the column parity, the nibble is swapped with 4 × <code>RRCA</code>. A masked merge then writes the nibble without disturbing the other character:</p>
@@ -1350,8 +1348,8 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <td><code>$5C7B</code></td>
 <td>UDG</td>
-<td>Yes</td>
-<td>UDG relocation</td>
+<td>Yes (points to RAMTOP + 1; OpticOS itself does not print UDGs)</td>
+<td>Machine code that finds the UDG area through it</td>
 </tr>
 <tr>
 <td><code>$5C7D</code></td>
@@ -1558,6 +1556,6 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 </li>
 <li><strong>Agreed (Nathan, 13 Nov 2026): RST <code>$28</code> enters the OpticOS maths byte-code</strong> (it was "Calculator not supported", decision 5). The interpreter's 37 calls become one byte each, saving about 99 bytes with the message. Without this the ROM would have about 185 bytes free, below the 256-byte margin. Machine code that calls the Sinclair calculator fails on OpticOS either way, but it no longer stops with an error message.</li>
 </ol>
-<p><em>End of specification v0.8.</em></p>
+<p><em>End of specification v0.9.</em></p>
 </body>
 </html>

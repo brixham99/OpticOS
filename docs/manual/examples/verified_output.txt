@@ -1,0 +1,224 @@
+===== ball.bas
+|                                                          O
+|Moves: 300
+--- LIST
+|Moves: 300
+|]
+|' Bouncing ball: SPACE stops it
+|DEF PROC move
+|  PRINT AT y%,x%;" ";
+|  x%=x%+dx%:y%=y%+dy%
+|  IF x%<=0 OR x%>=63 THEN dx%=-dx%:BEEP 0.01,24
+|  IF y%<=1 OR y%>=22 THEN dy%=-dy%:BEEP 0.01,12
+|  PRINT AT y%,x%;"O";
+|ENDPROC
+|BORDER 1:PAPER 0:INK 5:CLS
+|PRINT AT 0,0;"Bouncing ball - SPACE to stop"
+|x%=10:y%=5:dx%=1:dy%=1
+|FOR n%=1 TO 300
+|  move
+|  WAIT 1
+|  IF KEY(" ") THEN EXIT FOR
+|NEXT
+|>PRINT AT 23,0;"Moves: ";n%-1;
+|]
+===== errors.bas
+|]
+|10 / 4 = 2.5
+|1 / 0 = Error 200: Nothing to divide by
+|Error 11: Bad argument
+--- LIST
+|10 / 4 = 2.5
+|1 / 0 = Error 200: Nothing to divide by
+|Error 11: Bad argument
+|]
+|' Catching errors
+|DEF FN ratio(a,b)
+|  IF b=0 THEN ERROR 200,"Nothing to divide by"
+|  RETURN a/b
+|ENDFN
+|DEF PROC test(a,b)
+|  TRY
+|    PRINT a;" / ";b;" = ";ratio(a,b)
+|  CATCH
+|    PRINT "Error ";ERR;": ";ERR$
+|  ENDTRY
+|ENDPROC
+|test 10,4
+|test 1,0
+|TRY
+|  x=SQR-1
+|CATCH
+|  PRINT "Error ";ERR;": ";ERR$
+|>ENDTRY
+|]
+===== fact.bas
+|]
+|0! = 1
+|4! = 24
+|8! = 40320
+|12! = 479001600
+|9 squared = 81
+--- LIST
+|]
+|0! = 1
+|4! = 24
+|8! = 40320
+|12! = 479001600
+|9 squared = 81
+|]
+|' Recursive functions
+|DEF FN fact(n)
+|  IF n<=1 THEN RETURN 1
+|  RETURN n*fact(n-1)
+|ENDFN
+|DEF FN sq(n)=n*n
+|FOR k=0 TO 12 STEP 4
+|  PRINT k;"! = ";fact(k)
+|NEXT
+|>PRINT "9 squared = ";sq(9)
+|]
+===== guess.bas
+|]
+|50 is too high
+|25 is too low
+|Got it: 37 in 3 tries
+--- LIST
+|]
+|50 is too high
+|25 is too low
+|Got it: 37 in 3 tries
+|]
+|' The computer guesses your number by halving
+|secret%=37:lo%=1:hi%=100:tries%=0
+|REPEAT
+|  g%=(lo%+hi%) DIV 2
+|  tries%=tries%+1
+|  CASE SGN(g%-secret%) OF
+|  WHEN -1
+|    PRINT g%;" is too low"
+|    lo%=g%+1
+|  WHEN 1
+|    PRINT g%;" is too high"
+|    hi%=g%-1
+|  OTHERWISE
+|    PRINT "Got it: ";g%;" in ";tries%;" tries"
+|  ENDCASE
+|>UNTIL g%=secret%
+|]
+===== sort.bas
+|]
+|APPLE 5
+|BANANA 6
+|CHERRY 6
+|FIG 3
+|PEAR 4
+--- LIST
+|]
+|APPLE 5
+|BANANA 6
+|CHERRY 6
+|FIG 3
+|PEAR 4
+|]
+|' Read words, sort them, print them
+|DEF PROC words
+|  DATA "pear","apple","fig","banana","cherry"
+|ENDPROC
+|DIM w$(4)
+|RESTORE words
+|FOR i%=0 TO 4:READ w$(i%):NEXT
+|REPEAT
+|  done%=TRUE
+|  FOR i%=0 TO 3
+|    IF w$(i%)>w$(i%+1) THEN SWAP w$(i%),w$(i%+1):done%=FALSE
+|  NEXT
+|UNTIL done%
+|>FOR i%=0 TO 4:PRINT UPPER$(w$(i%));" ";LEN w$(i%):NEXT
+|]
+===== times.bas
+|]
+|Times table for 7
+|  1 x 7 = 7
+|  2 x 7 = 14
+|  3 x 7 = 21
+|  4 x 7 = 28
+|  5 x 7 = 35
+|  6 x 7 = 42
+|  7 x 7 = 49
+|  8 x 7 = 56
+|  9 x 7 = 63
+|  10 x 7 = 70
+|  11 x 7 = 77
+|  12 x 7 = 84
+--- LIST
+|]
+|Times table for 7
+|  1 x 7 = 7
+|  2 x 7 = 14
+|  3 x 7 = 21
+|  4 x 7 = 28
+|  5 x 7 = 35
+|  6 x 7 = 42
+|  7 x 7 = 49
+|  8 x 7 = 56
+|  9 x 7 = 63
+|  10 x 7 = 70
+|  11 x 7 = 77
+|  12 x 7 = 84
+|]
+|' Times table
+|INK 6
+|PRINT "Times table for 7"
+|INK 7
+|FOR i%=1 TO 12
+|  PRINT TAB (2);i%;" x 7 = ";i%*7
+|>NEXT
+|]
+===== tree.bas
+|A tree in 25 seconds
+|]
+|                     ����������������������
+|                 ������������������������������
+|               ���������� �����������������������
+|             ������� �� ����  ����� ����  ���������
+|            �����  ���    �� �    ����    ���  �����
+|            �������  ��    ��      ��    ��  ��������
+|           �������������    �      �    �������������
+|            ����        ��� �      � ����       ����
+|             ��           ���      ���            �
+|                            ��    ��
+|                             ��  ��
+|                              ����
+|                               ��
+|                                �
+|                                �
+|                                �
+|                                �
+|                                �
+|                                �
+--- LIST
+|A tree in 25 seconds
+|]
+|' A recursive tree
+|DEF PROC branch(x,y,a,l)
+|  LOCAL x2,y2
+|  IF l<4 THEN ENDPROC����������������������
+|  x2=x+l*COS a:y2=y+l*SIN a��������������������
+|  PLOT x,y:DRAW TO x2,y2� �����������������������
+|  branch x2,y2,a+0.45,l*0.7�  ����� ����  ���������
+|  branch x2,y2,a-0.45,l*0.7� �    ����    ���  �����
+|ENDPROC     �������  ��    ��      ��    ��  ��������
+|BORDER 0:PAPER 0:INK 4:CLS  �      �    �������������
+|t=FRAMES    ����        ��� �      � ����       ����
+|branch 128,0,PI/2,50      ���      ���            �
+|>INK 6:PRINT AT 0,0;"A tree in ";INT((FRAMES-t)/50);" seconds"
+|]                            ��  ��
+|                              ����
+|                               ��
+|                                �
+|                                �
+|                                �
+|                                �
+|                                �
+|                                �

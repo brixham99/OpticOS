@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en-GB"><head><meta charset="utf-8"><title>OpticOS User Manual</title>
+<style>
+@page { size: A5; margin: 20mm 14mm 16mm 14mm;
+  @top-right { content: "OpticOS and OpticBASIC  \2022  User Manual"; font: italic 7.5pt Tinos, serif; color: #555; vertical-align: bottom; padding-bottom: 3mm; }
+  @top-left { content: url(img/optica_logo_header.svg); vertical-align: bottom; padding-bottom: 2mm; }
+  @bottom-center { content: counter(page); font: bold 8pt Tinos, serif; }
+}
+@page cover { margin: 0; @top-left { content: none; } @top-right { content: none; } @bottom-center { content: none; } }
+@page plain { @top-left { content: none; } @top-right { content: none; } }
+html { font: 9.4pt/1.38 Tinos, "Liberation Serif", serif; color: #111; }
+body { margin: 0; }
+h1, h2, h3 { font-family: Tinos, serif; font-weight: bold; text-transform: uppercase; letter-spacing: .06em; text-align: center; }
+h1 { break-before: page; font-size: 15pt; margin: 0 0 5mm; padding-bottom: 2.5mm; border-bottom: 1.6pt solid #111; }
+h1 .num { display: block; font-size: 9pt; letter-spacing: .3em; color: #666; margin-bottom: 1mm; }
+h1 .num::before { content: "CHAPTER "; }
+h2 { font-size: 10.5pt; margin: 5mm 0 2mm; break-after: avoid; }
+h2::before, h2::after { content: " \2014  "; color: #888; }
+h2::after { content: "  \2014"; }
+p { margin: 0 0 2.2mm; text-align: justify; hyphens: auto; orphans: 3; widows: 3; }
+ul { margin: 0 0 2.5mm; padding-left: 5mm; } li { margin-bottom: 1mm; }
+code { font: 8.3pt "IBM Plex Mono", monospace; }
+pre { font: 7.9pt/1.35 "IBM Plex Mono", monospace; background: #f3f3ef; border-left: 2pt solid #111; padding: 2mm 3mm; margin: 0 0 3mm; white-space: pre-wrap; break-inside: avoid; }
+pre code { font: inherit; }
+table { border-collapse: collapse; width: 100%; margin: 0 0 3.5mm; font-size: 8.4pt; break-inside: auto; }
+th, td { border-bottom: .5pt solid #bbb; padding: 1mm 1.5mm; text-align: left; vertical-align: top; }
+th { border-bottom: 1.2pt solid #111; font-variant: small-caps; letter-spacing: .04em; }
+tr { break-inside: avoid; }
+table code { font-size: 7.8pt; }
+figure { margin: 2mm 0 4mm; text-align: center; break-inside: avoid; }
+figure img { width: 78%; border: 1.2pt solid #111; image-rendering: pixelated; }
+figure.pair img { width: 48.5%; } figure.pair img + img { margin-left: 1.5%; }
+figcaption { font-style: italic; font-size: 8pt; color: #444; margin-top: 1mm; }
+.ref p { text-align: left; margin: 0 0 1.8mm; padding-left: 4mm; text-indent: -4mm; break-inside: avoid; }
+.ref strong { font-family: "IBM Plex Mono", monospace; font-size: 8.3pt; }
+/* cover */
+.cover { page: cover; height: 210mm; width: 148mm; position: relative; text-align: center; overflow: hidden; }
+.cover .frame { position: absolute; inset: 8mm; border: 2.2pt solid #111; }
+.cover .frame2 { position: absolute; inset: 10mm; border: .6pt solid #111; }
+.cover .logo { position: absolute; top: 22mm; left: 0; right: 0; } .cover .logo img { width: 92mm; }
+.cover .t1 { position: absolute; top: 76mm; left: 0; right: 0; font: bold 26pt Tinos, serif; letter-spacing: .08em; }
+.cover .t2 { position: absolute; top: 90mm; left: 0; right: 0; font: bold 12pt Tinos, serif; letter-spacing: .28em; }
+.cover .shot { position: absolute; top: 104mm; left: 0; right: 0; } .cover .shot img { width: 92mm; border: 1.5pt solid #111; image-rendering: pixelated; }
+.cover .t3 { position: absolute; bottom: 22mm; left: 0; right: 0; font: bold 9.5pt Tinos, serif; letter-spacing: .2em; }
+.cover .t4 { position: absolute; bottom: 15mm; left: 0; right: 0; font: 8pt Tinos, serif; color: #444; }
+.toc { page: plain; break-before: page; }
+.toc h1 { break-before: avoid; }
+.toc ol { list-style: none; padding: 0; margin: 6mm 4mm; font-size: 10.5pt; }
+.toc li { margin: 0 0 2.4mm; border-bottom: .5pt dotted #999; }
+.toc a { color: #111; text-decoration: none; display: flex; justify-content: space-between; }
+.toc a span { font-weight: bold; width: 8mm; display: inline-block; }
+.toc a b { margin-left: auto; }
+.toc a em { font-style: normal; flex: 1; text-align: left; }
+.colophon { margin-top: 10mm; font-size: 8pt; color: #333; text-align: center; }
+</style></head><body>
+<section class="cover">
+  <div class="frame"></div><div class="frame2"></div>
+  <div class="logo"><img src="img/optica_logo.png" alt="Optica Technology Design"></div>
+  <div class="t1">OPTICOS</div>
+  <div class="t2">OPTICBASIC USER MANUAL</div>
+  <div class="shot"><img src="img/boot.png" alt="The OpticOS start-up screen"></div>
+  <div class="t3">FOR THE 48K ZX SPECTRUM</div>
+  <div class="t4">ROM v0.1 &nbsp;&bull;&nbsp; Manual edition 1, November 2026 &nbsp;&bull;&nbsp; &copy; 2026 Optica Technology Design</div>
+</section>
+<section class="toc"><h1>Contents</h1><ol>{{TOC}}</ol>
+<p class="colophon">OpticOS and OpticBASIC &copy; 2026 Optica Technology Design. ZX Spectrum is a trademark of its owners; OpticOS is not connected with Sinclair Research or Amstrad. Screenshots are from the Fuse emulator.</p></section>
+{{BODY}}
+</body></html>

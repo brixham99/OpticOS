@@ -1,6 +1,6 @@
 # OpticOS: design specification
 
-**Version 0.8, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. **v0.6** (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). **v0.7** (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). **v0.8** (phase 5c) records the last cuts as decision 13 (array parameters by reference, `CALL` register arguments, `CAT`, the OpticBASIC `SCREEN$` tape forms, `JOY`), builds CASE, EXIT, `ERROR n, msg$`, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2).
+**Version 0.9, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. **v0.6** (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). **v0.7** (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). **v0.8** (phase 5c) records the last cuts as decision 13 (array parameters by reference, `CALL` register arguments, `CAT`, the OpticBASIC `SCREEN$` tape forms, `JOY`), builds CASE, EXIT, `ERROR n, msg$`, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2). **v0.9** removes the last UDG mentions (§4.7, §5.4, §6.1, §9), records `TAB(c)` as built, lengthens the boot banner to `OpticOS (c) 2026 Optica Technology Design`, records the measured nesting limits (§4.8), corrects §6.1 (codes 128–255 print as `?`; no block graphics) and points to the user manual (`docs/manual`).
 Project, ROM and future repo name: **OpticOS**. Boot banner: `OpticOS (c) 2026 Optica Technology Design`.
 
 This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.
@@ -230,7 +230,7 @@ ERROR n [, msg$]                           ' raise an error
 | Statement | Notes |
 |---|---|
 | `CLS` | Clears with ATTR_P |
-| `PRINT [AT r,c;] [TAB c;] items` | `;` means no gap. `,` jumps to the next 16-column zone. `'` starts a new line. |
+| `PRINT [AT r,c;] [TAB(c);] items` | `;` means no gap. `,` jumps to the next 16-column zone. `'` starts a new line. |
 | `INPUT ["prompt";] v [, v…]` | As built: each variable gets its own input line at the print position, edited with the console keys (EDIT and the marker keys are off). A number is read as by VAL. |
 | `INK n`, `PAPER n`, `FLASH 0/1`, `BRIGHT 0/1`, `INVERSE 0/1`, `OVER 0/1` | Can also appear inline in PRINT. `8` means transparent. |
 | `BORDER n` | |
@@ -282,33 +282,29 @@ VERIFY …                       ' same forms as LOAD
 
 ### 4.7 Sample programs
 
-**Bouncing ball** (64-column text with UDG graphics)
+**Bouncing ball** (64-column text; UDGs were dropped in v0.7, so the ball is the letter O)
 
 ```
-' Bouncing ball demo for OpticOS
-DEF PROC init
-  BORDER 0: PAPER 0: INK 7: CLS
-  UDG "A", $3C,$7E,$FF,$FF,$FF,$FF,$7E,$3C
-  x% = 10: y% = 5: dx% = 1: dy% = 1
-ENDPROC
-
+' Bouncing ball: SPACE stops it
 DEF PROC move
-  PRINT AT y%, x%; "  ";
+  PRINT AT y%, x%; " ";
   x% = x% + dx%: y% = y% + dy%
-  IF x% <= 0 OR x% >= 62 THEN dx% = -dx%: BEEP 0.01, 24
-  IF y% <= 0 OR y% >= 22 THEN dy% = -dy%: BEEP 0.01, 12
-  PRINT AT y%, x%; INK 6; CHR$(144);
+  IF x% <= 0 OR x% >= 63 THEN dx% = -dx%: BEEP 0.01, 24
+  IF y% <= 1 OR y% >= 22 THEN dy% = -dy%: BEEP 0.01, 12
+  PRINT AT y%, x%; "O";
 ENDPROC
-
-init
-REPEAT
+BORDER 1: PAPER 0: INK 5: CLS
+PRINT AT 0, 0; "Bouncing ball - SPACE to stop"
+x% = 10: y% = 5: dx% = 1: dy% = 1
+FOR n% = 1 TO 300
   move
   WAIT 1
-UNTIL KEY(" ")
-PRINT AT 23, 0; "Bye!"
+  IF KEY(" ") THEN EXIT FOR
+NEXT
+PRINT AT 23, 0; "Bounces done: "; n%;
 ```
 
-The UDG takes two text columns, so x% steps through 0–62.
+The ball takes one text column, so x% runs through 0–63. This version is in the user manual and is run by its test script.
 
 **Guess the number, with error handling and a recursive function**
 
@@ -339,7 +335,7 @@ UNTIL g% = secret%
 
 ---
 
-### 4.8 Implementation status (as built through phase 5b)
+### 4.8 Implementation status (as built, phase 5 complete)
 
 Everything in §4.1–§4.7 is the target language. This table shows what the ROM actually does after phase 5b. Phase 5 works through the "not yet" column (§11).
 
@@ -359,6 +355,8 @@ Differences from the text above, as built:
 - BREAK cannot be caught by TRY (nor can STOP); it always returns to the prompt.
 - An uncaught error prints `message, line n` on the screen and makes that line current. There is no status bar.
 - The DEF table built by the prepass lies just above the program (§7.2), and every program edit clears the variables.
+- `TAB` takes its column in brackets, `TAB(c)`; `TAB c` is a syntax error.
+- Nesting is limited by the fixed stacks below RAMTOP (machine stack 512 bytes, control stack 768, value stack 320). Measured: a recursive FN used inside an expression nests 12 deep (`fact(12)` works, `fact(13)` stops with "No room"), and a recursive PROC with one parameter about 50 deep.
 
 ## 5. Program storage
 
@@ -411,7 +409,8 @@ $5DF0        PROG     -> program lines … $00, then the DEF table
              (free)
              STRHEAP  <- string heap (grows down from STKBOT)
              STKBOT   -> control stack and machine stack (grow down from RAMTOP)
-RAMTOP (default $FF57) +1 -> UDGs (21 x 8 = 168 bytes) to P_RAMT $FFFF
+RAMTOP (default $FF57) +1 -> 168 bytes kept free to P_RAMT $FFFF, where Sinclair keeps its UDGs
+             (the UDG variable points here for machine code; OpticOS does not print UDGs)
 ```
 
 The legacy shim loads a Sinclair program at `$5CCB` over the extended variables. That is safe because the shim only uses the compatible variables. Returning to OpticOS after legacy mode triggers a warm reset.
@@ -425,8 +424,7 @@ The legacy shim loads a Sinclair program at `$5CCB` over the extended variables.
 - **Format.** 96 characters (32–127), each 4 pixels wide by 8 rows. **Two glyphs are packed per byte row**: characters `32+2k` and `33+2k` share 8 bytes, with the even code in the high nibble and the odd code in the low nibble. That makes 48 pairs × 8 bytes = **384 bytes**, at `$3E80–$3FFF`, aligned so that a pair's 8 bytes never cross a 256-byte page (so `INC E` steps through them).
 - **Design grid.** Glyphs are 3 pixels wide with a fourth blank column, so neighbours have a gap. Row 0 is blank (line spacing), capitals and digits use rows 1–5, and descenders use rows 6–7. Lower case uses a 4-row x-height. The artwork is original and drawn by us in `font4.txt` (ASCII art), in the spirit of Tasword Two, not copied from it (§1.3).
 - **The copyright sign.** Code 127 is the **editor cursor/wrap block**, not ©. A © is illegible at 3 pixels wide, so **the font has no © glyph** and the banner uses ASCII `(c)`.
-- **Block graphics 128–143** are generated in code from the bits of the code. Each quadrant is 2 pixels × 4 rows. No table is needed.
-- **UDGs 144–164** are 8×8. In MODE 64 a UDG fills one whole screen byte, which is **2 text columns**. It is printed at the next even column and advances 2 columns, so it always lines up with one attribute cell.
+- **Codes 128–255 print as `?`** (as built, checked in v0.9). Block graphics 128–143 were planned, generated in code, but were not built, and UDG printing was dropped in v0.7 (decision 8). The 168 bytes above RAMTOP are still kept free, as on Sinclair, for machine code that expects them.
 
 ### 6.2 The fast print routine
 
@@ -711,7 +709,7 @@ The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print 
 | `$5C6B` | DF_SZ | Yes | Lower-screen size |
 | `$5C76` | SEED | Yes | RND |
 | `$5C78` | FRAMES (3) | Yes | Timing in many games |
-| `$5C7B` | UDG | Yes | UDG relocation |
+| `$5C7B` | UDG | Yes (points to RAMTOP + 1; OpticOS itself does not print UDGs) | Machine code that finds the UDG area through it |
 | `$5C7D` | COORDS | Yes | PLOT position |
 | `$5C88` | S_POSN | Yes | Print position, stored as 64-column values in MODE 64 |
 | `$5C8D–$5C91` | ATTR_P, MASK_P, ATTR_T, MASK_T, P_FLAG | Yes | Colour handling |
@@ -809,4 +807,4 @@ Nathan agreed the first six recommendations on 13 November 2026; decisions 7–1
 13. **Dropped in phase 5c (Nathan, 13 Nov 2026): array parameters by reference, `CALL` register arguments, `CAT`, and the OpticBASIC `SCREEN$` tape forms** (`SCREEN$` is `CODE 16384,6912`; the legacy shim keeps `LOAD "" SCREEN$` for loaders). **`JOY` is dropped too** (read a Kempston joystick with `IN 31`). **`BORDER` stays**, in OpticBASIC and in the legacy shim, and both are tested. As built: `FREE` is a function, not a command (`PRINT FREE`); `SAVE … AUTO` and `RUN name` take a PROC without parameters; `ERROR n, msg$` keeps up to 28 characters; `EXIT` finds its WEND, UNTIL or NEXT by counting loop keywords forwards, and `EXIT FOR` drops the FOR frame, so it should not be used from inside a TRY block within the loop.
 14. **Agreed (Nathan, 13 Nov 2026): RST `$28` enters the OpticOS maths byte-code** (it was "Calculator not supported", decision 5). The interpreter's 37 calls become one byte each, saving about 99 bytes with the message. Without this the ROM would have about 185 bytes free, below the 256-byte margin. Machine code that calls the Sinclair calculator fails on OpticOS either way, but it no longer stops with an error message.
 
-*End of specification v0.8.*
+*End of specification v0.9.*

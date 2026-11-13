@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en-GB"><head><meta charset="utf-8"><title>OpticOS User Manual</title>
+<style>
+@page { size: A5; margin: 20mm 14mm 16mm 14mm;
+  @top-right { content: "OpticOS and OpticBASIC  \2022  User Manual"; font: italic 7.5pt Tinos, serif; color: #555; vertical-align: bottom; padding-bottom: 3mm; }
+  @top-left { content: url(img/optica_logo_header.svg); vertical-align: bottom; padding-bottom: 2mm; }
+  @bottom-center { content: counter(page); font: bold 8pt Tinos, serif; }
+}
+@page cover { margin: 0; @top-left { content: none; } @top-right { content: none; } @bottom-center { content: none; } }
+@page plain { @top-left { content: none; } @top-right { content: none; } }
+html { font: 9.4pt/1.38 Tinos, "Liberation Serif", serif; color: #111; }
+body { margin: 0; }
+h1, h2, h3 { font-family: Tinos, serif; font-weight: bold; text-transform: uppercase; letter-spacing: .06em; text-align: center; }
+h1 { break-before: page; font-size: 15pt; margin: 0 0 5mm; padding-bottom: 2.5mm; border-bottom: 1.6pt solid #111; }
+h1 .num { display: block; font-size: 9pt; letter-spacing: .3em; color: #666; margin-bottom: 1mm; }
+h1 .num::before { content: "CHAPTER "; }
+h2 { font-size: 10.5pt; margin: 5mm 0 2mm; break-after: avoid; }
+h2::before, h2::after { content: " \2014  "; color: #888; }
+h2::after { content: "  \2014"; }
+p { margin: 0 0 2.2mm; text-align: justify; hyphens: auto; orphans: 3; widows: 3; }
+ul { margin: 0 0 2.5mm; padding-left: 5mm; } li { margin-bottom: 1mm; }
+code { font: 8.3pt "IBM Plex Mono", monospace; }
+pre { font: 7.9pt/1.35 "IBM Plex Mono", monospace; background: #f3f3ef; border-left: 2pt solid #111; padding: 2mm 3mm; margin: 0 0 3mm; white-space: pre-wrap; break-inside: avoid; }
+pre code { font: inherit; }
+table { border-collapse: collapse; width: 100%; margin: 0 0 3.5mm; font-size: 8.4pt; break-inside: auto; }
+th, td { border-bottom: .5pt solid #bbb; padding: 1mm 1.5mm; text-align: left; vertical-align: top; }
+th { border-bottom: 1.2pt solid #111; font-variant: small-caps; letter-spacing: .04em; }
+tr { break-inside: avoid; }
+table code { font-size: 7.8pt; }
+figure { margin: 2mm 0 4mm; text-align: center; break-inside: avoid; }
+figure img { width: 78%; border: 1.2pt solid #111; image-rendering: pixelated; }
+figure.pair img { width: 48.5%; } figure.pair img + img { margin-left: 1.5%; }
+figcaption { font-style: italic; font-size: 8pt; color: #444; margin-top: 1mm; }
+.ref p { text-align: left; margin: 0 0 1.8mm; padding-left: 4mm; text-indent: -4mm; break-inside: avoid; }
+.ref strong { font-family: "IBM Plex Mono", monospace; font-size: 8.3pt; }
+/* cover */
+.cover { page: cover; height: 210mm; width: 148mm; position: relative; text-align: center; overflow: hidden; }
+.cover .frame { position: absolute; inset: 8mm; border: 2.2pt solid #111; }
+.cover .frame2 { position: absolute; inset: 10mm; border: .6pt solid #111; }
+.cover .logo { position: absolute; top: 22mm; left: 0; right: 0; } .cover .logo img { width: 92mm; }
+.cover .t1 { position: absolute; top: 76mm; left: 0; right: 0; font: bold 26pt Tinos, serif; letter-spacing: .08em; }
+.cover .t2 { position: absolute; top: 90mm; left: 0; right: 0; font: bold 12pt Tinos, serif; letter-spacing: .28em; }
+.cover .shot { position: absolute; top: 104mm; left: 0; right: 0; } .cover .shot img { width: 92mm; border: 1.5pt solid #111; image-rendering: pixelated; }
+.cover .t3 { position: absolute; bottom: 22mm; left: 0; right: 0; font: bold 9.5pt Tinos, serif; letter-spacing: .2em; }
+.cover .t4 { position: absolute; bottom: 15mm; left: 0; right: 0; font: 8pt Tinos, serif; color: #444; }
+.toc { page: plain; break-before: page; }
+.toc h1 { break-before: avoid; }
+.toc ol { list-style: none; padding: 0; margin: 6mm 4mm; font-size: 10.5pt; }
+.toc li { margin: 0 0 2.4mm; border-bottom: .5pt dotted #999; }
+.toc a { color: #111; text-decoration: none; display: flex; justify-content: space-between; }
+.toc a span { font-weight: bold; width: 8mm; display: inline-block; }
+.toc a b { margin-left: auto; }
+.toc a em { font-style: normal; flex: 1; text-align: left; }
+.colophon { margin-top: 10mm; font-size: 8pt; color: #333; text-align: center; }
+</style></head><body>
+<section class="cover">
+  <div class="frame"></div><div class="frame2"></div>
+  <div class="logo"><img src="img/optica_logo.png" alt="Optica Technology Design"></div>
+  <div class="t1">OPTICOS</div>
+  <div class="t2">OPTICBASIC USER MANUAL</div>
+  <div class="shot"><img src="img/boot.png" alt="The OpticOS start-up screen"></div>
+  <div class="t3">FOR THE 48K ZX SPECTRUM</div>
+  <div class="t4">ROM v0.1 &nbsp;&bull;&nbsp; Manual edition 1, November 2026 &nbsp;&bull;&nbsp; &copy; 2026 Optica Technology Design</div>
+</section>
+<section class="toc"><h1>Contents</h1><ol><li><a href="#c1"><span>1</span><em>Introduction</em><b>3</b></a></li>
+<li><a href="#c2"><span>2</span><em>Getting started</em><b>5</b></a></li>
+<li><a href="#c3"><span>3</span><em>The keyboard and the screen</em><b>7</b></a></li>
+<li><a href="#c4"><span>4</span><em>Entering and editing programs</em><b>9</b></a></li>
+<li><a href="#c5"><span>5</span><em>The language</em><b>12</b></a></li>
+<li><a href="#c6"><span>6</span><em>Reference</em><b>16</b></a></li>
+<li><a href="#c7"><span>7</span><em>Errors and TRY / CATCH</em><b>22</b></a></li>
+<li><a href="#c8"><span>8</span><em>Tape</em><b>25</b></a></li>
+<li><a href="#c9"><span>9</span><em>Graphics, colour and sound</em><b>27</b></a></li>
+<li><a href="#c10"><span>10</span><em>Machine code</em><b>29</b></a></li>
+<li><a href="#c11"><span>11</span><em>Memory map and system variables</em><b>31</b></a></li>
+<li><a href="#c12"><span>12</span><em>Limits and differences from Sinclair BASIC</em><b>33</b></a></li>
+<li><a href="#c13"><span>13</span><em>Worked examples</em><b>35</b></a></li></ol>
+<p class="colophon">OpticOS and OpticBASIC &copy; 2026 Optica Technology Design. ZX Spectrum is a trademark of its owners; OpticOS is not connected with Sinclair Research or Amstrad. Screenshots are from the Fuse emulator.</p></section>
+<h1 id="c1"><span class="num">1</span>Introduction</h1>
+<p>OpticOS is a new 16K ROM for the 48K ZX Spectrum. It replaces the Sinclair ROM, and it brings its own language, <strong>OpticBASIC</strong>: a structured BASIC with named procedures and functions, block IF, CASE, WHILE, REPEAT and TRY, and no line numbers at all. Text is printed at <strong>64 columns</strong> in a 4-pixel font, so a listing shows twice as much as on a Sinclair screen.</p>
+<p>OpticOS keeps the parts of the Spectrum that other software relies on. The tape format is the standard one, and the ROM routines that games call, such as <code>LD-BYTES</code> and <code>BEEPER</code>, are at their usual addresses. Ordinary commercial games load with <code>LOAD ""</code> through a small legacy loader that understands the BASIC loader programs on their tapes.</p>
+<p>OpticOS is a clean-room design. It contains no Sinclair, Amstrad or Tasword code or artwork, and every build is checked to make sure that no run of 12 or more bytes is shared with the original ROM.</p>
+<p>This manual describes OpticOS and OpticBASIC exactly as they are built. Every example in it was typed into the ROM and run, and the screenshots come from the Fuse emulator with its tape traps turned off.</p>
+<h2>What you need</h2>
+<ul>
+<li>A 48K ZX Spectrum, or an emulator. OpticOS also starts on a 16K machine, with less room for programs.</li>
+<li>The ROM file <code>opticos.rom</code> (16,384 bytes). In Fuse, start with <code>fuse --machine 48 --rom-48 opticos.rom --no-traps</code>. The <code>--no-traps</code> option matters: without it, Fuse loads and saves tapes behind the ROM's back. On real hardware the ROM goes in an EPROM in place of the original; this has not yet been tried.</li>
+</ul>
+<h2>How this manual is laid out</h2>
+<p>Chapters 2 to 4 cover starting up, the keyboard and screen, and typing in and editing programs. Chapter 5 describes the language, and chapter 6 is an A–Z reference of every keyword and function. Then come errors, tape, graphics and sound, machine code, and the memory map. Chapter 12 lists the limits and the differences from Sinclair BASIC, and chapter 13 has worked examples.</p>
+<p>In syntax lines, <code>[ ]</code> marks something optional, <code>|</code> separates alternatives, and <code>…</code> means "more of the same". Names in <em>italics</em> stand for something you supply.</p>
+<h1 id="c2"><span class="num">2</span>Getting started</h1>
+<h2>The start-up screen</h2>
+<p>Switch on, and after a moment OpticOS draws its start-up screen and plays two notes: a short high one, then a longer low one. They are the BBC Micro's power-on tones played in reverse order, 523 Hz for 0.3 seconds and then 122 Hz for 0.9 seconds. The keyboard is not read while they play, so wait for the second note to finish before typing. A warm start (<code>NEW</code>) does not play them.</p>
+<figure><img src="img/boot.png"><figcaption>The start-up screen in Fuse.</figcaption></figure>
+
+<p>The top row is a colour bar showing the eight Spectrum colours, normal and then bright. Below it are the copyright line, <code>OpticOS (c) 2026 Optica Technology Design</code>, and the name and version of the BASIC. Then comes the prompt.</p>
+<h2>The prompt</h2>
+<p><code>]</code> followed by a space is the OpticOS prompt. Whatever you type at it is run as soon as you press ENTER:</p>
+<pre><code>] PRINT &quot;Hello, world!&quot;
+Hello, world!
+] PRINT 2+2, SQR 2
+4               1.41421356
+</code></pre>
+<p>The prompt changes to show what ENTER will do. <code>]</code> means run the line, <code>+</code> means add it to the program (AUTO mode), and <code>*</code> means put it back in place of the line being edited (chapter 4).</p>
+<h1 id="c3"><span class="num">3</span>The keyboard and the screen</h1>
+<h2>Typing keywords</h2>
+<p>OpticOS ignores the keyword legends printed on the Spectrum's keys. Keywords are typed <strong>letter by letter</strong>, like any other word, and recognised when you press ENTER. Upper or lower case does not matter: <code>print</code>, <code>Print</code> and <code>PRINT</code> are the same, and LIST always shows keywords in capitals.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Letters and digits</td>
+<td>Lower case. Hold CAPS SHIFT for capitals.</td>
+</tr>
+<tr>
+<td>SYMBOL SHIFT + key</td>
+<td>The red symbol on the key: <code>"</code> is SYMBOL+P, <code>;</code> is SYMBOL+O, <code>=</code> is SYMBOL+L, and so on</td>
+</tr>
+<tr>
+<td>CAPS SHIFT + SYMBOL SHIFT, then a key</td>
+<td>One extra symbol: <code>[ ] { } \ | ~</code> on Y, U, F, G, D, S and A</td>
+</tr>
+<tr>
+<td>CAPS+5 / CAPS+8</td>
+<td>Move the cursor left / right in the line you are typing</td>
+</tr>
+<tr>
+<td>CAPS+0 (DELETE)</td>
+<td>Delete the character to the left of the cursor</td>
+</tr>
+<tr>
+<td>CAPS+7 / CAPS+6</td>
+<td>Move the current-line marker up / down the program, and relist</td>
+</tr>
+<tr>
+<td>CAPS+1 (EDIT)</td>
+<td>Copy the current line into the input line; press again to empty it</td>
+</tr>
+<tr>
+<td>ENTER</td>
+<td>Run the line, or put it into the program</td>
+</tr>
+<tr>
+<td>CAPS+SPACE (BREAK)</td>
+<td>Stop a running program</td>
+</tr>
+</tbody>
+</table>
+<p>The input line holds up to 126 characters, which is two screen rows. New characters are inserted at the cursor.</p>
+<h2>The 64-column screen</h2>
+<p>The screen has 24 rows of 64 columns. Rows are numbered 0–23 from the top and columns 0–63 from the left, for <code>PRINT AT</code>. The font is OpticOS's own, 4 pixels wide, with true lower case and descenders. Character codes 32–127 print; code 127 is the block used as the cursor, and codes 128–255 print as <code>?</code>.</p>
+<p>There is no separate lower screen. Everything, including error messages and the prompt, appears in the main screen, which scrolls up when the bottom is reached.</p>
+<p><strong>Colour clash.</strong> Colours on the Spectrum belong to 8×8 pixel cells, and at 64 columns each cell holds <strong>two</strong> characters (columns 0 and 1, 2 and 3, and so on). Printing a character in a new colour recolours its neighbour too. To keep colours tidy, change colour on even-numbered columns.</p>
+<h1 id="c4"><span class="num">4</span>Entering and editing programs</h1>
+<h2>Programs without line numbers</h2>
+<p>An OpticBASIC program is a list of lines with no numbers. You add lines with <code>AUTO</code>, move about with a <strong>current-line marker</strong>, and change a line by copying it into the input line with EDIT. LIST shows the program indented to show its structure. The indentation is worked out each time and is not stored, so a program always lists tidily however you typed it.</p>
+<h2>Typing a program: AUTO</h2>
+<p>Type <code>AUTO</code>. The prompt changes to <code>+</code>, and each line you type now goes into the program <strong>after the current line</strong> and becomes the current line, so you type a program from top to bottom. An empty line (just ENTER) ends AUTO mode.</p>
+<pre><code>] AUTO
++ FOR i = 1 TO 3
++ PRINT i; &quot; squared is &quot;; i * i
++ NEXT
++
+] RUN
+1 squared is 1
+2 squared is 4
+3 squared is 9
+</code></pre>
+<h2>LIST and the marker</h2>
+<p><code>LIST</code> lists the whole program, with <code>&gt;</code> in front of the current line. CAPS+7 and CAPS+6 move the marker up and down one line and relist about ten lines either side of it. If you move up from the first line, the marker goes <em>above</em> it, and the next line you add goes at the top of the program.</p>
+<figure><img src="img/list_guess.png"><figcaption>LIST shows the structure by indentation. The marker is on the last line.</figcaption></figure>
+
+<h2>Changing and deleting lines: EDIT</h2>
+<p>Put the marker on a line and press <strong>EDIT</strong> (CAPS+1). The line appears in the input line, without its indentation, and the prompt becomes <code>*</code>. Change it with the cursor keys and DELETE, and press ENTER to put it back in place of the old line.</p>
+<p>To <strong>delete</strong> a line, put the marker on it and press EDIT twice (the second press empties the input line), then ENTER. The line before it becomes current.</p>
+<figure><img src="img/fuse_edit.png"><figcaption>Editing: the marker is on the empty PRINT, and the new text is in the input line after the * prompt.</figcaption></figure>
+
+<h2>Things to know</h2>
+<ul>
+<li>Every change to the program clears the variables, and the program is checked again before the next RUN.</li>
+<li><code>NEW</code> deletes the program and its variables. <code>LOAD</code> replaces them.</li>
+<li><code>RUN</code> runs the program from the top. <code>RUN</code> <em>name</em> runs just one procedure (chapter 6).</li>
+<li>When a program stops with an error, the line with the error becomes the current line, so EDIT brings it straight up.</li>
+</ul>
+<h1 id="c5"><span class="num">5</span>The language</h1>
+<h2>Lines and statements</h2>
+<p>Put one statement on each line. You can join statements with <code>:</code>, but you never need to. A comment starts with <code>REM</code> or <code>'</code> and runs to the end of the line.</p>
+<p>The block keywords, <code>IF</code> (block form), <code>ELSEIF</code>, <code>ELSE</code>, <code>ENDIF</code>, <code>WHILE</code>, <code>WEND</code>, <code>REPEAT</code>, <code>UNTIL</code>, <code>CASE</code>, <code>WHEN</code>, <code>OTHERWISE</code>, <code>ENDCASE</code>, <code>TRY</code>, <code>CATCH</code>, <code>ENDTRY</code>, <code>DEF</code> and <code>ENDPROC</code>/<code>ENDFN</code>, must each <strong>start a line</strong>.</p>
+<h2>Names and types</h2>
+<p>A name starts with a letter, followed by letters, digits or <code>_</code>, up to 32 characters, all of them significant. Names are not case-sensitive. The ending says what the variable holds:</p>
+<table>
+<thead>
+<tr>
+<th>Form</th>
+<th>Type</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>count</code></td>
+<td>Number (floating point)</td>
+<td>about ±1.7E38, 9 to 10 significant digits; whole numbers −65535 to 65535 are held exactly and work fastest</td>
+</tr>
+<tr>
+<td><code>count%</code></td>
+<td>16-bit integer</td>
+<td>−32768 to 32767; storing a value outside this is an Overflow error</td>
+</tr>
+<tr>
+<td><code>name$</code></td>
+<td>String</td>
+<td>0 to 255 characters</td>
+</tr>
+<tr>
+<td><code>a(9)</code>, <code>b%(3,3)</code>, <code>n$(20)</code></td>
+<td>Arrays of any type, made with DIM</td>
+<td>up to 3 dimensions, counted from 0</td>
+</tr>
+</tbody>
+</table>
+<p>A variable comes into being the first time something is stored in it. Using one before then is the error "No such variable".</p>
+<p><strong>Truth values.</strong> A comparison gives −1 for true and 0 for false, and <code>TRUE</code> and <code>FALSE</code> are −1 and 0. <code>IF</code>, <code>WHILE</code> and <code>UNTIL</code> treat any non-zero value as true.</p>
+<h2>Numbers and strings</h2>
+<p>Numbers can be written as <code>123</code>, <code>1.5</code>, <code>1.5E-3</code>, in hex as <code>$C000</code> or <code>&amp;C000</code>, or in binary as <code>%10110001</code>. Strings go in double quotes; to put a quote inside a string, write it twice: <code>"Say ""hello"""</code>.</p>
+<h2>Operators</h2>
+<p>From highest priority to lowest:</p>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Operators</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>( )</code>, functions, array subscripts</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>^</code></td>
+<td>power; <code>2^3^2</code> is <code>2^9</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>unary <code>-</code>, <code>+</code>, <code>NOT</code></td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>*</code> <code>/</code> <code>DIV</code> <code>MOD</code></td>
+<td><code>/</code> always gives a full result, <code>7/2</code> = 3.5; <code>DIV</code> divides and drops the fraction, <code>7 DIV 2</code> = 3</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>+</code> <code>-</code></td>
+<td><code>+</code> also joins strings: <code>"a" + "b"</code> = <code>"ab"</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>&lt;&lt;</code> <code>&gt;&gt;</code></td>
+<td>shift an integer left or right: <code>1 &lt;&lt; 4</code> = 16</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>=</code> <code>&lt;&gt;</code> <code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td>
+<td>compare numbers, or strings in character order</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>AND</code></td>
+<td>bitwise on whole numbers</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>OR</code> <code>XOR</code></td>
+<td>bitwise on whole numbers</td>
+</tr>
+</tbody>
+</table>
+<h2>Procedures and functions</h2>
+<p>A <strong>procedure</strong> is a named block of lines between <code>DEF name</code> and <code>ENDPROC</code>. You call it by writing its name, with any arguments after it, with or without brackets:</p>
+<pre><code>DEF PROC greet(who$, times%)
+  LOCAL i%
+  FOR i% = 1 TO times%
+    PRINT &quot;Hello, &quot;; who$
+  NEXT
+ENDPROC
+greet &quot;Nathan&quot;, 2
+</code></pre>
+<p>A <strong>function</strong> returns a value with <code>RETURN</code>, and ends with <code>ENDFN</code>. A one-line function can be written <code>DEF FN name(params) = expression</code>:</p>
+<pre><code>DEF FN area(w, h)
+  RETURN w * h
+ENDFN
+DEF FN sq(n) = n * n
+PRINT area(3, 4) + sq(2)
+</code></pre>
+<p>The words <code>PROC</code> and <code>FN</code> after <code>DEF</code> are optional, and so is <code>FN</code> in a call. Arguments are passed <strong>by value</strong>. Arrays cannot be passed, but every array is global, so a procedure can use one by name.</p>
+<p><code>LOCAL</code> (at the start of a procedure or function) and the parameters give the procedure its own copies of those variables. The old values come back when it ends, or when an error leaves it. Procedures and functions can call themselves (recursion). The program's main part is simply the lines that are not inside a <code>DEF</code>.</p>
+<h2>Control structures</h2>
+<pre><code>IF condition THEN statement [ELSE statement]     ' one line
+
+IF condition                                       ' block
+  …
+ELSEIF condition
+  …
+ELSE
+  …
+ENDIF
+
+WHILE condition … WEND            ' test first
+REPEAT … UNTIL condition          ' test after
+FOR v = first TO last [STEP s] … NEXT [v]
+
+CASE expression OF
+  WHEN value [, value …]
+    …
+  OTHERWISE
+    …
+ENDCASE
+
+EXIT FOR | EXIT WHILE | EXIT REPEAT
+TRY … CATCH … ENDTRY
+</code></pre>
+<p><code>CASE</code> compares the expression with each <code>WHEN</code> value in turn, runs the first branch that matches (or the <code>OTHERWISE</code> branch), and carries on after <code>ENDCASE</code>. The values can be numbers or strings, but must be the same type as the expression. A <code>WHEN</code> branch can follow on the same line after a <code>:</code>.</p>
+<p><code>EXIT FOR</code>, <code>EXIT WHILE</code> and <code>EXIT REPEAT</code> leave the innermost loop of that kind, carrying on after its NEXT, WEND or UNTIL.</p>
+<h1 id="c6"><span class="num">6</span>Reference</h1>
+<p>Every keyword and function OpticBASIC has, in alphabetical order. <em>n</em>, <em>x</em> and <em>a</em> stand for numeric expressions, <em>s$</em> for a string expression, and <em>v</em> for a variable.</p>
+<div class="ref">
+<p><strong>ABS</strong> <em>x</em> — The value without its sign. <code>PRINT ABS -3</code> gives 3.</p>
+<p><strong>AND</strong> — Logical or bitwise "and". <code>IF x &gt; 0 AND x &lt; 10 THEN PRINT "digit"</code>; <code>6 AND 3</code> is 2.</p>
+<p><strong>ASC</strong> <em>s$</em> — The character code of the first character. <code>ASC "A"</code> is 65.</p>
+<p><strong>AT</strong> — Used in PRINT: <code>PRINT AT row, column; …</code> (row 0–23, column 0–63).</p>
+<p><strong>ATN</strong> <em>x</em> — Arctangent, in radians. <code>PRINT ATN 1 * 4</code> gives 3.14159265.</p>
+<p><strong>AUTO</strong> — Start adding typed lines to the program after the current line (prompt <code>+</code>). An empty line stops.</p>
+<p><strong>BEEP</strong> <em>duration</em>, <em>pitch</em> — Play a note. Duration is in seconds; pitch is in semitones above middle C (0), from about −24 to 69. <code>BEEP 0.5, 7</code> plays the G above middle C for half a second.</p>
+<p><strong>BORDER</strong> <em>n</em> — Set the border colour, 0–7. <code>BORDER 1</code> makes it blue.</p>
+<p><strong>BRIGHT</strong> 0|1 — Bright colours off or on for what is printed next. Also inside PRINT: <code>PRINT BRIGHT 1; "Hi"</code>.</p>
+<p><strong>CALL</strong> <em>addr</em> — Run machine code at <em>addr</em>. It returns to BASIC with <code>RET</code>. <code>CALL 32768</code></p>
+<p><strong>CASE</strong> <em>x</em> <strong>OF</strong> — Start a CASE block (chapter 5). <code>CASE k% OF</code></p>
+<p><strong>CATCH</strong> — Starts the part of a TRY block that runs if an error happened (chapter 7).</p>
+<p><strong>CHR$</strong> <em>n</em> — The character with code <em>n</em> (0–255). <code>CHR$ 65</code> is "A".</p>
+<p><strong>CLEAR</strong> [<em>n</em>] — Forget all variables, open loops and procedure calls. With <em>n</em>, also move RAMTOP (the top of BASIC's memory) to <em>n</em>, leaving the memory above it free for machine code: <code>CLEAR 59999</code>. <em>n</em> must leave at least 1,856 bytes above the variables. Use CLEAR at the top level of a program, not inside a procedure.</p>
+<p><strong>CLS</strong> — Clear the screen to the current paper colour, and print from the top.</p>
+<p><strong>CODE</strong> — Used in SAVE, LOAD and VERIFY for blocks of memory (chapter 8).</p>
+<p><strong>COS</strong> <em>x</em> — Cosine of <em>x</em> radians.</p>
+<p><strong>DATA</strong> <em>item</em> [, <em>item</em> …] — Values for READ. Items can be any expressions, numbers or strings. A DATA statement must start its line. <code>DATA "pear", 3, 2*4</code></p>
+<p><strong>DEF</strong> <em>name</em>[(<em>params</em>)] — Start a procedure (ending <code>ENDPROC</code>) or function (ending <code>ENDFN</code>). <code>DEF PROC move(dx)</code>, <code>DEF FN half(x) = x / 2</code></p>
+<p><strong>DIM</strong> <em>a</em>(<em>n</em> [, <em>n</em> [, <em>n</em>]]) — Make an array with up to 3 dimensions, each counted from 0, so <code>DIM a(9)</code> has 10 elements. Numbers start as 0 and strings as "". Making the same array twice is an error. <code>DIM board%(7,7)</code>, <code>DIM name$(20)</code></p>
+<p><strong>DIV</strong> — Whole-number division: <code>17 DIV 5</code> is 3.</p>
+<p><strong>DPEEK</strong> <em>addr</em> — The 16-bit value at <em>addr</em> and <em>addr</em>+1, low byte first. <code>DPEEK 23675</code></p>
+<p><strong>DPOKE</strong> <em>addr</em>, <em>n</em> — Store a 16-bit value, low byte first. <code>DPOKE 32000, 1234</code></p>
+<p><strong>DRAW</strong> <em>dx</em>, <em>dy</em> — Draw a line from the last point plotted, <em>dx</em> across and <em>dy</em> up. <strong>DRAW TO</strong> <em>x</em>, <em>y</em> draws to an absolute position. <code>PLOT 0,0: DRAW 255,0: DRAW TO 128,191</code></p>
+<p><strong>ELSE</strong>, <strong>ELSEIF</strong> <em>condition</em> — Parts of an IF block; ELSE also in a one-line IF.</p>
+<p><strong>END</strong> — Stop the program quietly.</p>
+<p><strong>ENDCASE</strong>, <strong>ENDIF</strong>, <strong>ENDTRY</strong> — End a CASE, IF or TRY block.</p>
+<p><strong>ENDFN</strong>, <strong>ENDPROC</strong> — End a function or procedure. ENDPROC can also be used earlier, to leave a procedure: <code>IF l &lt; 4 THEN ENDPROC</code>.</p>
+<p><strong>ERR</strong> — The number of the last error (table in chapter 7).</p>
+<p><strong>ERR$</strong> — The message of the last error. After <code>ERROR n, msg$</code> it is <em>msg$</em>.</p>
+<p><strong>ERROR</strong> <em>n</em> [, <em>msg$</em>] — Cause error number <em>n</em> (0–255). With a message, the error report reads <em>msg$</em> and ERR$ gives <em>msg$</em>; up to 28 characters are kept. <code>ERROR 200, "Out of fuel"</code></p>
+<p><strong>EXIT FOR</strong> | <strong>EXIT WHILE</strong> | <strong>EXIT REPEAT</strong> — Leave the innermost loop of that kind. <code>IF KEY(" ") THEN EXIT FOR</code></p>
+<p><strong>EXP</strong> <em>x</em> — e to the power <em>x</em>. <code>EXP 1</code> is 2.71828183.</p>
+<p><strong>FALSE</strong> — 0.</p>
+<p><strong>FLASH</strong> 0|1 — Flashing off or on for what is printed next. Also inside PRINT.</p>
+<p><strong>FN</strong> — Optional before a function's name, in DEF or in a call.</p>
+<p><strong>FOR</strong> <em>v</em> = <em>first</em> <strong>TO</strong> <em>last</em> [<strong>STEP</strong> <em>s</em>] — Repeat the lines up to NEXT, counting <em>v</em> from <em>first</em> to <em>last</em>. The loop does not run at all if <em>first</em> is already past <em>last</em>. <code>FOR i = 10 TO 1 STEP -3</code> gives 10, 7, 4, 1.</p>
+<p><strong>FRAMES</strong> — The number of frames (fiftieths of a second) since the machine was switched on. Use it for timing: <code>t = FRAMES: …: PRINT (FRAMES - t) / 50; " s"</code>.</p>
+<p><strong>FREE</strong> — The number of bytes free for variables and strings. <code>PRINT FREE</code></p>
+<p><strong>HEX$</strong> <em>n</em> — <em>n</em> as four hex digits. <code>HEX$(255)</code> is "00FF".</p>
+<p><strong>IF</strong> <em>condition</em> <strong>THEN</strong> <em>statement</em> [<strong>ELSE</strong> <em>statement</em>], or the block form (chapter 5).</p>
+<p><strong>IN</strong> <em>port</em> — Read an input port. <code>IN 31</code> reads a Kempston joystick: bit 0 right, 1 left, 2 down, 3 up, 4 fire.</p>
+<p><strong>INK</strong> <em>n</em> — Set the ink colour, 0–7, for what is printed or plotted next; 8 means keep the colour already on the screen. Also inside PRINT: <code>PRINT INK 2; "red"</code>.</p>
+<p><strong>INKEY$</strong> — The key being pressed now, or "" if none. It does not wait.</p>
+<p><strong>INPUT</strong> ["<em>prompt</em>";] <em>v</em> [, <em>v</em> …] — Ask for values. Each variable gets its own line, edited with the usual keys. Numbers are read as by VAL. <code>INPUT "Your name? "; n$</code></p>
+<p><strong>INSTR</strong>(<em>s$</em>, <em>t$</em> [, <em>start</em>]) — The position of <em>t$</em> in <em>s$</em>, from 1, or 0 if it is not there. <code>INSTR("hello", "l")</code> is 3; <code>INSTR("hello", "l", 4)</code> is 4.</p>
+<p><strong>INT</strong> <em>x</em> — The whole number at or below <em>x</em>. <code>INT 2.7</code> is 2, <code>INT -2.5</code> is −3.</p>
+<p><strong>INVERSE</strong> 0|1 — Swap ink and paper in text, and make PLOT and DRAW clear pixels. It stays set after a PRINT that uses it.</p>
+<p><strong>KEY</strong>(<em>k$</em>) — TRUE while the key for the first character of <em>k$</em> is held down. It works for letters, digits and " " (space), and several keys can be tested at once, which suits games: <code>IF KEY("q") AND KEY("p") THEN …</code>.</p>
+<p><strong>LEFT$</strong>(<em>s$</em>, <em>n</em>) — The first <em>n</em> characters. <code>LEFT$("hello", 2)</code> is "he".</p>
+<p><strong>LEN</strong> <em>s$</em> — The length of a string.</p>
+<p><strong>LET</strong> — Optional: <code>LET x = 1</code> is the same as <code>x = 1</code>.</p>
+<p><strong>LIST</strong> — List the whole program, indented, with <code>&gt;</code> at the current line.</p>
+<p><strong>LN</strong> <em>x</em> — Natural logarithm. <strong>LOG</strong> <em>x</em> — Logarithm to base 10. <code>LOG 1000</code> is 3.</p>
+<p><strong>LOAD</strong> "<em>name</em>" | <strong>LOAD</strong> "" — Load a program from tape (chapter 8). <strong>LOAD</strong> "<em>name</em>" <strong>CODE</strong> [<em>start</em>] loads a block of memory.</p>
+<p><strong>LOCAL</strong> <em>v</em> [, <em>v</em> …] — Give a procedure or function its own copies of variables. Use it on the first lines of the procedure. <code>LOCAL x2, y2</code></p>
+<p><strong>MAX</strong>(<em>a</em>, <em>b</em>), <strong>MIN</strong>(<em>a</em>, <em>b</em>) — The larger or smaller of two numbers.</p>
+<p><strong>MID$</strong>(<em>s$</em>, <em>start</em> [, <em>n</em>]) — <em>n</em> characters from position <em>start</em> (from 1), or the rest of the string. <code>MID$("hello", 2, 3)</code> is "ell".</p>
+<p><strong>MOD</strong> — The remainder after division: <code>10 MOD 3</code> is 1.</p>
+<p><strong>NEW</strong> — Delete the program and variables.</p>
+<p><strong>NEXT</strong> [<em>v</em>] — End a FOR loop.</p>
+<p><strong>NOT</strong> <em>x</em> — Logical or bitwise "not". <code>NOT 0</code> is −1 (TRUE).</p>
+<p><strong>OF</strong> — Used in CASE.</p>
+<p><strong>OR</strong>, <strong>XOR</strong> — Logical or bitwise "or" and "exclusive or". <code>5 XOR 3</code> is 6.</p>
+<p><strong>OTHERWISE</strong> — The branch of a CASE that runs when no WHEN matches.</p>
+<p><strong>OUT</strong> <em>port</em>, <em>n</em> — Send a byte to an output port. <code>OUT 254, 2</code> sets the border red.</p>
+<p><strong>OVER</strong> 0|1 — With OVER 1, text and lines are combined with what is already on the screen, so drawing twice removes them. It stays set after a PRINT that uses it.</p>
+<p><strong>PAPER</strong> <em>n</em> — Set the background colour, 0–7 (8 = keep). Also inside PRINT.</p>
+<p><strong>PEEK</strong> <em>addr</em> — The byte at <em>addr</em>. <strong>POKE</strong> <em>addr</em>, <em>n</em> stores one.</p>
+<p><strong>PI</strong> — 3.14159265.</p>
+<p><strong>PLOT</strong> <em>x</em>, <em>y</em> — Set the pixel at <em>x</em> (0–255 across) and <em>y</em> (0–191 up from the <strong>bottom</strong>). <code>PLOT 128, 96</code></p>
+<p><strong>PRINT</strong> [<em>items</em>] — Print numbers and strings. Between items, <code>;</code> leaves no gap, <code>,</code> moves to the next 16-column zone, and <code>'</code> starts a new line. A <code>;</code> or <code>,</code> at the end stops the new line. Items can include <code>AT r, c;</code>, <code>TAB(c);</code> and the colour keywords. <code>?</code> is short for PRINT. <code>PRINT AT 5, 10; INK 6; "Score "; s%</code></p>
+<p><strong>PROC</strong> — Optional after DEF: <code>DEF PROC name</code> and <code>DEF name</code> are the same.</p>
+<p><strong>RANDOMIZE</strong> [<em>n</em>] — Start RND's sequence from <em>n</em>, so it repeats; with no <em>n</em>, from the frame counter.</p>
+<p><strong>READ</strong> <em>v</em> [, <em>v</em> …] — Take the next values from the DATA lines. Running out is the "Out of DATA" error.</p>
+<p><strong>REM</strong> — A comment; <code>'</code> does the same.</p>
+<p><strong>REPEAT</strong> … <strong>UNTIL</strong> <em>condition</em> — Repeat the lines until the condition is true. They always run at least once.</p>
+<p><strong>RESTORE</strong> [<em>name</em>] — Make the next READ start again from the first DATA line, or from the first DATA line after <code>DEF name</code>. That lets each procedure keep its own data.</p>
+<p><strong>RETURN</strong> <em>x</em> — Leave a function, giving its value.</p>
+<p><strong>RIGHT$</strong>(<em>s$</em>, <em>n</em>) — The last <em>n</em> characters.</p>
+<p><strong>RND</strong> — A random number from 0 to just under 1. <strong>RND</strong>(<em>n</em>) — a random whole number from 1 to <em>n</em>. <code>dice% = RND(6)</code></p>
+<p><strong>RUN</strong> [<em>name</em>] — Run the program from the start, or just the procedure <em>name</em> (one with no parameters), then return to the prompt. RUN clears the variables first.</p>
+<p><strong>SAVE</strong> "<em>name</em>" [<strong>AUTO</strong> <em>proc</em>] — Save the program to tape; with AUTO, it runs <em>proc</em> when it is loaded. <strong>SAVE</strong> "<em>name</em>" <strong>CODE</strong> <em>start</em>, <em>length</em> saves memory (chapter 8).</p>
+<p><strong>SGN</strong> <em>x</em> — −1, 0 or 1, the sign of <em>x</em>.</p>
+<p><strong>SIN</strong> <em>x</em> — Sine of <em>x</em> radians. <strong>SQR</strong> <em>x</em> — Square root.</p>
+<p><strong>STEP</strong> — Used in FOR.</p>
+<p><strong>STOP</strong> — Stop the program with the report "Stopped". It cannot be caught by TRY or continued.</p>
+<p><strong>STR$</strong> <em>x</em> — A number as a string. <code>STR$ PI</code> is "3.14159265".</p>
+<p><strong>STRING$</strong>(<em>n</em>, <em>s$</em>) — <em>s$</em> repeated <em>n</em> times. <code>STRING$(3, "ab")</code> is "ababab".</p>
+<p><strong>SWAP</strong> <em>a</em>, <em>b</em> — Exchange two variables or array elements of the same type. <code>SWAP w$(i%), w$(i% + 1)</code></p>
+<p><strong>TAB</strong>(<em>c</em>) — Used in PRINT: move to column <em>c</em>. Note the brackets.</p>
+<p><strong>TAN</strong> <em>x</em> — Tangent of <em>x</em> radians.</p>
+<p><strong>THEN</strong> — Used in a one-line IF.</p>
+<p><strong>TO</strong> — Used in FOR and in DRAW TO.</p>
+<p><strong>TRUE</strong> — −1.</p>
+<p><strong>TRY</strong> — Start a TRY … CATCH … ENDTRY block (chapter 7).</p>
+<p><strong>UPPER$</strong>(<em>s$</em>) — The string in capitals. <code>UPPER$("Mix")</code> is "MIX".</p>
+<p><strong>USR</strong> <em>addr</em> — Run machine code at <em>addr</em> and give back the value of its BC register pair when it returns.</p>
+<p><strong>VAL</strong> <em>s$</em> — The number written in a string. <code>VAL "1.5E3"</code> is 1500.</p>
+<p><strong>VERIFY</strong> — Check a tape against memory, with the same forms as LOAD.</p>
+<p><strong>WAIT</strong> <em>n</em> — Pause for <em>n</em> frames (fiftieths of a second). <code>WAIT 50</code> waits one second.</p>
+<p><strong>WEND</strong> — Ends a WHILE loop.</p>
+<p><strong>WHEN</strong> <em>value</em> [, <em>value</em> …] — A branch of a CASE block.</p>
+<p><strong>WHILE</strong> <em>condition</em> … <strong>WEND</strong> — Repeat the lines while the condition is true. They may not run at all.</p>
+</div>
+<h1 id="c7"><span class="num">7</span>Errors and TRY / CATCH</h1>
+<h2>Error reports</h2>
+<p>When something goes wrong in a running program, OpticOS stops it and prints a report giving the message and the position of the line, counting the first line of the program as line 1:</p>
+<pre><code>Division by zero, line 57
+</code></pre>
+<p>That line becomes the current line, so pressing EDIT brings it up straight away. A mistake in a line typed at the prompt gives the message alone. CAPS+SPACE (BREAK) stops a program with the report "Break".</p>
+<h2>Catching errors</h2>
+<p>Put lines that might fail between <code>TRY</code> and <code>CATCH</code>. If an error happens there, or in any procedure called from there, OpticOS gives up those lines and runs the lines after <code>CATCH</code> instead. <code>ERR</code> and <code>ERR$</code> say what went wrong. Any LOCAL variables are restored, and unfinished loops and procedure calls are dropped, on the way out. If no error happens, the CATCH part is skipped.</p>
+<p><code>ERROR n, msg$</code> causes an error of your own. Numbers from 100 upwards are free for your own use, and the message becomes both ERR$ and the report.</p>
+<pre><code>DEF FN ratio(a, b)
+  IF b = 0 THEN ERROR 200, &quot;Nothing to divide by&quot;
+  RETURN a / b
+ENDFN
+TRY
+  PRINT ratio(1, 0)
+CATCH
+  PRINT &quot;Error &quot;; ERR; &quot;: &quot;; ERR$
+ENDTRY
+</code></pre>
+<figure><img src="img/run_errors.png"><figcaption>The errors example from chapter 13.</figcaption></figure>
+
+<p>BREAK and STOP cannot be caught; they always return to the prompt.</p>
+<h2>Error numbers</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">ERR</th>
+<th>Message</th>
+<th>Usual cause</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">2</td>
+<td>No such variable</td>
+<td>A variable used before anything was stored in it</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td>No room</td>
+<td>Out of memory, or calls nested too deeply (chapter 12)</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td>Position off screen</td>
+<td>PRINT AT outside 0–23, 0–63</td>
+</tr>
+<tr>
+<td style="text-align: right;">5</td>
+<td>Division by zero</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td>Overflow</td>
+<td>A number too big, or an integer variable outside −32768 to 32767</td>
+</tr>
+<tr>
+<td style="text-align: right;">7</td>
+<td>Type mismatch</td>
+<td>A string where a number was needed, or the other way round</td>
+</tr>
+<tr>
+<td style="text-align: right;">8</td>
+<td>Bad subscript</td>
+<td>An array index out of range, or the wrong number of them</td>
+</tr>
+<tr>
+<td style="text-align: right;">9</td>
+<td>Block structure</td>
+<td>An IF, loop, CASE, TRY or DEF without its ending, or the reverse</td>
+</tr>
+<tr>
+<td style="text-align: right;">10</td>
+<td>Value outside range</td>
+<td>For example PLOT off the screen</td>
+</tr>
+<tr>
+<td style="text-align: right;">11</td>
+<td>Bad argument</td>
+<td>For example <code>SQR -1</code> or <code>CHR$ 300</code></td>
+</tr>
+<tr>
+<td style="text-align: right;">12</td>
+<td>Break</td>
+<td>CAPS+SPACE pressed</td>
+</tr>
+<tr>
+<td style="text-align: right;">13</td>
+<td>Syntax error</td>
+<td>A line OpticBASIC cannot make sense of</td>
+</tr>
+<tr>
+<td style="text-align: right;">14</td>
+<td>No such PROC or FN</td>
+<td>Calling a name that has no DEF</td>
+</tr>
+<tr>
+<td style="text-align: right;">15</td>
+<td>NEXT but no FOR</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align: right;">16</td>
+<td>Not in a PROC or FN</td>
+<td>ENDPROC, ENDFN or RETURN outside one</td>
+</tr>
+<tr>
+<td style="text-align: right;">17</td>
+<td>Stopped</td>
+<td>STOP</td>
+</tr>
+<tr>
+<td style="text-align: right;">18</td>
+<td>Array already made</td>
+<td>DIM of an array that exists</td>
+</tr>
+<tr>
+<td style="text-align: right;">19</td>
+<td>String over 255</td>
+<td>A string longer than 255 characters</td>
+</tr>
+<tr>
+<td style="text-align: right;">20</td>
+<td>Out of DATA</td>
+<td>READ with no DATA left</td>
+</tr>
+<tr>
+<td style="text-align: right;">23</td>
+<td>No such stream</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align: right;">26</td>
+<td>Tape: bad or missing block</td>
+<td>A tape error, or BREAK during LOAD</td>
+</tr>
+<tr>
+<td style="text-align: right;">65</td>
+<td>Legacy BASIC: unsupported statement</td>
+<td>A Sinclair loader used something the legacy loader does not know (chapter 8)</td>
+</tr>
+</tbody>
+</table>
+<h1 id="c8"><span class="num">8</span>Tape</h1>
+<p>OpticOS uses the standard Spectrum tape signal and headers, so its tapes can be read by other tools, and tape images (<code>.tap</code> and <code>.tzx</code>) work in emulators. In Fuse, turn the tape traps off (<code>--no-traps</code>) so that OpticOS's own routines do the work.</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SAVE "name"</code></td>
+<td>Save the program. Names are up to 10 characters.</td>
+</tr>
+<tr>
+<td><code>SAVE "name" AUTO proc</code></td>
+<td>Save the program so that, once loaded, it runs the procedure <em>proc</em> (which must have no parameters)</td>
+</tr>
+<tr>
+<td><code>SAVE "name" CODE start, length</code></td>
+<td>Save a block of memory</td>
+</tr>
+<tr>
+<td><code>LOAD "name"</code> or <code>LOAD ""</code></td>
+<td>Load the named program, or the first one found. This replaces the program in memory.</td>
+</tr>
+<tr>
+<td><code>LOAD "name" CODE [start]</code></td>
+<td>Load a block of memory, at the address it was saved from or at <em>start</em></td>
+</tr>
+<tr>
+<td><code>VERIFY "name"</code> …</td>
+<td>Check a saved program or block against memory, with the same forms as LOAD</td>
+</tr>
+</tbody>
+</table>
+<p>To save a picture of the screen, save its memory: <code>SAVE "pic" CODE 16384, 6912</code>. While loading, OpticOS shows each header it finds, such as <code>Bytes: name</code>. BREAK stops a load.</p>
+<p>OpticOS programs are saved with ordinary "Program:" headers, so other tools list them as BASIC programs. Their data begins with a short signature, and that is how <code>LOAD</code> tells an OpticBASIC program from a Sinclair one.</p>
+<h2>Loading commercial games</h2>
+<p>Almost every commercial tape starts with a short Sinclair BASIC program that loads the rest, such as:</p>
+<pre><code>10 BORDER 0: CLEAR 32767: LOAD &quot;&quot;CODE : RANDOMIZE USR 32768
+</code></pre>
+<p>When <code>LOAD ""</code> finds a Sinclair BASIC program, OpticOS hands it to its <strong>legacy loader</strong>, which runs the statements such loaders use: <code>BORDER</code>, <code>PAPER</code>, <code>INK</code>, <code>BRIGHT</code>, <code>CLS</code>, <code>CLEAR n</code>, <code>POKE</code>, <code>RANDOMIZE USR</code>, <code>LOAD "" CODE</code> and <code>LOAD "" SCREEN$</code>, <code>PRINT</code> with text and <code>AT</code>, <code>REM</code>, <code>GO TO</code> and <code>RUN</code>, with simple sums, <code>PEEK</code>, <code>USR</code> and <code>VAL "…"</code>. That is enough for the great majority of games, which then run as on the Sinclair ROM. A loader that uses anything else stops with "Legacy BASIC: unsupported statement".</p>
+<figure class="pair"><img src="img/fuse_miremare.png"><img src="img/fuse_bounceball_play.png"><figcaption>Mire Mare's menu and Bounce Ball in play, both loaded with LOAD "" in Fuse with traps off.</figcaption></figure>
+
+<p>Games that call deeper into the Sinclair ROM, for example its calculator or its 8×8 font, will not work (chapter 10).</p>
+<h1 id="c9"><span class="num">9</span>Graphics, colour and sound</h1>
+<h2>Colours</h2>
+<table>
+<thead>
+<tr>
+<th>0</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>5</th>
+<th>6</th>
+<th>7</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>black</td>
+<td>blue</td>
+<td>red</td>
+<td>magenta</td>
+<td>green</td>
+<td>cyan</td>
+<td>yellow</td>
+<td>white</td>
+</tr>
+</tbody>
+</table>
+<p><code>INK</code>, <code>PAPER</code>, <code>BRIGHT</code> and <code>FLASH</code> set the colours for what is printed or plotted next. Used inside a PRINT, as in <code>PRINT INK 2; "Danger"</code>, they last only to the end of that PRINT. <code>INVERSE</code> and <code>OVER</code> stay set. <code>BORDER</code> sets the border. <code>CLS</code> clears the screen in the current paper colour.</p>
+<p>Remember that each colour cell holds two characters (chapter 3).</p>
+<h2>Drawing</h2>
+<p>The graphics screen is 256 pixels across by 192 up, with (0, 0) at the <strong>bottom left</strong>. <code>PLOT x, y</code> sets a pixel. <code>DRAW dx, dy</code> draws a straight line from the last point by the given amounts, and <code>DRAW TO x, y</code> draws to a given point. Each cell that a line passes through takes the current colours. With <code>OVER 1</code>, pixels are flipped rather than set, so drawing the same line twice rubs it out; with <code>INVERSE 1</code> they are cleared.</p>
+<figure class="pair"><img src="img/fuse_graphics.png"><img src="img/run_tree.png"><figcaption>PLOT, DRAW and colours; and the recursive tree from chapter 13.</figcaption></figure>
+
+<h2>Sound</h2>
+<p><code>BEEP duration, pitch</code> plays a note through the speaker: the duration in seconds and the pitch in semitones from middle C. A scale:</p>
+<pre><code>FOR n% = 0 TO 7
+  READ p%: BEEP 0.2, p%
+NEXT
+DATA 0, 2, 4, 5, 7, 9, 11, 12
+</code></pre>
+<h1 id="c10"><span class="num">10</span>Machine code</h1>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PEEK a</code>, <code>POKE a, n</code></td>
+<td>Read or write one byte</td>
+</tr>
+<tr>
+<td><code>DPEEK a</code>, <code>DPOKE a, n</code></td>
+<td>Read or write a 16-bit word, low byte first</td>
+</tr>
+<tr>
+<td><code>IN port</code>, <code>OUT port, n</code></td>
+<td>Read or write an I/O port; <code>IN 31</code> is a Kempston joystick</td>
+</tr>
+<tr>
+<td><code>CALL a</code></td>
+<td>Run code at <em>a</em>; it returns with <code>RET</code></td>
+</tr>
+<tr>
+<td><code>USR a</code></td>
+<td>Run code at <em>a</em>, and give back BC when it returns</td>
+</tr>
+<tr>
+<td><code>CLEAR n</code></td>
+<td>Move RAMTOP down to <em>n</em>, keeping the memory above it safe from BASIC</td>
+</tr>
+</tbody>
+</table>
+<p>A small example, which puts <code>LD BC,1234: RET</code> at address 60000 and runs it:</p>
+<pre><code>CLEAR 59999
+DATA 1, 210, 4, 201
+FOR a = 60000 TO 60003: READ b: POKE a, b: NEXT
+PRINT USR 60000
+</code></pre>
+<p>It prints 1234. CALL has no way to pass register values; POKE them into memory for the code to read, or use USR to get a result back.</p>
+<h2>ROM routines</h2>
+<p>OpticOS keeps the main ROM entry points that games and utilities call, with the usual register contracts:</p>
+<table>
+<thead>
+<tr>
+<th>Address</th>
+<th>Routine</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$0000</code></td>
+<td>Cold start</td>
+</tr>
+<tr>
+<td><code>$0008</code></td>
+<td>RST 8: error, with the code in the next byte</td>
+</tr>
+<tr>
+<td><code>$0010</code></td>
+<td>RST 16: print the character in A</td>
+</tr>
+<tr>
+<td><code>$0038</code></td>
+<td>The 50 Hz interrupt (FRAMES and the keyboard)</td>
+</tr>
+<tr>
+<td><code>$0066</code></td>
+<td>NMI: jumps to the address in NMIADD if it is not zero</td>
+</tr>
+<tr>
+<td><code>$03B5</code></td>
+<td>BEEPER: DE = cycles, HL = period</td>
+</tr>
+<tr>
+<td><code>$04C2</code></td>
+<td>SA-BYTES: IX = start, DE = length, A = flag</td>
+</tr>
+<tr>
+<td><code>$0556</code></td>
+<td>LD-BYTES: IX, DE, A = flag; carry set to load, clear to verify</td>
+</tr>
+<tr>
+<td><code>$05E3</code>, <code>$05E7</code></td>
+<td>LD-EDGE-2 and LD-EDGE-1, timed to match, for custom loaders</td>
+</tr>
+<tr>
+<td><code>$0D6B</code>, <code>$0DAF</code></td>
+<td>CLS and CL-ALL</td>
+</tr>
+<tr>
+<td><code>$1601</code></td>
+<td>CHAN-OPEN: A = stream</td>
+</tr>
+<tr>
+<td><code>$203C</code></td>
+<td>PR-STRING: DE = address, BC = length</td>
+</tr>
+<tr>
+<td><code>$22AA</code></td>
+<td>PIXEL-ADD: B = y, C = x; gives HL = address, A = bit</td>
+</tr>
+</tbody>
+</table>
+<p><strong>RST $28 is not the Sinclair calculator.</strong> On OpticOS, <code>RST $28</code> enters OpticOS's own floating-point routines, so machine code written for the Sinclair calculator will not work, and nor will the calculator stack routines. Other addresses in the Sinclair ROM hold different code, and nothing should rely on them. The 8×8 font at <code>$3D00</code> is not there either.</p>
+<h1 id="c11"><span class="num">11</span>Memory map and system variables</h1>
+<h2>Memory (48K)</h2>
+<table>
+<thead>
+<tr>
+<th>Address</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$0000–$3FFF</code></td>
+<td>The OpticOS ROM; the 4×8 font is at <code>$3E80</code></td>
+</tr>
+<tr>
+<td><code>$4000–$57FF</code></td>
+<td>Screen bitmap</td>
+</tr>
+<tr>
+<td><code>$5800–$5AFF</code></td>
+<td>Screen colours (attributes)</td>
+</tr>
+<tr>
+<td><code>$5B00–$5BFF</code></td>
+<td>OpticOS working space and the maths registers</td>
+</tr>
+<tr>
+<td><code>$5C00–$5CB5</code></td>
+<td>System variables (the ones in the table below keep their Sinclair addresses)</td>
+</tr>
+<tr>
+<td><code>$5CB6–$5CCA</code></td>
+<td>Channel table</td>
+</tr>
+<tr>
+<td><code>$5CCB–$5D4F</code></td>
+<td>More OpticOS variables: name hash table, editor state; Sinclair loaders are loaded here</td>
+</tr>
+<tr>
+<td><code>$5D50–$5DCF</code></td>
+<td>The input line</td>
+</tr>
+<tr>
+<td><code>$5DD0–$5DEB</code></td>
+<td>The message of the last <code>ERROR n, msg$</code></td>
+</tr>
+<tr>
+<td><code>$5DF0</code> (24048)</td>
+<td>Start of the program, then the procedure table and the variables, growing upwards</td>
+</tr>
+<tr>
+<td>…</td>
+<td>Free memory (see <code>FREE</code>)</td>
+</tr>
+<tr>
+<td>below RAMTOP − 1,856</td>
+<td>The string heap, growing downwards</td>
+</tr>
+<tr>
+<td>RAMTOP − 1,856</td>
+<td>The typed-line buffer (256 bytes), value stack (320), control stack (768), machine stack (512)</td>
+</tr>
+<tr>
+<td>RAMTOP (<code>$FF57</code>)</td>
+<td>The last byte BASIC uses; move it with <code>CLEAR n</code></td>
+</tr>
+<tr>
+<td><code>$FF58–$FFFF</code></td>
+<td>168 bytes kept free, where Sinclair keeps its UDGs</td>
+</tr>
+</tbody>
+</table>
+<p>On a 16K machine everything from RAMTOP down is 32K lower (RAMTOP is <code>$7F57</code>).</p>
+<h2>System variables</h2>
+<p>These keep their Sinclair addresses and meanings:</p>
+<table>
+<thead>
+<tr>
+<th>Address</th>
+<th style="text-align: right;">Decimal</th>
+<th>Name</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$5C08</code></td>
+<td style="text-align: right;">23560</td>
+<td>LAST_K</td>
+<td>The last key pressed</td>
+</tr>
+<tr>
+<td><code>$5C09</code></td>
+<td style="text-align: right;">23561</td>
+<td>REPDEL</td>
+<td>Delay before a key repeats (frames)</td>
+</tr>
+<tr>
+<td><code>$5C0A</code></td>
+<td style="text-align: right;">23562</td>
+<td>REPPER</td>
+<td>Delay between repeats</td>
+</tr>
+<tr>
+<td><code>$5C36</code></td>
+<td style="text-align: right;">23606</td>
+<td>CHARS</td>
+<td>Font address, for machine code</td>
+</tr>
+<tr>
+<td><code>$5C3A</code></td>
+<td style="text-align: right;">23610</td>
+<td>ERR_NR</td>
+<td>Error code (IY points here when machine code runs)</td>
+</tr>
+<tr>
+<td><code>$5C3B</code></td>
+<td style="text-align: right;">23611</td>
+<td>FLAGS</td>
+<td>Bit 5 is set when a new key is pressed</td>
+</tr>
+<tr>
+<td><code>$5C48</code></td>
+<td style="text-align: right;">23624</td>
+<td>BORDCR</td>
+<td>Border colour</td>
+</tr>
+<tr>
+<td><code>$5C4F</code></td>
+<td style="text-align: right;">23631</td>
+<td>CHANS</td>
+<td>Channel table address</td>
+</tr>
+<tr>
+<td><code>$5C76</code></td>
+<td style="text-align: right;">23670</td>
+<td>SEED</td>
+<td>The last RANDOMIZE value</td>
+</tr>
+<tr>
+<td><code>$5C78</code></td>
+<td style="text-align: right;">23672</td>
+<td>FRAMES</td>
+<td>Frame counter, 3 bytes</td>
+</tr>
+<tr>
+<td><code>$5C7B</code></td>
+<td style="text-align: right;">23675</td>
+<td>UDG</td>
+<td>Points to RAMTOP + 1</td>
+</tr>
+<tr>
+<td><code>$5C7D</code></td>
+<td style="text-align: right;">23677</td>
+<td>COORDS</td>
+<td>The last point plotted (x, then y)</td>
+</tr>
+<tr>
+<td><code>$5C88</code></td>
+<td style="text-align: right;">23688</td>
+<td>S_POSN</td>
+<td>Print position: column (0–63), then row</td>
+</tr>
+<tr>
+<td><code>$5C8D</code></td>
+<td style="text-align: right;">23693</td>
+<td>ATTR_P</td>
+<td>The current colours</td>
+</tr>
+<tr>
+<td><code>$5C8F</code></td>
+<td style="text-align: right;">23695</td>
+<td>ATTR_T</td>
+<td>Colours for the current PRINT</td>
+</tr>
+<tr>
+<td><code>$5C91</code></td>
+<td style="text-align: right;">23697</td>
+<td>P_FLAG</td>
+<td>Bit 0 OVER, bit 2 INVERSE</td>
+</tr>
+<tr>
+<td><code>$5CB0</code></td>
+<td style="text-align: right;">23728</td>
+<td>NMIADD</td>
+<td>NMI routine address (0 = none)</td>
+</tr>
+<tr>
+<td><code>$5CB2</code></td>
+<td style="text-align: right;">23730</td>
+<td>RAMTOP</td>
+<td>The top of BASIC's memory</td>
+</tr>
+<tr>
+<td><code>$5CB4</code></td>
+<td style="text-align: right;">23732</td>
+<td>P_RAMT</td>
+<td>The last byte of RAM</td>
+</tr>
+</tbody>
+</table>
+<p>The other Sinclair system variables are used for OpticOS's own purposes, so do not POKE them.</p>
+<h1 id="c12"><span class="num">12</span>Limits and differences from Sinclair BASIC</h1>
+<h2>Limits</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Program size</td>
+<td>All of free memory: about 39,000 bytes on a 48K machine with nothing else loaded</td>
+</tr>
+<tr>
+<td>Line length</td>
+<td>126 characters typed; the stored line up to 255 bytes</td>
+</tr>
+<tr>
+<td>Names</td>
+<td>Up to 32 characters, all significant</td>
+</tr>
+<tr>
+<td>Strings</td>
+<td>Up to 255 characters</td>
+</tr>
+<tr>
+<td>Arrays</td>
+<td>Up to 3 dimensions</td>
+</tr>
+<tr>
+<td>Nesting</td>
+<td>The stacks are fixed in size. A recursive function inside an expression goes about 12 calls deep (<code>fact(12)</code> works, <code>fact(13)</code> is "No room"); a recursive procedure with one parameter about 50</td>
+</tr>
+<tr>
+<td>ERROR message</td>
+<td>28 characters</td>
+</tr>
+</tbody>
+</table>
+<h2>Differences from Sinclair BASIC</h2>
+<ul>
+<li><strong>No line numbers</strong>, so no <code>GO TO</code>, <code>GO SUB</code>, <code>CONTINUE</code> or <code>LIST n</code>. Use procedures, loops and CASE.</li>
+<li><strong>Keywords are typed in full</strong>, letter by letter. The keyword legends on the keys are not used.</li>
+<li><strong>64 columns</strong>, with no lower screen. <code>TAB</code> takes its column in brackets.</li>
+<li>Integer (<code>%</code>) variables, long names, structured blocks, procedures with parameters and LOCAL, functions of any length, TRY/CATCH, CASE, SWAP, hex and binary numbers, and <code>DIV</code>, <code>MOD</code>, <code>XOR</code>, <code>&lt;&lt;</code>, <code>&gt;&gt;</code> are new.</li>
+<li><code>RND(n)</code> gives a whole number from 1 to <em>n</em>. <code>INKEY$</code>, <code>KEY()</code> and <code>FRAMES</code> are there for games.</li>
+<li><code>/</code> and <code>DIV</code> differ: <code>7/2</code> is 3.5, and <code>7 DIV 2</code> is 3.</li>
+<li>Arrays count from <strong>0</strong>: <code>DIM a(9)</code> makes <code>a(0)</code> to <code>a(9)</code>. Strings are true strings, not fixed-length character arrays.</li>
+<li><strong>Not provided:</strong> <code>CIRCLE</code> and arcs, user-defined graphics and block graphics (codes 128–255 print as <code>?</code>), <code>SCREEN$()</code>, <code>ATTR</code>, <code>POINT</code>, <code>ASN</code> and <code>ACS</code> (use <code>ATN(x / SQR(1 - x * x))</code>), <code>LPRINT</code>, <code>LLIST</code> and <code>COPY</code>, <code>CAT</code>, <code>MERGE</code>, saving arrays to tape (<code>SAVE … DATA</code>), and the Sinclair calculator.</li>
+<li><strong>Sinclair BASIC programs do not run</strong>, apart from tape loaders (chapter 8).</li>
+<li>Every change to the program clears the variables.</li>
+<li><code>STOP</code> cannot be continued, and BREAK cannot be caught by TRY.</li>
+</ul>
+<h1 id="c13"><span class="num">13</span>Worked examples</h1>
+<p>These programs are in <code>docs/manual/examples</code> in the OpticOS repository. Each one was typed into the ROM and run, and the output shown is what the ROM printed. Type them with AUTO; the indentation does not need to be typed, because LIST puts it back.</p>
+<h2>Times table</h2>
+<pre><code>' Times table
+INK 6
+PRINT &quot;Times table for 7&quot;
+INK 7
+FOR i% = 1 TO 12
+  PRINT TAB(2); i%; &quot; x 7 = &quot;; i% * 7
+NEXT
+</code></pre>
+<p>The <code>TAB(2)</code> indents each line by two columns, and <code>INK</code> sets the colour of the heading.</p>
+<h2>Guessing a number</h2>
+<p>The computer finds a number by halving the range each time, and CASE sorts out the three possible answers.</p>
+<pre><code>' The computer guesses your number by halving
+secret% = 37: lo% = 1: hi% = 100: tries% = 0
+REPEAT
+  g% = (lo% + hi%) DIV 2
+  tries% = tries% + 1
+  CASE SGN(g% - secret%) OF
+    WHEN -1
+      PRINT g%; &quot; is too low&quot;
+      lo% = g% + 1
+    WHEN 1
+      PRINT g%; &quot; is too high&quot;
+      hi% = g% - 1
+    OTHERWISE
+      PRINT &quot;Got it: &quot;; g%; &quot; in &quot;; tries%; &quot; tries&quot;
+  ENDCASE
+UNTIL g% = secret%
+</code></pre>
+<figure><img src="img/run_guess.png"><figcaption>The output, followed by an error typed at the prompt.</figcaption></figure>
+
+<h2>Recursive functions</h2>
+<pre><code>' Recursive functions
+DEF FN fact(n)
+  IF n &lt;= 1 THEN RETURN 1
+  RETURN n * fact(n - 1)
+ENDFN
+DEF FN sq(n) = n * n
+FOR k = 0 TO 12 STEP 4
+  PRINT k; &quot;! = &quot;; fact(k)
+NEXT
+PRINT &quot;9 squared = &quot;; sq(9)
+</code></pre>
+<p>It prints <code>0! = 1</code>, <code>4! = 24</code>, <code>8! = 40320</code>, <code>12! = 479001600</code> and <code>9 squared = 81</code>.</p>
+<h2>Sorting words</h2>
+<p>The words are kept in DATA inside a procedure, and <code>RESTORE words</code> points READ at them. SWAP exchanges two neighbours that are in the wrong order, until a pass makes no changes.</p>
+<pre><code>' Read words, sort them, print them
+DEF PROC words
+  DATA &quot;pear&quot;, &quot;apple&quot;, &quot;fig&quot;, &quot;banana&quot;, &quot;cherry&quot;
+ENDPROC
+DIM w$(4)
+RESTORE words
+FOR i% = 0 TO 4: READ w$(i%): NEXT
+REPEAT
+  done% = TRUE
+  FOR i% = 0 TO 3
+    IF w$(i%) &gt; w$(i% + 1) THEN SWAP w$(i%), w$(i% + 1): done% = FALSE
+  NEXT
+UNTIL done%
+FOR i% = 0 TO 4: PRINT UPPER$(w$(i%)); &quot; &quot;; LEN w$(i%): NEXT
+</code></pre>
+<figure><img src="img/run_sort.png"><figcaption>APPLE 5, BANANA 6, CHERRY 6, FIG 3, PEAR 4, followed by FREE.</figcaption></figure>
+
+<h2>Catching errors</h2>
+<pre><code>' Catching errors
+DEF FN ratio(a, b)
+  IF b = 0 THEN ERROR 200, &quot;Nothing to divide by&quot;
+  RETURN a / b
+ENDFN
+DEF PROC test(a, b)
+  TRY
+    PRINT a; &quot; / &quot;; b; &quot; = &quot;; ratio(a, b)
+  CATCH
+    PRINT &quot;Error &quot;; ERR; &quot;: &quot;; ERR$
+  ENDTRY
+ENDPROC
+test 10, 4
+test 1, 0
+TRY
+  x = SQR -1
+CATCH
+  PRINT &quot;Error &quot;; ERR; &quot;: &quot;; ERR$
+ENDTRY
+</code></pre>
+<p>The output is <code>10 / 4 = 2.5</code>, then <code>1 / 0 = Error 200: Nothing to divide by</code> from the program's own ERROR, and <code>Error 11: Bad argument</code> from SQR.</p>
+<h2>A bouncing ball</h2>
+<p>The ball moves until it has made 300 moves or SPACE is held down; <code>EXIT FOR</code> leaves the loop early.</p>
+<pre><code>' Bouncing ball: SPACE stops it
+DEF PROC move
+  PRINT AT y%, x%; &quot; &quot;;
+  x% = x% + dx%: y% = y% + dy%
+  IF x% &lt;= 0 OR x% &gt;= 63 THEN dx% = -dx%: BEEP 0.01, 24
+  IF y% &lt;= 1 OR y% &gt;= 22 THEN dy% = -dy%: BEEP 0.01, 12
+  PRINT AT y%, x%; &quot;O&quot;;
+ENDPROC
+BORDER 1: PAPER 0: INK 5: CLS
+PRINT AT 0, 0; &quot;Bouncing ball - SPACE to stop&quot;
+x% = 10: y% = 5: dx% = 1: dy% = 1
+FOR n% = 1 TO 300
+  move
+  WAIT 1
+  IF KEY(&quot; &quot;) THEN EXIT FOR
+NEXT
+PRINT AT 23, 0; &quot;Moves: &quot;; n% - 1;
+</code></pre>
+<figure><img src="img/run_ball.png"><figcaption>The ball in flight.</figcaption></figure>
+
+<h2>A recursive tree</h2>
+<p>Each branch draws itself and then two smaller branches at an angle, until they are too short to see. LOCAL keeps each call's end point separate.</p>
+<pre><code>' A recursive tree
+DEF PROC branch(x, y, a, l)
+  LOCAL x2, y2
+  IF l &lt; 4 THEN ENDPROC
+  x2 = x + l * COS a: y2 = y + l * SIN a
+  PLOT x, y: DRAW TO x2, y2
+  branch x2, y2, a + 0.45, l * 0.7
+  branch x2, y2, a - 0.45, l * 0.7
+ENDPROC
+BORDER 0: PAPER 0: INK 4: CLS
+t = FRAMES
+branch 128, 0, PI / 2, 50
+INK 6: PRINT AT 0, 0; &quot;A tree in &quot;; INT((FRAMES - t) / 50); &quot; seconds&quot;
+</code></pre>
+<p>It takes about 25 seconds, and prints how long it took.</p>
+</body></html>
