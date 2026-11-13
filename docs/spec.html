@@ -1,0 +1,1507 @@
+<html><head><meta charset='utf-8'><title>OpticOS design specification</title><style>body{font-family:'DejaVu Sans',sans-serif;font-size:10pt;line-height:1.4;max-width:100%;margin:0}
+h1{color:#1b3a6b;border-bottom:3px solid #1b3a6b}h2{color:#1b3a6b;border-bottom:1px solid #aac;margin-top:1.6em;page-break-after:avoid}
+table{border-collapse:collapse;margin:.6em 0;width:100%;font-size:8.8pt}td,th{border:1px solid #bbc;padding:3px 5px;vertical-align:top}th{background:#e6eaf3}
+pre{background:#f4f4f7;border:1px solid #dde;padding:6px;font-size:8.3pt;white-space:pre-wrap;page-break-inside:avoid}code{font-family:'DejaVu Sans Mono',monospace;font-size:92%}
+@page{size:A4;margin:16mm 14mm}</style></head><body>
+<h1>OpticOS: design specification</h1>
+<p><strong>Version 0.2, 13 November 2026.</strong> The six design decisions in §12 were agreed the same day.
+Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>OpticOS (c) 2026 Optica Technology</code>.</p>
+<p>This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.</p>
+<hr />
+<h2>1. Goals and non-goals</h2>
+<h3>Goals</h3>
+<ol>
+<li><strong>A drop-in 16,384-byte ROM image</strong> for the 48K (and 16K) Spectrum that boots on real hardware, in Fuse and in our headless rig.</li>
+<li><strong>OpticBASIC, a modern structured BASIC with no line numbers.</strong> It has named procedures and functions with parameters and <code>LOCAL</code>, block <code>IF/ELSEIF/ELSE/ENDIF</code>, <code>WHILE</code>, <code>REPEAT</code>, <code>FOR</code>, <code>CASE</code>, labels in place of line-number <code>GOTO</code>, and <code>TRY/CATCH</code> error handling.</li>
+<li><strong>64-column text as the default</strong> (a condensed 4-pixel font in the spirit of Tasword Two) for PRINT and the editor, with a <code>MODE 32</code> switch.</li>
+<li><strong>A full-screen editor</strong>. You type keywords letter by letter and a tokeniser converts them. There is no single-key keyword entry.</li>
+<li><strong>Tape compatibility.</strong> OpticOS uses the standard ROM tape encoding (pilot, sync, bit timings, flag and parity bytes, the 17-byte header layout), so ordinary TAP and TZX files load and OpticOS saves load on other tools.</li>
+<li><strong>Machine-code compatibility where it is cheap.</strong> RST vectors, IM 1 at <code>$0038</code>, NMI at <code>$0066</code>, LD-BYTES at <code>$0556</code>, SA-BYTES at <code>$04C2</code>, BEEPER at <code>$03B5</code> and a handful of others keep their addresses and register contracts.</li>
+<li><strong>Speed.</strong> The target is at least 3× Sinclair BASIC on integer loops, using a 16-bit integer fast path and pre-resolved control flow.</li>
+<li><strong>Clean room.</strong> OpticOS contains no Sinclair, Amstrad or Tasword code or artwork (see §1.3).</li>
+</ol>
+<h3>Non-goals</h3>
+<ul>
+<li>Running existing Sinclair BASIC programs. The exception is the small <strong>legacy loader</strong> subset that tape loaders use (§3.4).</li>
+<li>Emulating the RST <code>$28</code> calculator byte-code interface.</li>
+<li>128K paging, AY sound, the ZX Printer, Interface 1 and Microdrive. The <code>$0008</code> hook stays, so a later shadow ROM could still page in.</li>
+<li>An inline assembler like BBC BASIC's. It is too expensive in 16K. <code>CALL</code> and <code>USR</code> cover machine code.</li>
+<li><code>MERGE</code>, <code>DATA</code> arrays on tape, <code>DEF FN</code> in the Sinclair style, <code>RENUM</code> and <code>AUTO</code>. None of these make sense without line numbers.</li>
+</ul>
+<h3>1.3 Clean-room rules</h3>
+<ul>
+<li>Nathan's <code>48.rom</code> (in <code>/workspace/ultimate/roms/</code>) is a <strong>behavioural reference only</strong>. We may run it in an emulator to measure register contracts, timings and outputs at the entry points we keep. We do not disassemble it into OpticOS source, and we do not paste its bytes or routines.</li>
+<li>The ROM image, the Ultimate snapshots and the scans are <strong>never committed or published</strong>. <code>roms/</code> stays in <code>.gitignore</code>, as in the Mire Mare repo.</li>
+<li>Public facts are fair to use: the tape signal format, the header layout, system-variable addresses, token numbers and published entry-point contracts.</li>
+<li>A <code>similarity_check.py</code> gate fails the build if <code>opticos.rom</code> shares any run of 12 or more identical bytes with <code>48.rom</code>. Font areas and runs of filler bytes are excluded from the check.</li>
+<li><strong>The font is original artwork.</strong> Tasword Two (Tasman Software, 1983) inspired the idea of a 64-column font. We draw our own glyphs on a 3×6 grid, in an ASCII-art source file, without consulting Tasword's or Sinclair's bitmaps.</li>
+</ul>
+<hr />
+<h2>2. Hardware compatibility</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Behaviour OpticOS relies on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU</td>
+<td>Z80A at 3.5 MHz. 69,888 T-states per frame on the 48K. Contended memory at <code>$4000–$7FFF</code>.</td>
+</tr>
+<tr>
+<td>ULA port <code>$FE</code> (any even port)</td>
+<td>Writing sets the border (bits 0–2), MIC (bit 3) and EAR/beeper (bit 4). Reading gives keyboard half-rows (high byte selects the row, bits 0–4 active low) and EAR in (bit 6).</td>
+</tr>
+<tr>
+<td>Keyboard matrix</td>
+<td>8 half-rows × 5 keys. Row-select bytes are <code>$FE, $FD, $FB, $F7, $EF, $DF, $BF, $7F</code> (CAPS–V, A–G, Q–T, 1–5, 0–6, P–Y, ENTER–H, SPACE–B).</td>
+</tr>
+<tr>
+<td>Kempston</td>
+<td>Port <code>$1F</code>, active high: bit 0 right, 1 left, 2 down, 3 up, 4 fire. Read by the <code>JOY</code> function only. It is never auto-detected, because a floating bus reads <code>$FF</code>.</td>
+</tr>
+<tr>
+<td>IM 1</td>
+<td>Set at boot. The 50 Hz frame interrupt arrives at <code>$0038</code>.</td>
+</tr>
+<tr>
+<td>NMI</td>
+<td><code>$0066</code>. If <code>NMIADD</code> (<code>$5CB0</code>) is non-zero, jump to it. Otherwise <code>RETN</code>.</td>
+</tr>
+<tr>
+<td>Screen</td>
+<td>Bitmap <code>$4000–$57FF</code> in the usual third/row/line interleave. Attributes <code>$5800–$5AFF</code>.</td>
+</tr>
+<tr>
+<td>RAM size</td>
+<td>The boot memory test finds 16K (<code>P_RAMT=$7FFF</code>) or 48K (<code>$FFFF</code>).</td>
+</tr>
+</tbody>
+</table>
+<h3>Interrupt routine (<code>$0038</code>)</h3>
+<p>The routine does not use IY. It addresses the system variables directly. A game that repurposes IY and leaves IM 1 running crashes the Sinclair ROM, but it survives OpticOS. On each interrupt the routine:</p>
+<ol>
+<li>Pushes AF, BC, DE and HL.</li>
+<li>Increments the 24-bit <code>FRAMES</code> counter (<code>$5C78</code>).</li>
+<li>Scans the keyboard into <code>KSTATE</code>-style debounce slots. It writes <code>LAST_K</code> (<code>$5C08</code>) and sets bit 5 of <code>FLAGS</code> (<code>$5C3B</code>), with <code>REPDEL</code> and <code>REPPER</code> auto-repeat.</li>
+<li>Toggles the editor cursor every 16 frames when the editor is active.</li>
+<li>Pops the registers, then <code>EI</code> and <code>RET</code>.</li>
+</ol>
+<p>The budget is about 1,000 T-states on a typical frame and no more than 1,600.</p>
+<hr />
+<h2>3. Compatibility policy</h2>
+<h3>3.1 Tape format (kept exactly)</h3>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pilot</td>
+<td>2168 T per half-pulse. 8063 pulses for a header (flag <code>$00</code>), 3223 for data (<code>$FF</code>).</td>
+</tr>
+<tr>
+<td>Sync</td>
+<td>667 T, then 735 T.</td>
+</tr>
+<tr>
+<td>Bits</td>
+<td>0 = two 855 T half-pulses. 1 = two 1710 T half-pulses. MSB first.</td>
+</tr>
+<tr>
+<td>Block</td>
+<td>Flag byte, then data, then an XOR parity byte.</td>
+</tr>
+<tr>
+<td>Header</td>
+<td>17 bytes: type (0 program, 1 number array, 2 char array, 3 code), 10-char name, length, param 1, param 2.</td>
+</tr>
+</tbody>
+</table>
+<p>OpticOS programs are saved as <strong>type 0</strong> headers, so tape catalogues still say "Program:". The data block begins with the 4-byte signature <code>"OB" $01 $00</code>. On LOAD, a type-0 block without this signature is a Sinclair BASIC program and is handed to the legacy loader (§3.4).</p>
+<h3>3.2 Fixed entry points</h3>
+<p>Each one is either the real routine or a 3-byte <code>JP</code> stub at the original address. Its register contract is documented and tested.</p>
+<table>
+<thead>
+<tr>
+<th>Address</th>
+<th>Name</th>
+<th>Contract kept</th>
+<th>Why</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$0000</code></td>
+<td>RESET</td>
+<td>Cold start</td>
+<td>Universal</td>
+<td>in init</td>
+</tr>
+<tr>
+<td><code>$0008</code></td>
+<td>ERROR (RST 8)</td>
+<td>Next byte is the error code</td>
+<td>Some games and Interface 1</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>$0010</code></td>
+<td>PRINT-A (RST 16)</td>
+<td>Print A to the current channel</td>
+<td>Very common in loaders and type-in code</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>$0018</code>/<code>$0020</code></td>
+<td>GET/NEXT-CHAR</td>
+<td>OpticOS's own interpreter fetch. Not guaranteed.</td>
+<td>Vector slots</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>$0028</code></td>
+<td>RST 40</td>
+<td><strong>Not</strong> the Sinclair calculator. Raises error "Calculator not supported".</td>
+<td></td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>$0030</code></td>
+<td>RST 48</td>
+<td>Workspace allocate (OpticOS's own)</td>
+<td></td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>$0038</code></td>
+<td>IM 1 ISR</td>
+<td>FRAMES and keyboard</td>
+<td>Universal</td>
+<td>in ISR</td>
+</tr>
+<tr>
+<td><code>$0066</code></td>
+<td>NMI</td>
+<td>As §2 (the Sinclair bug is fixed)</td>
+<td></td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>$03B5</code></td>
+<td>BEEPER</td>
+<td>DE = cycles, HL = period, as documented</td>
+<td>Many games use it for sound</td>
+<td>stub</td>
+</tr>
+<tr>
+<td><code>$04C2</code></td>
+<td>SA-BYTES</td>
+<td>IX = start, DE = length, A = flag</td>
+<td>Savers and utilities</td>
+<td>real routine</td>
+</tr>
+<tr>
+<td><code>$0556</code></td>
+<td>LD-BYTES</td>
+<td>IX, DE, A = flag, carry set = load, carry clear = verify. Returns carry set on success.</td>
+<td><strong>Most important.</strong> Called by countless loaders.</td>
+<td>real routine</td>
+</tr>
+<tr>
+<td><code>$05E3</code>/<code>$05E7</code></td>
+<td>LD-EDGE-2/1</td>
+<td>B = timing counter in and out, carry clear = BREAK or time-out</td>
+<td>Used by many custom and turbo loaders</td>
+<td>real routine</td>
+</tr>
+<tr>
+<td><code>$096F</code></td>
+<td><code>RET</code> byte</td>
+<td>Makes the <code>POKE 23739,111</code> "hide Bytes: names" trick harmless</td>
+<td>Seen in both Mire Mare and Bounce Ball loaders</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>$0D6B</code></td>
+<td>CLS</td>
+<td>Clear the screen with ATTR_P</td>
+<td>Cheap and common</td>
+<td>stub</td>
+</tr>
+<tr>
+<td><code>$0DAF</code></td>
+<td>CL-ALL</td>
+<td>Same as CLS, and resets the print position</td>
+<td>Cheap</td>
+<td>stub</td>
+</tr>
+<tr>
+<td><code>$1601</code></td>
+<td>CHAN-OPEN</td>
+<td>A = stream (−3..15)</td>
+<td>RST 16 users</td>
+<td>stub</td>
+</tr>
+<tr>
+<td><code>$203C</code></td>
+<td>PR-STRING</td>
+<td>DE = address, BC = length</td>
+<td>Common</td>
+<td>stub</td>
+</tr>
+<tr>
+<td><code>$22AA</code></td>
+<td>PIXEL-ADD</td>
+<td>B = y, C = x, gives HL = address, A = bit</td>
+<td>Some games</td>
+<td>stub</td>
+</tr>
+<tr>
+<td><code>$2D2B</code>/<code>$2DA2</code></td>
+<td>STACK-BC / FP-TO-BC</td>
+<td>Not provided. The calculator stack is not emulated (§12).</td>
+<td></td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p>The LD-EDGE timing is matched by black-box measurement: we feed pulses of known length and compare the returned B with the reference ROM in the rig. We do not read its code. The per-iteration loop time and the starting B values in LD-BYTES must match closely, so that turbo loaders which call <code>$05E7</code> with their own thresholds still work.</p>
+<h3>3.3 What breaks</h3>
+<table>
+<thead>
+<tr>
+<th>Breaks</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Existing Sinclair BASIC programs</td>
+<td>Type-ins and BASIC games</td>
+<td>None. The legacy loader runs only the loader subset.</td>
+</tr>
+<tr>
+<td>Deep ROM calls (the calculator, <code>$0C0A</code> PO-MSG, <code>$1C82</code>-type syntax routines, mid-routine jumps)</td>
+<td>A minority of games, and many utilities</td>
+<td>Stubs for the top dozen (above). The rest are documented as unsupported.</td>
+</tr>
+<tr>
+<td>RST <code>$28</code> calculator byte-code</td>
+<td>A few games and demos</td>
+<td>Raise an error instead of crashing</td>
+</tr>
+<tr>
+<td>Sinclair 8×8 font at <code>$3D00</code></td>
+<td>Games that print with the ROM font, or set <code>CHARS=$3C00</code> and draw their own text</td>
+<td>Accepted: it breaks. <code>MODE 32</code> uses pixel-doubled glyphs. There is no 8×8 font at <code>$3D00</code> for now; it may be revisited in Phase 5 if the margin allows (§12).</td>
+</tr>
+<tr>
+<td>ROM checksums, or using ROM bytes as random data or sound</td>
+<td>Copy protection and rare effects</td>
+<td>None (different but harmless)</td>
+</tr>
+<tr>
+<td>Sinclair's 32-column print layout</td>
+<td>Loaders that <code>PRINT AT</code> assuming 32 columns, through the legacy shim</td>
+<td>The legacy shim forces <code>MODE 32</code> while it runs</td>
+</tr>
+<tr>
+<td>ZX Printer (<code>LPRINT</code>/<code>COPY</code>)</td>
+<td>Negligible</td>
+<td>Dropped</td>
+</tr>
+</tbody>
+</table>
+<h3>3.4 Legacy loader shim</h3>
+<p>Almost every commercial tape starts with a short BASIC loader. Both of our own test tapes do. Here are the Bounce Ball and Mire Mare loaders, decoded from the TAPs:</p>
+<pre><code>10 BORDER 0: CLEAR 32767: LOAD &quot;&quot;CODE : RANDOMIZE USR 32768          (Bounce Ball)
+10 BORDER 0: PAPER 0: INK 0: CLEAR 24575: LOAD &quot;&quot;SCREEN$ :
+   POKE 23739,111: LOAD &quot;&quot;CODE : RANDOMIZE USR 24576                 (Mire Mare)
+</code></pre>
+<p>The shim is a very small interpreter for Sinclair-tokenised programs. It loads the program at <code>$5CCB</code>, as the original does, because loaders often embed machine code at fixed addresses or <code>PEEK 23635</code>. It then interprets only these:</p>
+<ul>
+<li><code>BORDER</code>, <code>PAPER</code>, <code>INK</code>, <code>BRIGHT</code>, <code>CLS</code>, <code>CLEAR n</code>, <code>POKE</code>, <code>RANDOMIZE USR</code>, <code>LOAD "" [CODE|SCREEN$] [a[,b]]</code>, <code>PRINT</code> with literals and <code>AT</code>, <code>REM</code>, <code>GO TO</code>, <code>RUN</code> and <code>:</code></li>
+<li>Expressions using <code>USR</code>, <code>PEEK</code>, <code>+ - *</code>, <code>VAL "…"</code> and numbers. Numbers are taken from the hidden 5-byte form after each literal (the <code>$0E</code> marker), so no ASCII number parsing is needed.</li>
+</ul>
+<p>Anything else stops with "Legacy BASIC: unsupported statement". The cost is about 650 bytes. Sinclair's token numbers for these keywords are a published interface, so recognising them is fine.</p>
+<h3>3.5 Policy (agreed)</h3>
+<p>Keep the tape format and the entry-point table above, put a <code>RET</code> at <code>$096F</code>, and include the legacy shim. Do not emulate RST <code>$28</code> or the calculator stack. There is no 8×8 ROM font for now; it may be revisited in Phase 5 if the margin allows (§12).</p>
+<hr />
+<h2>4. Language definition (OpticBASIC)</h2>
+<h3>4.1 Lexical rules</h3>
+<ul>
+<li><strong>Keywords</strong> are case-insensitive. LIST shows them in upper case. Identifiers are case-insensitive and folded to lower case.</li>
+<li><strong>Identifiers</strong> start with a letter, followed by letters, digits or <code>_</code>. Up to 32 characters, all significant. The suffix <code>%</code> means a 16-bit integer and <code>$</code> means a string. With no suffix, the variable is a number held as a 5-byte float with the small-integer form.</li>
+<li><strong>Literals</strong>: <code>123</code>, <code>1.5E-3</code>, hex <code>$C000</code>, binary <code>%10110001</code>, and strings in double quotes. Write a quote inside a string as <code>""</code>.</li>
+<li><strong>Comments</strong> start with <code>REM</code> or <code>'</code> and run to the end of the line.</li>
+<li><strong>Statements</strong> are one per line. <code>:</code> is allowed as a separator but is not needed.</li>
+<li><strong>Static integers</strong> <code>A%</code>–<code>Z%</code> live at fixed RAM addresses, with no lookup, BBC-style. They are the fastest variables.</li>
+</ul>
+<h3>4.2 Data types</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Storage</th>
+<th>Range or notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Integer <code>x%</code></td>
+<td>2 bytes</td>
+<td>−32768..32767. Overflow raises error 6.</td>
+</tr>
+<tr>
+<td>Number <code>x</code></td>
+<td>5 bytes</td>
+<td>Sinclair-layout float: exponent byte plus a 4-byte mantissa, about 9.5 significant digits, ±1.7E38. Integral values in −65535..65535 use the <strong>small-integer form</strong> <code>00 sign lo hi 00</code>, and the arithmetic fast path works on that form directly.</td>
+</tr>
+<tr>
+<td>String <code>s$</code></td>
+<td>3-byte descriptor (length, pointer) plus heap bytes</td>
+<td>0–255 characters</td>
+</tr>
+<tr>
+<td>Arrays</td>
+<td><code>DIM a(9)</code>, <code>b%(3,3)</code>, <code>n$(20)</code></td>
+<td>Up to 3 dimensions, base 0, so <code>DIM a(9)</code> gives 10 elements. Each string array element is its own heap string.</td>
+</tr>
+<tr>
+<td>Boolean</td>
+<td>Integer</td>
+<td>TRUE = −1, FALSE = 0. <code>AND</code>, <code>OR</code> and <code>XOR</code> are bitwise on integers.</td>
+</tr>
+</tbody>
+</table>
+<h3>4.3 Operator precedence (highest first)</h3>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Operators</th>
+<th>Associativity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>( )</code>, function calls, array subscripts</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>^</code></td>
+<td>right</td>
+</tr>
+<tr>
+<td>3</td>
+<td>unary <code>-</code>, unary <code>+</code>, <code>NOT</code></td>
+<td>right</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>*</code> <code>/</code> <code>DIV</code> <code>MOD</code></td>
+<td>left</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>+</code> <code>-</code> (<code>+</code> also joins strings)</td>
+<td>left</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>&lt;&lt;</code> <code>&gt;&gt;</code> (integer shifts)</td>
+<td>left</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>=</code> <code>&lt;&gt;</code> <code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td>
+<td>left (non-chaining)</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>AND</code></td>
+<td>left</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>OR</code> <code>XOR</code></td>
+<td>left</td>
+</tr>
+</tbody>
+</table>
+<p><code>/</code> always returns a float. <code>DIV</code> is integer division.</p>
+<h3>4.4 Statements</h3>
+<p><strong>Structure and procedures</strong></p>
+<pre><code>DEF PROC name[(p1, p2$, p3%)]  … ENDPROC
+DEF FN name[(params)]          … RETURN expr … ENDFN
+DEF FN name(params) = expr                 ' one-line form
+LOCAL v, w$, k%, arr()                     ' first lines of a PROC or FN only
+name [args]   or   name(args)              ' call a PROC (bare name)
+LABEL name    /   GOTO name                ' escape hatch, same PROC only
+END   STOP   REM   '
+</code></pre>
+<p>Parameters are passed by value. Arrays are passed by reference using <code>a()</code>. Scoping is <strong>dynamic, BBC-style</strong>: <code>LOCAL</code> and parameters save the old value on the control stack and restore it at <code>ENDPROC</code>, <code>ENDFN</code> or error unwind. Recursion is supported.</p>
+<p><strong>Control flow</strong></p>
+<pre><code>IF c THEN stmt [ELSE stmt]                 ' one-line form
+IF c                                       ' block form (nothing after the condition)
+  …
+ELSEIF c
+  …
+ELSE
+  …
+ENDIF
+WHILE c … WEND
+REPEAT … UNTIL c
+FOR v = a TO b [STEP s] … NEXT [v]
+EXIT FOR | EXIT WHILE | EXIT REPEAT
+CASE expr OF
+  WHEN v1, v2   …
+  WHEN v3       …
+  OTHERWISE     …
+ENDCASE
+TRY … CATCH … ENDTRY
+ERROR n [, msg$]                           ' raise an error
+</code></pre>
+<p><strong>Data</strong></p>
+<p><code>[LET] v = expr</code>, <code>DIM</code>, <code>SWAP a, b</code>, <code>DATA</code>, <code>READ</code>, <code>RESTORE [label]</code>, <code>CLEAR [ramtop]</code>, <code>RANDOMIZE [n]</code></p>
+<p><strong>Screen and text</strong></p>
+<table>
+<thead>
+<tr>
+<th>Statement</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CLS</code></td>
+<td>Clears with ATTR_P</td>
+</tr>
+<tr>
+<td><code>PRINT [AT r,c;] [TAB c;] items</code></td>
+<td><code>;</code> means no gap. <code>,</code> jumps to the next 16-column zone. <code>'</code> starts a new line.</td>
+</tr>
+<tr>
+<td><code>INPUT ["prompt";] v [, v…]</code></td>
+<td>One-line editor on the bottom row</td>
+</tr>
+<tr>
+<td><code>INK n</code>, <code>PAPER n</code>, <code>FLASH 0/1</code>, <code>BRIGHT 0/1</code>, <code>INVERSE 0/1</code>, <code>OVER 0/1</code></td>
+<td>Can also appear inline in PRINT. <code>8</code> means transparent.</td>
+</tr>
+<tr>
+<td><code>BORDER n</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>MODE 64</code> / <code>MODE 32</code></td>
+<td>Switches the text width. Also clears the screen and homes the cursor.</td>
+</tr>
+<tr>
+<td><code>UDG c$, b0, …, b7</code></td>
+<td>Defines a UDG. <code>UDG("A")</code> returns its address.</td>
+</tr>
+</tbody>
+</table>
+<p>Columns in <code>AT</code> and <code>TAB</code> are <strong>0–63 in MODE 64</strong> and 0–31 in MODE 32. Rows are 0–23. Row 23 is available to PRINT as long as no <code>INPUT</code> is pending.</p>
+<p><strong>Graphics</strong> (256×192 pixels, origin bottom-left; y = 0–191, since OpticOS keeps no permanent lower screen; INPUT temporarily uses row 23)</p>
+<p><code>PLOT x,y</code>, <code>DRAW dx,dy</code> (relative, Bresenham), <code>DRAW TO x,y</code> (absolute), <code>CIRCLE x,y,r</code> (integer midpoint). There are no Sinclair arcs: <code>DRAW dx,dy,angle</code> is a non-goal.</p>
+<p><strong>Sound</strong></p>
+<p><code>BEEP dur, pitch</code> works as on Sinclair, with pitch in semitones from middle C. <code>SOUND period, cycles</code> drives the beeper directly with integers.</p>
+<p><strong>Machine and I/O</strong></p>
+<p><code>POKE a,b</code>, <code>DPOKE a,w</code>, <code>OUT port,b</code>, <code>CALL addr [,a%,bc%,de%,hl%]</code> and <code>WAIT n</code>. <code>WAIT n</code> halts for n frames.</p>
+<p><strong>Tape</strong></p>
+<pre><code>SAVE &quot;name&quot;                    ' program (+ AUTO to autostart)
+SAVE &quot;name&quot; AUTO [label]
+SAVE &quot;name&quot; CODE start, len
+SAVE &quot;name&quot; SCREEN$
+LOAD &quot;name&quot; | LOAD &quot;&quot;          ' program (OpticOS or legacy)
+LOAD &quot;&quot; CODE [start [, len]]
+LOAD &quot;&quot; SCREEN$
+VERIFY …                       ' same forms as LOAD
+CAT                            ' list tape headers until BREAK
+</code></pre>
+<p><strong>Direct-mode commands</strong></p>
+<p><code>RUN [label]</code>, <code>LIST [proc|label]</code>, <code>NEW</code>, <code>CONT</code> (not after an edit), <code>EDIT</code>, <code>FIND "text"</code>, <code>FREE</code>. Any statement can also be typed in direct mode.</p>
+<h3>4.5 Functions</h3>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Functions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Maths</td>
+<td><code>ABS SGN INT SQR EXP LN LOG SIN COS TAN ATN ASN ACS PI RND RND(n) MAX(a,b) MIN(a,b)</code></td>
+</tr>
+<tr>
+<td>String</td>
+<td><code>LEN LEFT$ RIGHT$ MID$ CHR$ ASC STR$ VAL INSTR(a$,b$[,start]) STRING$(n,s$) HEX$(n) UPPER$</code></td>
+</tr>
+<tr>
+<td>Input</td>
+<td><code>INKEY$</code>, <code>KEY(k$)</code> (true while that key is held, with no repeat, which suits games), <code>JOY</code> (Kempston)</td>
+</tr>
+<tr>
+<td>Machine</td>
+<td><code>PEEK DPEEK IN(port) USR(addr)</code> (returns BC, as Sinclair does), <code>FRAMES</code>, <code>FREE</code></td>
+</tr>
+<tr>
+<td>Screen</td>
+<td><code>POINT(x,y) ATTR(r,c) SCREEN$(r,c)</code>. <code>ATTR</code> takes a text cell and works out the attribute cell under it (§6.4).</td>
+</tr>
+<tr>
+<td>Errors</td>
+<td><code>ERR</code>, <code>ERR$</code>, <code>ERRLINE</code> (line ordinal), <code>ERRPROC$</code></td>
+</tr>
+</tbody>
+</table>
+<h3>4.6 Error handling</h3>
+<p><code>TRY</code> pushes a frame holding the stack pointer and the address of its <code>CATCH</code>. An error, whether raised by the ROM or by <code>ERROR n</code>, unwinds the control stack to the nearest TRY frame. Along the way it restores LOCALs and drops FOR, WHILE and PROC frames, then continues after <code>CATCH</code>. Without a TRY, execution stops and the editor opens on the offending line. The message is shown on the status bar, for example <code>6 Number too big, line 57 in PROC move</code>. BREAK (CAPS+SPACE) is error 1. It can be caught, but a second BREAK within 1 second cannot.</p>
+<h3>4.7 Sample programs</h3>
+<p><strong>Bouncing ball</strong> (64-column text with UDG graphics)</p>
+<pre><code>' Bouncing ball demo for OpticOS
+DEF PROC init
+  BORDER 0: PAPER 0: INK 7: CLS
+  UDG &quot;A&quot;, $3C,$7E,$FF,$FF,$FF,$FF,$7E,$3C
+  x% = 10: y% = 5: dx% = 1: dy% = 1
+ENDPROC
+
+DEF PROC move
+  PRINT AT y%, x%; &quot;  &quot;;
+  x% = x% + dx%: y% = y% + dy%
+  IF x% &lt;= 0 OR x% &gt;= 62 THEN dx% = -dx%: BEEP 0.01, 24
+  IF y% &lt;= 0 OR y% &gt;= 22 THEN dy% = -dy%: BEEP 0.01, 12
+  PRINT AT y%, x%; INK 6; CHR$(144);
+ENDPROC
+
+init
+REPEAT
+  move
+  WAIT 1
+UNTIL KEY(&quot; &quot;)
+PRINT AT 23, 0; &quot;Bye!&quot;
+</code></pre>
+<p>The UDG takes two text columns, so x% steps through 0–62.</p>
+<p><strong>Guess the number, with error handling and a recursive function</strong></p>
+<pre><code>DEF FN fact(n)
+  IF n &lt;= 1 THEN RETURN 1
+  RETURN n * fact(n - 1)
+ENDFN
+
+secret% = RND(100)
+tries% = 0
+PRINT &quot;I'm thinking of a number 1-100.  (10! = &quot;; fact(10); &quot;)&quot;
+REPEAT
+  TRY
+    INPUT &quot;Guess&quot;; g%
+  CATCH
+    PRINT &quot;Numbers only, please (&quot;; ERR$; &quot;)&quot;
+    g% = 0
+  ENDTRY
+  tries% = tries% + 1
+  CASE SGN(g% - secret%) OF
+    WHEN -1: PRINT g%; &quot; is too low&quot;
+    WHEN  1: PRINT g%; &quot; is too high&quot;
+    OTHERWISE: PRINT &quot;Got it in &quot;; tries%; &quot; tries&quot;
+  ENDCASE
+UNTIL g% = secret%
+</code></pre>
+<hr />
+<h2>5. Program storage</h2>
+<h3>5.1 Line format</h3>
+<pre><code>+-----+-----------------------------+------+-----+
+| len | tokens and operands …       | $0D  | len |
++-----+-----------------------------+------+-----+
+</code></pre>
+<ul>
+<li><code>len</code> (1 byte, 3–255) appears at <strong>both ends</strong> of the line. Walking forward is <code>ptr += len</code> and walking backward is <code>ptr -= (ptr-1)^</code>. Both are O(1), so the editor never needs line numbers. The overhead is 3 bytes per line, against Sinclair's 5 (number, length and ENTER).</li>
+<li>The program ends with a <code>$00</code> sentinel.</li>
+<li><strong>Indentation is not stored.</strong> The tokeniser strips leading spaces. LIST and the editor recompute indentation from the block keywords, at 2 spaces per level, while they display. The program always looks tidy and no bytes are wasted.</li>
+<li>Spaces inside a line are kept only where they are needed to separate words, so that LIST shows a canonical spacing.</li>
+</ul>
+<h3>5.2 Token encoding</h3>
+<table>
+<thead>
+<tr>
+<th>Byte(s)</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$80–$FF</code></td>
+<td>Keyword tokens (one byte, 128 slots). Statements come first, so they can be dispatched by <code>token-$80</code>.</td>
+</tr>
+<tr>
+<td><code>$01 t h n name…</code></td>
+<td>Identifier: <code>t</code> = type (float, int, string, or array of each), <code>h</code> = 6-bit hash, <code>n</code> = length, then the lower-case name</td>
+</tr>
+<tr>
+<td><code>$02 lo hi</code></td>
+<td>16-bit integer literal</td>
+</tr>
+<tr>
+<td><code>$03 lo hi</code></td>
+<td>Hex literal (LIST shows it as <code>$…</code>)</td>
+</tr>
+<tr>
+<td><code>$04 lo hi</code></td>
+<td>Binary literal</td>
+</tr>
+<tr>
+<td><code>$05 e m m m m</code></td>
+<td>Float literal (5 bytes)</td>
+</tr>
+<tr>
+<td><code>$06 n chars…</code></td>
+<td>String literal</td>
+</tr>
+<tr>
+<td><code>$07 lo hi</code></td>
+<td><strong>Link slot</strong>: a forward or back reference filled in by the prepass (§7.2)</td>
+</tr>
+<tr>
+<td><code>$20–$7E</code></td>
+<td>Punctuation and operators as ASCII. Two-character operators (<code>&lt;=</code>, <code>&gt;=</code>, <code>&lt;&gt;</code>, <code>&lt;&lt;</code>, <code>&gt;&gt;</code>) have their own tokens.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Link slots</strong> follow <code>IF</code> (block form), <code>ELSEIF</code>, <code>ELSE</code>, <code>WHILE</code>, <code>WEND</code>, <code>REPEAT</code>, <code>CASE</code>, <code>WHEN</code>, <code>TRY</code>, <code>CATCH</code>, <code>DEF PROC</code> and <code>DEF FN</code>. Each is 3 bytes, and the prepass patches it with the address of the matching keyword. Identifiers and literals are self-describing, so the detokeniser rebuilds the exact source text. The only change is that numbers come back normalised, so <code>1.50</code> lists as <code>1.5</code>.</p>
+<h3>5.3 How the editor addresses lines</h3>
+<p>The editor keeps a <strong>(pointer, ordinal)</strong> pair for the top line on screen and for the cursor line. Moving up or down one line is a single <code>len</code> step and ±1 on the ordinal. Jumping to an ordinal (from an error, <code>FIND</code> or <code>LIST name</code>) walks from the nearest known pair. Ordinals exist only for display. They are never stored and never used in GOTO.</p>
+<h3>5.4 RAM layout (48K)</h3>
+<pre><code>$4000-$57FF  bitmap            $5800-$5AFF  attributes
+$5B00-$5BFF  edit-line buffer and tokeniser workspace (free for machine code once BASIC has stopped)
+$5C00-$5CB5  system variables (compatible subset at Sinclair addresses, §9)
+$5CB6-$5CCA  channel table (K, S, R; Sinclair layout, so 23739 = channel S output, low byte)
+$5CCB-$5D4F  OpticOS extended system variables: 32 hash heads (64), A%-Z% (52), editor state (16) …
+$5D50        PROG     -&gt; program lines … $00
+             VARS     -&gt; variable records (grow up)
+             (free)
+             STRHEAP  &lt;- string heap (grows down from STKBOT)
+             STKBOT   -&gt; control stack and machine stack (grow down from RAMTOP)
+RAMTOP (default $FF57) +1 -&gt; UDGs (21 x 8 = 168 bytes) to P_RAMT $FFFF
+</code></pre>
+<p>The legacy shim loads a Sinclair program at <code>$5CCB</code> over the extended variables. That is safe because the shim only uses the compatible variables. Returning to OpticOS after legacy mode triggers a warm reset.</p>
+<hr />
+<h2>6. The editor and the 64-column display</h2>
+<h3>6.1 The 4-pixel font (default)</h3>
+<ul>
+<li><strong>Format.</strong> 96 characters (32–127), each 4 pixels wide by 8 rows. <strong>Two glyphs are packed per byte row</strong>: characters <code>32+2k</code> and <code>33+2k</code> share 8 bytes, with the even code in the high nibble and the odd code in the low nibble. That makes 48 pairs × 8 bytes = <strong>384 bytes</strong>, at <code>$3E80–$3FFF</code>, aligned so that a pair's 8 bytes never cross a 256-byte page (so <code>INC E</code> steps through them).</li>
+<li><strong>Design grid.</strong> Glyphs are 3 pixels wide with a fourth blank column, so neighbours have a gap. Row 0 is blank (line spacing), capitals and digits use rows 1–5, and descenders use rows 6–7. Lower case uses a 4-row x-height. The artwork is original and drawn by us in <code>font4.txt</code> (ASCII art), in the spirit of Tasword Two, not copied from it (§1.3).</li>
+<li><strong>The copyright sign.</strong> Code 127 is the <strong>editor cursor/wrap block</strong>, not ©. A © is illegible at 3 pixels wide, so <strong>the font has no © glyph</strong> and the banner uses ASCII <code>(c)</code>.</li>
+<li><strong>Block graphics 128–143</strong> are generated in code from the bits of the code. Each quadrant is 2 pixels × 4 rows. No table is needed.</li>
+<li><strong>UDGs 144–164</strong> are 8×8. In MODE 64 a UDG fills one whole screen byte, which is <strong>2 text columns</strong>. It is printed at the next even column and advances 2 columns, so it always lines up with one attribute cell.</li>
+</ul>
+<h3>6.2 The fast print routine</h3>
+<p>The screen byte is <code>col &gt;&gt; 1</code>. An even column means the high nibble, so the destination mask is M = <code>$F0</code>, and an odd column gives M = <code>$0F</code>. The glyph nibble sits on the side given by <code>(code-32) &amp; 1</code>. If that side differs from the column parity, the nibble is swapped with 4 × <code>RRCA</code>. A masked merge then writes the nibble without disturbing the other character:</p>
+<pre><code>; DE -&gt; 8 font bytes of the pair, HL -&gt; top screen byte, C = M, B = 8
+row:  ld   a,(de)      ;  7
+      ; rrca x4        ; 16  (only when parity differs; separate loop copy)
+      xor  (hl)        ;  7
+      and  c           ;  4
+      xor  (hl)        ;  7  -&gt; new nibble in M, old screen bits elsewhere
+      ld   (hl),a      ;  7
+      inc  e           ;  4
+      inc  h           ;  4
+      djnz row         ; 13
+</code></pre>
+<p>That is 53 T per row (69 with the swap), so <strong>424–552 T for the 8 rows</strong>. Setup adds about 280 T: channel dispatch, the screen address from row and column, the font address, the attribute write and advancing the cursor. <strong>Total: about 700–830 T per character</strong>, or about 750 T on average. A full 64×24 screen of 1,536 characters takes about 1.15 M T, which is about <strong>16 frames (0.33 s)</strong>.</p>
+<ul>
+<li><strong>Pair fast path.</strong> When two characters start at an even column with plain attributes (the normal case for LIST, editor redraw and string PRINT), both nibbles are combined and the whole byte is stored with no masking: <code>ld a,(de1) / and $F0 / ld c,a / ld a,(de2) / and $0F / or c / ld (hl),a</code>, with the swaps as needed. This costs about 75 T per row, or about <strong>450 T per character</strong> including setup, and an editor redraw takes about 0.2 s.</li>
+<li><strong>INVERSE / OVER</strong> use a slower general path. <code>CPL</code> before the merge gives inverse. OVER replaces the merge with <code>and c / xor (hl)</code>.</li>
+<li><strong>Scrolling</strong> moves 23 text rows up one, exactly as in 32-column mode: 5,888 bytes by <code>LDI</code> runs, about 110–125 k T, which is under 2 frames.</li>
+</ul>
+<h3>6.3 MODE 32</h3>
+<p><code>MODE 32</code> switches the print routine to a whole-byte path.</p>
+<ul>
+<li>If <code>CHARS</code> holds its default value, glyphs are the 4-pixel font with each pixel doubled horizontally, using a 16-byte nibble-to-byte table. That is chunky but readable, and it costs no font storage.</li>
+<li>If a program has pointed <code>CHARS</code> at an 8×8 font in RAM, as games and the legacy shim might, that font is used directly.</li>
+</ul>
+<p>The cost is about <strong>110 bytes</strong>: the table plus the extra paths. A full 8×8 ROM font at <code>$3D00</code> would look better in MODE 32 and restore <code>$3D00</code> compatibility, but at <strong>+768 bytes</strong> it would leave only about 240 bytes of margin, so it is not included for now. It may be revisited in Phase 5 if the margin allows (§12).</p>
+<h3>6.4 Attributes at 64 columns: colour-clash policy</h3>
+<p>One attribute byte covers an 8×8 cell, which is <strong>two 64-column characters</strong> (columns 2k and 2k+1).</p>
+<ul>
+<li><strong>Last writer wins.</strong> Printing any character writes ATTR_T into its cell, so it also recolours its neighbour. Colour 8 (transparent) and <code>OVER</code> keep their Sinclair meanings, so <code>INK 8</code>/<code>PAPER 8</code> leave the cell's colours alone.</li>
+<li><strong>Guidance</strong>, shown in the manual and in the "Colour" example: change colours on even columns. <code>PRINT AT r,c; INK n;</code> with an odd <code>c</code> recolours column c−1 too.</li>
+<li><strong>The editor is monochrome.</strong> It uses one paper/ink pair, so the text never clashes. Colour is used only on the status bar (row 23, a whole row) and for whole-line highlights, such as the error line in red paper, which never clash because they cover full rows.</li>
+<li><strong>The cursor</strong> is drawn by XOR-ing a 4×8 nibble block, not by FLASH, because FLASH would blink both characters in the cell. The ISR toggles it every 16 frames.</li>
+<li><code>ATTR(r,c)</code> returns the attribute of cell <code>(r, c&gt;&gt;1)</code> in MODE 64.</li>
+</ul>
+<h3>6.5 Editor layout (64×24)</h3>
+<pre><code>row  0-22 : program text, 23 rows x 64 columns, auto-indented (2 spaces per level)
+row 23    : status bar (inverse):
+            EDIT  L  ln 57/212  col 17  PROC move           FREE 31204
+</code></pre>
+<ul>
+<li>Long lines (up to 255 tokenised bytes, about 300 characters listed) <strong>wrap</strong>. Code 127 appears in column 63 as a wrap mark, and the continuation rows are indented by the line's indent + 4.</li>
+<li><strong>Console screen.</strong> Direct mode and running programs use a separate 64×24 scrolling console. The editor screen is redrawn from the program when you go back to it, so no shadow buffer is needed. <code>CAPS+1</code> (EDIT) switches between the two. With an empty program, boot lands in the console.</li>
+</ul>
+<h3>6.6 Typing and keys</h3>
+<p>Keywords are typed <strong>letter by letter</strong>, which is the recommendation. The tokeniser recognises them when you leave a line. The keyword legends on the keys are ignored, which frees the whole keyboard for typing.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Letters and digits</td>
+<td>Lower case. <strong>C</strong> mode (caps lock) gives upper case.</td>
+</tr>
+<tr>
+<td>SYMBOL SHIFT + key</td>
+<td>The red symbol printed on the key (<code>"</code>, <code>=</code>, <code>+</code>, <code>&lt;</code>, <code>;</code> …), as on Sinclair</td>
+</tr>
+<tr>
+<td>CAPS + SYMBOL, then a key</td>
+<td><strong>E (extended) mode</strong>, one shot: <code>[ ] { } \ | ~</code> on SS-style keys Y U F G D S A, and the editor functions below</td>
+</tr>
+<tr>
+<td>CAPS+5/6/7/8</td>
+<td>Cursor left, down, up, right</td>
+</tr>
+<tr>
+<td>CAPS+0</td>
+<td>Delete left. In E mode, delete right.</td>
+</tr>
+<tr>
+<td>CAPS+2</td>
+<td>Caps lock</td>
+</tr>
+<tr>
+<td>CAPS+3 / CAPS+4</td>
+<td>Page up / page down (23 rows)</td>
+</tr>
+<tr>
+<td>CAPS+1 (EDIT)</td>
+<td>Switch between the editor and the console</td>
+</tr>
+<tr>
+<td>CAPS+9</td>
+<td>Graphics mode (block graphics and UDGs)</td>
+</tr>
+<tr>
+<td>ENTER</td>
+<td>Split the line, or add a new line below</td>
+</tr>
+<tr>
+<td>E + 5 / E + 8</td>
+<td>Start / end of line</td>
+</tr>
+<tr>
+<td>E + 6 / E + 7</td>
+<td>End / start of program</td>
+</tr>
+<tr>
+<td>E + D</td>
+<td>Delete the line (into a one-line clipboard)</td>
+</tr>
+<tr>
+<td>E + I</td>
+<td>Insert the clipboard line above the cursor</td>
+</tr>
+<tr>
+<td>E + F / E + N</td>
+<td>Find: prompt on the status bar / find next</td>
+</tr>
+<tr>
+<td>E + J</td>
+<td>Join with the next line</td>
+</tr>
+<tr>
+<td>E + R</td>
+<td>RUN (go to the console and run)</td>
+</tr>
+<tr>
+<td>CAPS+SPACE</td>
+<td>BREAK</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Insert and delete.</strong> The current line is detokenised into the edit buffer at <code>$5B00</code>, where editing is plain text. When the cursor leaves the line, or ENTER is pressed, the buffer is re-tokenised and swapped into the program with one block move (<code>LDIR</code>/<code>LDDR</code>) of everything above it. Any edit sets <code>DIRTY</code>, which forces a prepass and a variable clear on the next RUN and disables CONT. The tokeniser always accepts the line. Syntax and block errors come from the prepass or at run time, and jump straight to the line.</p>
+<p><strong>Direct commands</strong> are typed on the console: <code>RUN</code>, <code>LIST</code>, <code>NEW</code>, <code>SAVE</code>, <code>LOAD</code>, <code>VERIFY</code>, <code>CAT</code>, <code>CONT</code>, <code>FIND</code>, <code>FREE</code>, or any statement.</p>
+<h3>6.7 Boot screen</h3>
+<p>The cold-start screen (layout agreed with Nathan, 13 November 2026) is:</p>
+<table>
+<thead>
+<tr>
+<th>Row</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><strong>Colour bar.</strong> Attribute cells only, with no pixels set. There are 16 swatches, each 2 attribute cells wide, across all 32 columns: black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Bright black is included so the layout stays even. Each cell's ink equals its paper.</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Blank</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>OpticOS (c) 2026 Optica Technology</code>, white on black</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>OpticBASIC v0.1</code>, the name and version of the BASIC</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Blank</td>
+</tr>
+<tr>
+<td>5</td>
+<td>The prompt <code>]</code>, with the cursor at column 2</td>
+</tr>
+</tbody>
+</table>
+<p>Rows 1–23 are white ink on black paper, and the border is black. <strong><code>]</code> followed by a space is the OpticOS direct-mode prompt everywhere.</strong> It appears at boot and again whenever a command finishes or an error is reported. The prompt and its space use two of the 64 columns, so a console line holds up to 61 characters plus the cursor. The colour bar is an ordinary screen row, so it scrolls away with the console text. The mock-up is <code>assets/opticos_boot.png</code>, and the rig's boot test compares the ROM's screen with it pixel for pixel.</p>
+<hr />
+<h2>7. Interpreter design</h2>
+<h3>7.1 The tokeniser</h3>
+<p>The tokeniser makes a single pass over the edit buffer. At each word boundary it looks the word up in the keyword table. The table is sorted and grouped by first letter, with a 26-entry index of first-letter offsets (52 bytes), and each keyword ends with bit 7 set. A match must be followed by a non-identifier character, and <code>%</code>, <code>$</code> or <code>(</code> after a keyword are allowed by context. Words that don't match become identifiers: the tokeniser computes their hash and stores the type, hash, length and name. Numbers are converted to binary with the maths package's string-to-number routine. The detokeniser does the reverse, plus indentation, and serves LIST, the editor and error display.</p>
+<h3>7.2 The prepass (resolver)</h3>
+<p>The prepass runs at RUN, or at the first CONT after a load or edit. It takes about 30–60 ms per KB of program. In one linear pass it:</p>
+<ol>
+<li>Records every <code>DEF PROC</code>, <code>DEF FN</code> and <code>LABEL</code> in a <strong>symbol table</strong> in a reserved RAM area just above the program: hash, name pointer and line address, 5 bytes each. It reports duplicates.</li>
+<li>Matches blocks with a small temporary stack and <strong>patches the link slots</strong>:
+   - <code>IF</code> → its <code>ELSEIF</code>, <code>ELSE</code> or <code>ENDIF</code>
+   - <code>ELSE</code> → <code>ENDIF</code>
+   - <code>WHILE</code> ↔ <code>WEND</code>
+   - <code>REPEAT</code> ← <code>UNTIL</code>
+   - <code>CASE</code> → each <code>WHEN</code> → <code>ENDCASE</code>
+   - <code>TRY</code> → <code>CATCH</code> → <code>ENDTRY</code>
+   - <code>DEF</code> → its end, so that execution can skip over definitions it falls into</li>
+<li>Reports structural errors before anything runs, for example "ENDIF without IF, line 40".</li>
+</ol>
+<p>At run time, a false <code>IF</code>, an exiting <code>WHILE</code> or a skipped <code>DEF</code> costs one pointer load. There are no scans.</p>
+<h3>7.3 Statement dispatch and the control stack</h3>
+<p>The interpreter's registers are HL = text pointer (<code>CH_ADD</code>) and SP = the machine stack, which is also the control stack. Each statement token is looked up in a 2-byte jump table. Control frames are pushed on the Z80 stack with a type byte:</p>
+<table>
+<thead>
+<tr>
+<th>Frame</th>
+<th>Contents</th>
+<th>Bytes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FOR (float)</td>
+<td>type, variable pointer, limit (5), step (5), loop pointer</td>
+<td>15</td>
+</tr>
+<tr>
+<td>FOR (integer fast)</td>
+<td>type, variable pointer, limit (2), step (2), loop pointer</td>
+<td>9</td>
+</tr>
+<tr>
+<td>WHILE / REPEAT</td>
+<td>type, loop pointer</td>
+<td>3</td>
+</tr>
+<tr>
+<td>PROC / FN</td>
+<td>type, return pointer, saved-locals count, saved ERR frame</td>
+<td>6</td>
+</tr>
+<tr>
+<td>LOCAL entry</td>
+<td>variable pointer, old value (2, 5 or 3 bytes)</td>
+<td>4–7</td>
+</tr>
+<tr>
+<td>TRY</td>
+<td>type, CATCH address, saved SP</td>
+<td>5</td>
+</tr>
+<tr>
+<td>CASE</td>
+<td>type, ENDCASE address, selector value</td>
+<td>3–8</td>
+</tr>
+</tbody>
+</table>
+<p><code>ERR_SP</code> points at the current error frame. RST 8 unwinds to that frame. <code>NEXT</code>, <code>WEND</code> and <code>ENDPROC</code> check the frame type. When they find the wrong one, they report "NEXT without FOR" and similar errors. Before each push, a stack-overflow check compares SP against <code>STRHEAP</code> plus a 64-byte guard.</p>
+<h3>7.4 Variable lookup</h3>
+<p>The type byte and 6-bit hash are stored in the identifier token. There are 32 chain heads, indexed by hash and type. Each variable record holds: next pointer (2), name length (1), name, value (2, 5 or 3 bytes, or an array header).</p>
+<p><strong>Lookup</strong>: take the head, walk the chain, and compare the length and then the name with a short <code>CPI</code>-style loop. A typical program has under 50 variables, so chains average fewer than 2 entries, and a lookup costs about 150–250 T. <code>A%</code>–<code>Z%</code> skip lookup entirely at about 40 T. Creating a variable appends at <code>VARS</code> end, which sits below the heap, so the gap shrinks.</p>
+<p>A later optimisation, kept out of the budget, is an inline cache: a 2-byte pointer slot tagged with a RUN generation counter. It would cost 3 bytes per identifier use, which is why it isn't in the plan.</p>
+<h3>7.5 The integer fast path</h3>
+<p>The expression evaluator is precedence-climbing. Values live on a small value stack in workspace as 5-byte entries. Integers of every kind are held in <strong>small-integer form</strong> (<code>00 sign lo hi 00</code>).</p>
+<p>For <code>+ - * &lt; = …</code>, <code>DIV</code>, <code>MOD</code>, <code>AND</code>, <code>OR</code> and shifts, if both operands are small integers, 16-bit Z80 code runs and checks for overflow. Only on overflow does it promote both operands to float and retry. <code>FOR</code> with integer start, limit and step uses the 9-byte frame and 16-bit compare. Literals are pre-converted, so there is no ASCII parsing at run time. Between them, these are where the speed comes from.</p>
+<h3>7.6 Strings and garbage collection</h3>
+<ul>
+<li>The heap grows <strong>down</strong> from <code>STKBOT</code>. Each heap string is <code>[back-pointer 2][length 1][chars]</code>, and the back-pointer points at the descriptor that owns it.</li>
+<li>Temporaries made during expression evaluation go on the heap with back-pointer 0. They are freed at the end of each statement by resetting the heap mark (no GC).</li>
+<li><strong>Compaction</strong> runs when an allocation fails. It is a sliding pass from the top of the heap down:</li>
+<li>If a block's back-pointer still points at a descriptor that refers to this block, the block is kept: it slides up and the descriptor is fixed up.</li>
+<li>Otherwise the block is dropped.</li>
+<li>The pass is O(heap) and needs no mark phase or extra memory, at about 300 bytes of code.</li>
+<li>The worst case is about 25 ms per 10 KB of heap.</li>
+</ul>
+<h3>7.7 Maths package</h3>
+<ul>
+<li><strong>Format.</strong> Sinclair-compatible 5-byte layout. That keeps <code>STACK-BC</code>-style interoperability possible, and the small-integer form provides the fast path.</li>
+<li><strong>Core.</strong> Add, subtract, multiply (32×32 shift-and-add), divide (restoring), normalise and round, compare, and int↔float conversion.</li>
+<li><strong>Transcendentals.</strong> Range reduction plus short Chebyshev or minimax series, driven by a compact <strong>internal byte-code</strong> (our own opcodes) that runs coefficient tables. That is far smaller than open-coding each function.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SIN, COS</td>
+<td>Reduce to ±π/4, 6 terms</td>
+</tr>
+<tr>
+<td>ATN</td>
+<td>Reduce to [0, 1], 8 terms. ASN and ACS are derived from it.</td>
+</tr>
+<tr>
+<td>LN</td>
+<td>Mantissa in [0.5, 1], 7 terms</td>
+</tr>
+<tr>
+<td>EXP</td>
+<td>2^n × series</td>
+</tr>
+<tr>
+<td>SQR</td>
+<td>Newton iteration, 4–5 steps</td>
+</tr>
+<tr>
+<td><code>^</code></td>
+<td>EXP(LN) with an integer fast path for small exponents</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Accuracy target</strong>: an error of 1 unit in the last place or less on the core operations, and 2 or less on the transcendentals, checked against Python <code>mpmath</code>.</li>
+</ul>
+<hr />
+<h2>8. 16K ROM memory map and budget</h2>
+<h3>8.1 Fixed points in the ROM</h3>
+<pre><code>$0000-$006F  RST vectors, $0038 ISR entry, $0066 NMI         (fixed)
+$03B5        BEEPER          $04C2 SA-BYTES   $0556 LD-BYTES
+$05E3/$05E7  LD-EDGE-2/1     $096F RET        $0D6B CLS   $0DAF CL-ALL
+$1601        CHAN-OPEN       $203C PR-STRING  $22AA PIXEL-ADD
+$3E80-$3FFF  4-pixel font, 384 bytes                          (fixed)
+everything else: modules packed into the gaps by the link script (first-fit, largest first)
+</code></pre>
+<h3>8.2 Budget</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Module</th>
+<th style="text-align: right;">Bytes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Restarts, NMI, reset, RAM test, system-variable and channel init</td>
+<td style="text-align: right;">380</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Boot banner <code>OpticOS (c) 2026 Optica Technology</code> (34 bytes of text, the last with bit 7 set) plus the call to print it</td>
+<td style="text-align: right;">40</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Interrupt routine, keyboard scan, debounce and repeat, 3 × 40 key tables</td>
+<td style="text-align: right;">520</td>
+</tr>
+<tr>
+<td>4</td>
+<td>64-column print: masked nibble path, pair fast path, INVERSE/OVER, control codes, AT/TAB, colours, scroll, cursor</td>
+<td style="text-align: right;">1,000</td>
+</tr>
+<tr>
+<td>5</td>
+<td>MODE 32 (pixel doubling, 8×8 CHARS path, 16-byte table)</td>
+<td style="text-align: right;">110</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Block-graphics generator and 2-column UDG print</td>
+<td style="text-align: right;">60</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>4-pixel font, 96 glyphs, 2 per byte</strong></td>
+<td style="text-align: right;">384</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Tape low level: SA-BYTES, LD-BYTES, edge routines</td>
+<td style="text-align: right;">380</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Tape commands: SAVE/LOAD/VERIFY/CAT, headers, CODE/SCREEN$/AUTO, signature</td>
+<td style="text-align: right;">520</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Sound: BEEPER, BEEP pitch conversion, SOUND</td>
+<td style="text-align: right;">160</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Graphics: pixel address, PLOT, DRAW/DRAW TO, CIRCLE, POINT, ATTR, SCREEN$</td>
+<td style="text-align: right;">620</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Float core (+ − × ÷, normalise, compare, conversions, small-int ops)</td>
+<td style="text-align: right;">1,100</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Number ↔ string (VAL, STR$, PRINT formatting, hex and binary)</td>
+<td style="text-align: right;">550</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Transcendentals, byte-code runner and coefficient tables (SIN COS TAN ATN ASN ACS EXP LN SQR ^ RND)</td>
+<td style="text-align: right;">950</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Tokeniser, detokeniser and LIST auto-indent</td>
+<td style="text-align: right;">600</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Keyword table (about 120 words, bit-7 terminated, with a first-letter index)</td>
+<td style="text-align: right;">600</td>
+</tr>
+<tr>
+<td>17</td>
+<td>Statement and function dispatch tables</td>
+<td style="text-align: right;">300</td>
+</tr>
+<tr>
+<td>18</td>
+<td>Expression evaluator (precedence, types, coercion, fast path)</td>
+<td style="text-align: right;">850</td>
+</tr>
+<tr>
+<td>19</td>
+<td>Interpreter core: prepass, control stack, IF/loops/PROC/FN/LOCAL/TRY/EXIT</td>
+<td style="text-align: right;">1,550</td>
+</tr>
+<tr>
+<td>20</td>
+<td>CASE / WHEN / OTHERWISE</td>
+<td style="text-align: right;">150</td>
+</tr>
+<tr>
+<td>21</td>
+<td>Variables and arrays (hash lookup, create, DIM, indexing, A%–Z%)</td>
+<td style="text-align: right;">500</td>
+</tr>
+<tr>
+<td>22</td>
+<td>Strings: heap, slicing, string functions, GC</td>
+<td style="text-align: right;">650</td>
+</tr>
+<tr>
+<td>23</td>
+<td>I/O and miscellaneous statements (PEEK/POKE/IN/OUT/CALL/USR/KEY/JOY/WAIT/DATA/READ …)</td>
+<td style="text-align: right;">450</td>
+</tr>
+<tr>
+<td>24</td>
+<td>Full-screen editor (64×24, wrap, find, clipboard, status bar)</td>
+<td style="text-align: right;">1,400</td>
+</tr>
+<tr>
+<td>25</td>
+<td>Direct mode and console</td>
+<td style="text-align: right;">250</td>
+</tr>
+<tr>
+<td>26</td>
+<td>Errors: RST 8 unwind and about 36 messages, compressed using keyword tokens</td>
+<td style="text-align: right;">450</td>
+</tr>
+<tr>
+<td>27</td>
+<td>Legacy loader shim (Sinclair BASIC subset)</td>
+<td style="text-align: right;">650</td>
+</tr>
+<tr>
+<td>28</td>
+<td>Fixed-address stubs and fragmentation loss around fixed points</td>
+<td style="text-align: right;">200</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Total</strong></td>
+<td style="text-align: right;"><strong>15,374</strong></td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Margin (of 16,384)</strong></td>
+<td style="text-align: right;"><strong>1,010 (6.2%)</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print logic costs about 100 bytes more than a plain 32-column printer, so the change of display gained roughly 200 bytes overall. Adding an 8×8 font at <code>$3D00</code> would bring the total to 16,142, leaving a margin of 242 (1.5%). That is too thin, so the font is left out for now (§12).</p>
+<h3>8.3 Benchmarks</h3>
+<ul>
+<li><strong>ZX81 8K ROM.</strong> Floating point, BASIC, display, tape and a line editor in 8,192 bytes. That suggests a richer system in 16K is realistic.</li>
+<li><strong>Sinclair 48K ROM.</strong> 16K, including a 768-byte font and a large calculator. It is generous in its token handling, and its syntax checking is folded into the run-time code.</li>
+<li><strong>BBC BASIC II.</strong> 16K for the language alone. The screen, keyboard, tape and line editor live in the separate 16K MOS, and about 2–3K of the language ROM goes on the inline assembler. Without the assembler that leaves about 13K for language plus maths, which is the strongest warning against over-ambitious features. OpticBASIC is smaller (no assembler, no VDU system, simpler PRINT formatting), but it also carries its own "MOS".</li>
+<li><strong>Microsoft 8K BASIC</strong> (8080 and 6502 versions, about 8–9K with floats) shows that the core interpreter plus floats can be done in about 7K.</li>
+</ul>
+<h3>8.4 Risks</h3>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Likelihood</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The maths package and editor overrun by 20–30% (typical)</td>
+<td>High</td>
+<td>Margin, plus the cut list below</td>
+</tr>
+<tr>
+<td>LD-EDGE timing mismatch breaks turbo loaders</td>
+<td>Medium</td>
+<td>Pulse-sweep tests against the reference in the rig. A loader compatibility corpus.</td>
+</tr>
+<tr>
+<td>Fixed addresses fragment the ROM</td>
+<td>Medium</td>
+<td>Link script with gap packing. Small routines are kept to fill gaps.</td>
+</tr>
+<tr>
+<td>64-column legibility on a real TV</td>
+<td>Medium</td>
+<td>Font tuning in Fuse with a CRT filter. MODE 32 as a fallback.</td>
+</tr>
+<tr>
+<td>Float accuracy</td>
+<td>Low to medium</td>
+<td>mpmath test vectors</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cut list (about 900 bytes recoverable)</strong>: CASE (150), ASN/ACS (80), <code>SCREEN$()</code> (60), CAT (60), CIRCLE (120), editor clipboard and join (150), <code>HEX$</code>/<code>STRING$</code>/<code>UPPER$</code> (90), and slimming the legacy shim to the minimal loader set (200).</p>
+<hr />
+<h2>9. System variables</h2>
+<p><strong>Policy.</strong> Keep the variables that machine code and loaders commonly touch at their <strong>Sinclair addresses</strong>, with the same meaning. Everything else in <code>$5C00–$5CB5</code> is reused for OpticOS internals, and <code>IY</code> is set to <code>$5C3A</code> whenever control passes to user code. This keeps <code>(IY+n)</code> habits harmless, and the OpticOS ISR does not rely on IY.</p>
+<table>
+<thead>
+<tr>
+<th>Address</th>
+<th>Name</th>
+<th>Kept?</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$5C08</code></td>
+<td>LAST_K</td>
+<td>Yes</td>
+<td>Games read it for keys</td>
+</tr>
+<tr>
+<td><code>$5C09/0A</code></td>
+<td>REPDEL/REPPER</td>
+<td>Yes</td>
+<td>Commonly POKEd</td>
+</tr>
+<tr>
+<td><code>$5C36</code></td>
+<td>CHARS</td>
+<td>Yes</td>
+<td>Fonts in RAM. It also selects MODE 32 behaviour.</td>
+</tr>
+<tr>
+<td><code>$5C3A</code></td>
+<td>ERR_NR</td>
+<td>Yes</td>
+<td>IY base, RST 8</td>
+</tr>
+<tr>
+<td><code>$5C3B</code></td>
+<td>FLAGS</td>
+<td>Bit 5 (new key) only</td>
+<td>ISR and keyboard pollers</td>
+</tr>
+<tr>
+<td><code>$5C3D</code></td>
+<td>ERR_SP</td>
+<td>Yes (OpticOS meaning: error frame)</td>
+<td>Code that traps errors</td>
+</tr>
+<tr>
+<td><code>$5C48</code></td>
+<td>BORDCR</td>
+<td>Yes</td>
+<td>Restoring the border after a load</td>
+</tr>
+<tr>
+<td><code>$5C4F/51</code></td>
+<td>CHANS/CURCHL</td>
+<td>Yes</td>
+<td>RST 16 and CHAN-OPEN users</td>
+</tr>
+<tr>
+<td><code>$5C53</code></td>
+<td>PROG</td>
+<td>Yes (OpticOS program start, or <code>$5CCB</code> in legacy mode)</td>
+<td><code>PEEK 23635</code> loaders</td>
+</tr>
+<tr>
+<td><code>$5C6B</code></td>
+<td>DF_SZ</td>
+<td>Yes</td>
+<td>Lower-screen size</td>
+</tr>
+<tr>
+<td><code>$5C76</code></td>
+<td>SEED</td>
+<td>Yes</td>
+<td>RND</td>
+</tr>
+<tr>
+<td><code>$5C78</code></td>
+<td>FRAMES (3)</td>
+<td>Yes</td>
+<td>Timing in many games</td>
+</tr>
+<tr>
+<td><code>$5C7B</code></td>
+<td>UDG</td>
+<td>Yes</td>
+<td>UDG relocation</td>
+</tr>
+<tr>
+<td><code>$5C7D</code></td>
+<td>COORDS</td>
+<td>Yes</td>
+<td>PLOT position</td>
+</tr>
+<tr>
+<td><code>$5C88</code></td>
+<td>S_POSN</td>
+<td>Yes</td>
+<td>Print position, stored as 64-column values in MODE 64</td>
+</tr>
+<tr>
+<td><code>$5C8D–$5C91</code></td>
+<td>ATTR_P, MASK_P, ATTR_T, MASK_T, P_FLAG</td>
+<td>Yes</td>
+<td>Colour handling</td>
+</tr>
+<tr>
+<td><code>$5CB0</code></td>
+<td>NMIADD</td>
+<td>Yes</td>
+<td>NMI hook</td>
+</tr>
+<tr>
+<td><code>$5CB2</code></td>
+<td>RAMTOP</td>
+<td>Yes</td>
+<td>CLEAR, and loaders</td>
+</tr>
+<tr>
+<td><code>$5CB4</code></td>
+<td>P_RAMT</td>
+<td>Yes</td>
+<td>Memory size</td>
+</tr>
+<tr>
+<td>others</td>
+<td>KSTATE, E_LINE, WORKSP, X_PTR …</td>
+<td>Reused internally</td>
+<td>Only Sinclair BASIC needs their meanings</td>
+</tr>
+</tbody>
+</table>
+<p>New variables in <code>$5CCB–$5D4F</code>:</p>
+<ul>
+<li><code>MODE</code></li>
+<li><code>FONT4</code></li>
+<li><code>VARS</code>, <code>STRHEAP</code>, <code>STKBOT</code>, <code>SYMTAB</code></li>
+<li><code>DIRTY</code> and the prepass generation counter</li>
+<li>editor state: top pointer and ordinal, cursor pointer and ordinal, column, clipboard</li>
+<li>the 32 hash heads (64 bytes)</li>
+<li><code>A%</code>–<code>Z%</code> (52 bytes)</li>
+</ul>
+<p>A magic byte and checksum on this area lets OpticOS detect corruption by machine code. A <code>RET</code> back from <code>CALL</code> into a damaged area causes a warm reset that keeps the program, rather than a crash.</p>
+<hr />
+<h2>10. Build and test plan</h2>
+<h3>10.1 Tools on the box</h3>
+<ul>
+<li><strong>Assembler.</strong> <code>pasmo 0.5.3</code>. Install it from <code>/workspace/debs/pasmo_0.5.3-8_amd64.deb</code> (<code>dpkg -x</code> into a local prefix if it isn't on PATH; today it isn't). Use <code>pasmo --bin opticos.asm build/opticos.rom build/opticos.sym</code>. The Python assembler <code>spectrum-ball/tools/zasm.py</code> is a fallback that produces identical output.</li>
+<li><strong>Emulator.</strong> Fuse 1.6.0 (<code>fuse-emulator-sdl</code> and <code>libspectrum8</code> debs in <code>/workspace/debs</code>), driven by <code>ultimate/miremare/tools/fusectl.py</code>, which gives a private Xvfb, xdotool keys and screenshots. Load the ROM with:
+  <code>fuse-sdl --machine 48 --rom-48 /workspace/newrom/build/opticos.rom --no-traps --no-fastload file.tap</code>
+  Fuse's tape traps assume the Sinclair loader internals, so the real-signal path (<code>--no-traps</code>) is the authority. A second pass with traps on records whether fast loading happens to work.</li>
+<li><strong>Headless rig.</strong> <code>z80core.c</code> / <code>libz80core.so</code> (copies in <code>spectrum-ball/tools</code> and <code>miremare/tools</code>), driven from Python through <code>spectest.py</code> and <code>headless.py</code>. Today the rig injects game code directly and <strong>does not implement IX/IY (DD/FD prefixes)</strong> or EAR input. Phase 0 extends it with:
+  1. the DD/FD/DDCB/FDCB opcodes (needed for LD-BYTES, whose contract is IX-based)
+  2. a ROM-boot mode from <code>$0000</code> with a 16K ROM write-protect
+  3. an EAR input pulse stream generated from a TAP (the standard timings) and a MIC/EAR output recorder that turns pulses back into TAP
+  4. memory-contention timing that is accurate enough for edge-loop tests.</li>
+</ul>
+<h3>10.2 Build checks (<code>make check</code>)</h3>
+<ol>
+<li>The image is exactly 16,384 bytes, and the fixed symbols sit at their addresses (checked from the symbol file).</li>
+<li><code>similarity_check.py</code> passes against <code>48.rom</code> (§1.3). The ROM is never copied into <code>build/</code>, and <code>.gitignore</code> covers <code>roms/</code>, <code>*.rom</code> from outside and <code>build/</code>.</li>
+<li>A size report per module against the budget table. The build fails if margin drops below 256 bytes.</li>
+</ol>
+<h3>10.3 Test suites</h3>
+<table>
+<thead>
+<tr>
+<th>Suite</th>
+<th>How it works</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Boot</td>
+<td>Rig: the banner <code>OpticOS (c) 2026 Optica Technology</code> appears at row 0, read back with a Python decoder that converts screen bitmaps to text using our font. RAM test passes for 16K and 48K.</td>
+</tr>
+<tr>
+<td>Keyboard</td>
+<td>Inject matrix states. Check LAST_K, repeat and E mode.</td>
+</tr>
+<tr>
+<td>Print</td>
+<td>Pixel-exact checks at odd and even columns, pair path, INVERSE/OVER, attribute-cell policy, scrolling. T-state counts per character recorded (target ≤ 850 T masked, ≤ 500 T pair).</td>
+</tr>
+<tr>
+<td>Maths</td>
+<td>About 5,000 vectors against mpmath, with error in units of the last place. Integer fast path and overflow promotion.</td>
+</tr>
+<tr>
+<td>Tokeniser</td>
+<td>Round trip: source → tokens → LIST is identical after normalisation, across a corpus.</td>
+</tr>
+<tr>
+<td>Interpreter</td>
+<td>About 150 small <code>.obas</code> programs with expected console output, including the §4.7 samples, recursion, GC stress and every error message.</td>
+</tr>
+<tr>
+<td>Editor</td>
+<td>Scripted key sequences, then compare the program and screen.</td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>PCW benchmarks BM1–BM8 under OpticOS and under the Sinclair reference in the rig. Target ≥ 3× on BM1–BM3.</td>
+</tr>
+<tr>
+<td>Tape: save</td>
+<td>SAVE → recorded pulses → TAP → byte-compare and parse. The original ROM in Fuse then loads OpticOS-saved CODE blocks.</td>
+</tr>
+<tr>
+<td><strong>Compatibility</strong></td>
+<td><code>LOAD ""</code> with real-signal loading in Fuse (<code>--no-traps</code>): <code>/workspace/spectrum-ball/bounceball.tap</code>, <code>/workspace/rel/miremare.tap</code>, <code>miremare_demo.tap</code> and <code>miremare_sfx.tap</code>. Pass means the game reaches its title screen and responds to keys (screenshots compared with the earlier runs under the Sinclair ROM). Extend later with any TAPs Nathan supplies privately, which are never committed.</td>
+</tr>
+<tr>
+<td>Edge timing</td>
+<td>Sweep pulse lengths and compare the B returned by <code>$05E7</code> with the reference ROM, tolerance ±1.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>11. Phased plan</h2>
+<p>A "session" means one long working block, as with Mire Mare.</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Content</th>
+<th>Deliverables</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>0. Rig</strong></td>
+<td>Add IX/IY, ROM boot, EAR in and out, and the screen-to-text decoder to the headless core. Build skeleton, link script, checks.</td>
+<td><code>tools/rig/</code>, <code>make check</code>, an empty 16K image</td>
+<td>1 session</td>
+</tr>
+<tr>
+<td><strong>1. Boot, screen, keyboard, tape</strong></td>
+<td>Reset and RAM test, ISR, keyboard, 4-pixel font artwork, 64-column print and scroll, MODE 32, channels and RST 16, BEEPER, SA/LD-BYTES at fixed addresses, the stubs, <strong>the legacy shim</strong>, and a minimal console.</td>
+<td>A ROM that boots to the banner in Fuse. Bounce Ball and Mire Mare load and play via <code>LOAD ""</code> with no traps. Font sheet PNG.</td>
+<td>3 sessions</td>
+</tr>
+<tr>
+<td><strong>2. Maths</strong></td>
+<td>Float core, conversions, byte-code runner, transcendentals, RND</td>
+<td>Maths library plus the mpmath test report</td>
+<td>2 sessions</td>
+</tr>
+<tr>
+<td><strong>3. Interpreter</strong></td>
+<td>Tokeniser and detokeniser, prepass, evaluator, statements, PROC/FN/LOCAL, loops, TRY, strings and GC, arrays, graphics, sound, tape commands, console-based direct mode</td>
+<td>Sample programs run. Benchmark report against Sinclair.</td>
+<td>3–4 sessions</td>
+</tr>
+<tr>
+<td><strong>4. Editor</strong></td>
+<td>Full-screen 64×24 editor, keys, wrap, find, clipboard, status bar, error jump</td>
+<td>Editor test suite. Demo GIF.</td>
+<td>2 sessions</td>
+</tr>
+<tr>
+<td><strong>5. Polish</strong></td>
+<td>CASE, size squeeze, a possible revisit of the 8×8 font if the margin allows, user manual (PDF, in the Mire Mare style), example tape, a check on a real TV via Nathan</td>
+<td><code>opticos.rom</code> v1.0, manual, examples. The repo is <strong>OpticOS</strong>, created only with Nathan's go-ahead.</td>
+<td>1–2 sessions</td>
+</tr>
+</tbody>
+</table>
+<p>The total is about <strong>12–14 sessions</strong>, which is larger than Mire Mare. Phase 1 is a useful stopping point on its own: it proves the hardware layer and tape compatibility before any BASIC exists.</p>
+<hr />
+<h2>12. Decisions (agreed 13 Nov 2026)</h2>
+<p>Nathan agreed all six recommendations on 13 November 2026.</p>
+<ol>
+<li><strong>No 8×8 font at <code>$3D00</code> for now.</strong> Ship the 4-pixel font only and get MODE 32 by pixel doubling. Revisit in Phase 5 if the margin allows. Without it, games that draw text from the ROM font show garbage.</li>
+<li><strong>Include the legacy loader shim (about 650 bytes).</strong> Without it, almost no commercial tape, including Bounce Ball and Mire Mare, loads with <code>LOAD ""</code>.</li>
+<li><strong>Error handling is <code>TRY</code>/<code>CATCH</code>/<code>ENDTRY</code> plus <code>ERROR n</code>.</strong> It is structured, it fits the no-line-number style, and it costs about the same as <code>ON ERROR</code>.</li>
+<li><strong>Procedures are called by bare name</strong> (<code>move</code>, not <code>PROC move</code>). They look modern, the prepass resolves them, and the cost is a small lookup on the first identifier of a statement.</li>
+<li><strong>Do not emulate the RST <code>$28</code> calculator.</strong> It would cost 600 bytes or more, and few games use it. RST <code>$28</code> raises a clean error instead.</li>
+<li><strong><code>LOCAL</code> is dynamic, in the BBC style</strong>, not true lexical scope. Lexical scope would need per-PROC symbol tables, at about 300 bytes plus a slower lookup.</li>
+</ol>
+<p><em>End of specification v0.2.</em></p>
+</body></html>
