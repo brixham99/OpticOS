@@ -77,7 +77,7 @@ def t_keys():
     check('typed text echoes in 64 columns after "] "', rows[5] == '] ' + line, repr(rows[5]))
     s.type('\n')
     rows = T(s.text_rows(FONT))
-    check('unknown command reply, then a new prompt', rows[6].startswith('Phase 1 console') and rows[7] == ']',
+    check('unknown command reply, then a new prompt', rows[6] == 'Syntax error' and rows[7] == ']',
           repr(rows[6:8]))
     # caps lock and delete
     s.press(['^', '2']); s.type('abc'); s.press(['^', '2']); s.type('xy'); s.press(['^', '0'])

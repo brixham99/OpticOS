@@ -1,6 +1,10 @@
 ; errors.asm - RST 8 handler and messages.
 ERR_SCREEN equ $04
+ERR_DIV0   equ $05
+ERR_OVFL   equ $06
 ERR_RANGE  equ $0A
+ERR_ARG    equ $0B
+ERR_SYN    equ $0D
 ERR_BREAK  equ $0C
 ERR_STRM   equ $17
 ERR_TAPE   equ $1A
@@ -87,6 +91,18 @@ err_tab:
         defb ERR_SCREEN
         defm "Position off scree"
         defb 'n'+$80
+        defb ERR_DIV0
+        defm "Division by zer"
+        defb 'o'+$80
+        defb ERR_OVFL
+        defm "Overflo"
+        defb 'w'+$80
+        defb ERR_ARG
+        defm "Bad argumen"
+        defb 't'+$80
+        defb ERR_SYN
+        defm "Syntax erro"
+        defb 'r'+$80
         defb ERR_CALC
         defm "Calculator not supporte"
         defb 'd'+$80

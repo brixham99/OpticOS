@@ -25,7 +25,7 @@ if rom[0x096F] != 0xC9: fail('no RET at $096F')
 LIMITS = [('m_isr_e', 0x0066), ('secB_end', 0x03B5), ('secC_end', 0x04C2),
           ('secD_end', 0x0556), ('secE_end', 0x05E3), ('secF_end', 0x096F), ('secG_end', 0x0D6B),
           ('secH_end', 0x0DAF), ('secI_end', 0x1601), ('m_stb_e', 0x203C), ('m_stb_e2', 0x22AA),
-          ('m_stb_e3', 0x3E80)]
+          ('secK_end', 0x3E80)]
 for lab, lim in LIMITS:
     if sym[lab] > lim: fail('%s ends at %04X, past %04X' % (lab, sym[lab], lim))
 if sym['GLYPHBUF'] & 0xFF > 0xF8: fail('GLYPHBUF crosses a page')
@@ -44,8 +44,12 @@ MODS = [
   ('Errors: RST 8 handler and messages', '26', 450, r('m_err_s', 'm_err_e')),
   ('Tape commands: header search, name match, Program:/Bytes:', '9', 520, r('m_tcmd_s', 'm_tcmd_e')),
   ('Legacy loader shim (interpreter, expressions, PRINT)', '27', 650, r('m_leg_s', 'm_leg_e1') + r('m_leg_s2', 'm_leg_e2')),
-  ('Number output (pr_dec, pr_hex shared)', '13', 550, r('m_num_s', 'm_num_e')),
-  ('Direct mode and console (phase 1 minimal)', '25', 250, r('m_con_s', 'm_con_e')),
+  ('Number output for the legacy shim and console (pr_dec, pr_hex)', '13', 550, r('m_num_s', 'm_num_e')),
+  ('Float core (+ - * /, normalise, compare, conversions, small-int ops)', '12', 1100, r('m_fpc_s', 'm_fpc_e')),
+  ('Number <-> string (STR$/PRINT formatting, VAL)', '13', 550, r('m_fpv_s', 'm_fpv_e')),
+  ('Transcendentals, byte-code runner, coefficient tables', '14', 950, r('m_fpt_s', 'm_fpt_e') + r('m_fpk_s', 'm_fpk_e')),
+  ('Expression evaluator (phase 2 seed) and PRINT', '18', 850, r('m_exp_s', 'm_exp_e')),
+  ('Direct mode and console (command dispatch)', '25', 250, r('m_con_s', 'm_con_e')),
   ('Fixed-address stubs (CHAN-OPEN, PR-STRING, PIXEL-ADD, $096F)', '28', 200,
       r('m_stb_s', 'm_stb_e') + r('m_stb_s2', 'm_stb_e2') + r('m_stb_s3', 'm_stb_e3') + 1),
   ('4-pixel font', '7', 384, r('m_font_s', 'm_font_e') if 'm_font_e' in sym else 384),
@@ -55,7 +59,7 @@ nonzero = sum(1 for b in rom if b)
 lines = ['| Spec item | Module | Bytes used | Phase budget | % |', '|---|---|---:|---:|---:|']
 for name, item, bud, n in MODS:
     lines.append('| %s | %s | %d | %d | %d%% |' % (item, name, n, bud, round(100 * n / bud)))
-lines.append('| | **Total (phase 1 modules)** | **%d** | **%d** | |' % (used, sum(m[2] for m in MODS)))
+lines.append('| | **Total (modules built so far)** | **%d** | **%d** | |' % (used, sum(m[2] for m in MODS)))
 lines.append('')
 lines.append('ROM: 16,384 bytes; %d bytes of code and data placed, %d free (zero-filled gaps).' % (used, 16384 - used))
 print('\n'.join(lines))

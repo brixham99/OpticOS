@@ -106,6 +106,11 @@ secI_end:
 ; ---------------------------------------------------------------- $1601
         org $1601
         include "stubs.asm"
+        include "fpcore.asm"
+        include "fptrans.asm"
+        include "fpconv.asm"
+        include "expr.asm"
+secK_end:
 
 ; ---------------------------------------------------------------- $3E80
         org FONT

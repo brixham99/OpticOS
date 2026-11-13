@@ -12,7 +12,7 @@ The boot message reads:
 OpticOS (c) 2026 Optica Technology
 ```
 
-Status: **Phase 1 complete** (boot, screen, keyboard, tape and the legacy loader). The ROM boots in Fuse and in the headless rig, and loads ordinary game tapes with `LOAD ""` from a real tape signal, with traps off. There is no OpticBASIC yet: that is Phases 2–4. The design is in [`docs/spec.md`](docs/spec.md). The Phase 1 report, with test results, byte usage and screenshots, is in [`docs/phase1/`](docs/phase1/README.md).
+Status: **Phase 2 complete** (maths package). Phase 1 brought boot, screen, keyboard, tape and the legacy loader: the ROM boots in Fuse and in the headless rig, and loads ordinary game tapes with `LOAD ""` from a real tape signal, with traps off. Phase 2 added clean-room floating point (+ − × ÷ ^, SIN COS TAN ATN ASN ACS EXP LN LOG SQR INT ABS SGN RND, STR$/VAL) and a direct-mode `PRINT` / `?` at the `]` prompt, so `PRINT "Hello, World!"` and `PRINT 2+2, SQR 2` work. The rest of OpticBASIC is Phases 3–4. The design is in [`docs/spec.md`](docs/spec.md). The reports are in [`docs/phase1/`](docs/phase1/README.md) and [`docs/phase2/`](docs/phase2/README.md), and the maths API is in [`docs/maths.md`](docs/maths.md).
 
 ## Building
 

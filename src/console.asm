@@ -1,5 +1,5 @@
 ; console.asm - phase 1 minimal console: a one-line editor with a blinking
-; 4x8 cursor block after the "] " prompt.  Commands: LOAD "" (legacy tape loader) and CLS.
+; 4x8 cursor block after the "] " prompt.  Commands (cmd_tab): PRINT or ?, CLS, LOAD "".
 CON_LEN equ $5B4F
 m_con_s:
 console:
@@ -68,23 +68,41 @@ con_enter:
         ld (hl),0
         ld a,13
         call pr_out
-        ld hl,LINEBUF
-        ld de,cmd_load
-        call con_match
-        jp z,lg_cmd_load
-        ld hl,LINEBUF
-        ld de,cmd_cls
-        call con_match
-        jr z,con_cls
-        ld a,(CON_LEN)
+        ld hl,LINEBUF           ; one dispatch for every command
+        ld (CH_ADD),hl
+        call nxc
         or a
         jp z,con_new
-        ld hl,msg_what
-        call pr_msg
+        ld de,cmd_tab
+cdt_l:   ld a,(de)
+        or a
+        jp z,err_syn
+        push hl
+        call cd_match
+        jr z,cdt_go
+        pop hl
+        inc de
+        inc de
+        jr cdt_l
+cdt_go:  pop af
+        ld (CH_ADD),hl
+        ex de,hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ex de,hl
+        call jphl
         jp con_new
-con_cls:
-        call CLS
-        jp con_new
+cmd_cls: call nxc
+        or a
+        jp nz,err_syn
+        jp CLS
+cmd_load:
+        ld hl,(CH_ADD)
+        ld de,pat_qq
+        call con_match
+        jp z,lg_cmd_load
+        jp err_syn
 
 con_ok: ld a,ERR_OK
         ld (ERR_NR),a
@@ -162,13 +180,17 @@ cs_2:   ld a,(hl)
         djnz cs_2
         ret
 
-cmd_load:
-        defm "LOAD"
-        defb '"','"'+$80
-cmd_cls:
+cmd_tab: defm "PRIN"            ; word, handler (CH_ADD is after the word)
+        defb 'T'+$80
+        defw cmd_print
+        defb '?'+$80
+        defw cmd_print
         defm "CL"
         defb 'S'+$80
-msg_what:
-        defm "Phase 1 console: try LOAD "
-        defb '"','"'+$80
+        defw cmd_cls
+        defm "LOA"
+        defb 'D'+$80
+        defw cmd_load
+        defb 0
+pat_qq: defb '"','"'+$80
 m_con_e:

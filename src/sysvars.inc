@@ -50,3 +50,21 @@ LG_DEST  equ $5B4C      ; legacy LOAD: explicit destination (2), 0 = header
 HDRBUF   equ $5B50      ; 17-byte tape header buffer
 
 FONT     equ $3E80
+
+; ---- maths workspace (phase 2), $5B61-$5BFF (see docs/maths.md)
+RNDS     equ $5C93      ; reused MEMBOT: 32-bit RND state (4 bytes)
+FSG      equ $5B61      ; maths scratch byte
+NBUF     equ $5B62      ; number-to-string output (16)
+NDIG     equ $5B72      ; decimal digits (9)
+NDE      equ $5B7B      ; decimal exponent of the first digit
+NCNT     equ $5B7C      ; digit count
+VDX      equ $5B7D      ; string-to-number decimal exponent
+NBP      equ $5B7E      ; output pointer into NBUF (2)
+FA       equ $5B80      ; unpacked accumulator: g m1 m2 m3 m4 exp sign (8)
+FB       equ $5B88      ; unpacked operand
+FT       equ $5B90      ; byte-code temporaries T0-T6, 8 bytes each
+T6       equ $5BC0      ; T6: polynomial argument / scratch
+VSTK     equ $5BC8      ; expression value stack, 9 x 5 bytes
+VSTKE    equ $5BF5
+FRP      equ $5BFC      ; saved right-operand pointer (2)
+VSP      equ $5BFE      ; value stack pointer (2)

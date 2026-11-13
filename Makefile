@@ -24,6 +24,10 @@ ifdef REF
 else
 	python3 tools/rig/test_phase1.py
 endif
+	python3 tools/rig/test_maths.py --n 3000
+
+coef:
+	python3 tools/fpcoef.py
 
 fuse: build/opticos.rom
 	python3 tools/fuse_phase1.py build/opticos.rom build/fuse /workspace/spectrum-ball/bounceball.tap
@@ -31,4 +35,4 @@ fuse: build/opticos.rom
 clean:
 	rm -rf build tools/rig/libz80.so
 
-.PHONY: rig zex check fuse clean
+.PHONY: rig zex check fuse clean coef
