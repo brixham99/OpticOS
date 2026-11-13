@@ -190,9 +190,9 @@ ROM: **16,101 placed, 283 free** (was 15,693 / 691). The new code is in seven pi
 
 The maths squeezes came to 39 bytes, not the 130 estimated: the VAL loop and the EXP terms gave less than hoped. The RST `$28` change made up the difference.
 
-## Deviations and things to confirm
+## Deviations
 
-- **RST `$28` (spec decision 14, to confirm).** Decision 5 had RST `$28` raise "Calculator not supported". It now enters OpticOS's maths byte-code. Sinclair calculator code fails on OpticOS either way, but now without the message. Undoing this costs about 99 bytes, which would leave about 185 free, below the margin, and then something else would have to go (for example `ERROR n, msg$`, about 64 bytes plus its hooks, or `CLEAR n`).
+- **RST `$28` (spec decision 14, agreed by Nathan on 13 Nov 2026; it supersedes decision 5).** Decision 5 had RST `$28` raise "Calculator not supported". It now enters OpticOS's maths byte-code. Sinclair calculator code fails on OpticOS either way, but now without the message. Without it the ROM would have about 185 bytes free, below the margin.
 - **Program start moved** from `$5DD0` to `$5DF0`. The 32 bytes below it hold the ERROR message (28) and the tape signature (4). Programs saved by earlier builds still load, because the loader works from the header length, but token values changed with the new keywords, so older saved programs list wrongly.
 - `FREE` is a function (`PRINT FREE`), not a command. `RUN name` and `SAVE … AUTO name` take a PROC with no parameters. EXIT FOR should not be used from inside a TRY within the loop.
 - An unclosed CASE is reported at its last WHEN line, as an unclosed IF is at its last ELSEIF.
@@ -212,4 +212,3 @@ The maths squeezes came to 39 bytes, not the 130 estimated: the VAL loop and the
 - A user manual: OpticBASIC reference, editor keys, tape, and the differences from Sinclair BASIC.
 - An example tape: a few OpticBASIC programs (game, graphics, CASE/TRY demo) saved with `SAVE … AUTO`.
 - A check on a real 48K Spectrum and a real TV: tape loading from audio, timing, the 64-column font's legibility on a CRT, and the start-up chime.
-- Nathan to confirm decision 14 (RST `$28`).
