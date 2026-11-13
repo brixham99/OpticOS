@@ -501,11 +501,11 @@ GLYPHS: dict[str, tuple[str, ...]] = {
     ),
     "O": (
         "....",
-        ".##.",
+        ".#..",
         "#.#.",
         "#.#.",
         "#.#.",
-        ".##.",
+        ".#..",
         "....",
         "....",
     ),
@@ -521,11 +521,11 @@ GLYPHS: dict[str, tuple[str, ...]] = {
     ),
     "Q": (
         "....",
-        ".##.",
+        ".#..",
         "#.#.",
         "#.#.",
+        "#.#.",
         ".##.",
-        "..#.",
         "....",
         "....",
     ),
@@ -684,8 +684,8 @@ GLYPHS: dict[str, tuple[str, ...]] = {
         "....",
         ".##.",
         "#.#.",
-        "#.#.",
         "###.",
+        "#.#.",
         "....",
         "....",
     ),
@@ -802,8 +802,8 @@ GLYPHS: dict[str, tuple[str, ...]] = {
     "m": (
         "....",
         "....",
-        "#.#.",
         "###.",
+        "#.#.",
         "#.#.",
         "#.#.",
         "....",
@@ -822,10 +822,10 @@ GLYPHS: dict[str, tuple[str, ...]] = {
     "o": (
         "....",
         "....",
-        ".##.",
+        ".#..",
         "#.#.",
         "#.#.",
-        ".##.",
+        ".#..",
         "....",
         "....",
     ),
@@ -885,7 +885,7 @@ GLYPHS: dict[str, tuple[str, ...]] = {
         "#.#.",
         "#.#.",
         "#.#.",
-        ".##.",
+        "###.",
         "....",
         "....",
     ),
@@ -1204,41 +1204,71 @@ def render_font_sheet_labelled() -> Image.Image:
 
 def main() -> None:
     validate()
-    here = Path("/workspace/newrom/font")
+    destinations = [
+        Path("/workspace/newrom/font"),
+        Path("/workspace/opticos-repo/font"),
+    ]
     preview = Path("/tmp/opticos-preview")
+    assets = Path("/workspace/opticos-repo/assets")
     preview.mkdir(parents=True, exist_ok=True)
-    here.mkdir(parents=True, exist_ok=True)
+    assets.mkdir(parents=True, exist_ok=True)
 
     blob = packed_bytes()
-    (here / "font4x8.bin").write_bytes(blob)
-    write_font4_txt(here / "font4.txt")
-    write_font4x8_py(here / "font4x8.py", blob)
-
     px = render_screen()
     frame = compose_frame(px)
     frame_3x = frame.resize((FRAME_W * 3, FRAME_H * 3), Image.Resampling.NEAREST)
-    # Also a raw 256x192 (no border) for the decoder later
     raw = Image.new("RGB", (SCREEN_W, SCREEN_H), PAPER)
     for y, row in enumerate(px):
         for x, colour in enumerate(row):
             raw.putpixel((x, y), colour)
+    sheet = render_font_sheet_labelled()
+    crop = raw.crop((0, 0, 34 * 4, 16))
+    closeup = crop.resize((crop.width * 8, crop.height * 8), Image.Resampling.NEAREST)
 
+    for here in destinations:
+        here.mkdir(parents=True, exist_ok=True)
+        (here / "font4x8.bin").write_bytes(blob)
+        write_font4_txt(here / "font4.txt")
+        write_font4x8_py(here / "font4x8.py", blob)
+        # Keep the generator itself in sync when we run from /workspace/newrom/font.
+        src = Path(__file__).resolve()
+        dest = (here / "make_font.py").resolve()
+        if src != dest:
+            dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+        frame.save(here / "opticos_boot.png")
+        frame_3x.save(here / "opticos_boot_3x.png")
+        raw.save(here / "opticos_boot_raw256x192.png")
+
+    # Repo assets: the 1x and 3x frames plus the glyph sheet. Boot PNGs
+    # are not stored under font/ in the public repo.
+    for extra in (Path("/workspace/newrom/font/opticos_boot.png"),
+                  Path("/workspace/newrom/font/opticos_boot_3x.png"),
+                  Path("/workspace/newrom/font/opticos_boot_raw256x192.png")):
+        pass
+    frame.save(assets / "opticos_boot.png")
+    frame_3x.save(assets / "opticos_boot_3x.png")
+    sheet.save(assets / "font_sheet.png")
+    # Review copies
     frame.save(preview / "opticos_boot.png")
     frame_3x.save(preview / "opticos_boot_3x.png")
     raw.save(preview / "opticos_boot_raw256x192.png")
-    render_font_sheet_labelled().save(preview / "font_sheet.png")
+    sheet.save(preview / "font_sheet.png")
+    closeup.save(preview / "banner_closeup.png")
 
-    # Close-up of just the banner row, 8x, so we can judge legibility
-    crop = raw.crop((0, 0, 34 * 4, 16))  # banner + cursor row
-    crop.resize((crop.width * 8, crop.height * 8), Image.Resampling.NEAREST).save(
-        preview / "banner_closeup.png"
-    )
+    # Do not commit boot PNGs inside the repo's font/ directory.
+    for leftover in (
+        Path("/workspace/opticos-repo/font/opticos_boot.png"),
+        Path("/workspace/opticos-repo/font/opticos_boot_3x.png"),
+        Path("/workspace/opticos-repo/font/opticos_boot_raw256x192.png"),
+    ):
+        if leftover.exists():
+            leftover.unlink()
 
     print(f"packed {len(blob)} bytes")
     print(f"frame {FRAME_W}x{FRAME_H}, 3x {FRAME_W*3}x{FRAME_H*3}")
     print(f"banner {len(BANNER)} chars at row {BANNER_ROW} col {BANNER_COL}")
     print(f"cursor at row {CURSOR_ROW} col {CURSOR_COL}")
-    print("wrote", here, "and", preview)
+    print("wrote", ", ".join(str(d) for d in destinations), "and", preview)
 
 
 if __name__ == "__main__":
