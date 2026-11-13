@@ -29,20 +29,23 @@ con_pr: ld a,(EMODE)            ; prompt: ] direct, + AUTO, * EDIT
         rst 16
         ld a,' '
         rst 16
-        call pos_lin
+con_in: call pos_lin
         ld (ESTART),hl
 k_rd:   call redraw
 con_key:
         call con_getkey
         cp 13
         jp z,con_enter
+        ld hl,EMODE
+        bit 2,(hl)              ; INPUT: no editor keys
+        jr nz,ck_n
         cp 7
         jp z,con_edit
         cp 11
         jp z,c_up
         cp 10
         jp z,c_down
-        ld hl,EIDX
+ck_n:   ld hl,EIDX
         cp 8
         jr z,c_left
         cp 9
@@ -124,8 +127,19 @@ con_enter:
         call lin_pos
         ld a,13
         rst 16
+        ld hl,EMODE
+        bit 2,(hl)
+        res 2,(hl)
+        ret nz                  ; back to INPUT
         call con_line
         jp con_new
+; con_inp: read one line into EBUF (CON_LEN) at the print position
+con_inp: xor a
+        ld (CON_LEN),a
+        ld (EIDX),a
+        ld hl,EMODE
+        set 2,(hl)
+        jp con_in
 ; redraw: print the input line from ESTART, then put the cursor at EIDX
 redraw: ld hl,(ESTART)
         call lin_pos

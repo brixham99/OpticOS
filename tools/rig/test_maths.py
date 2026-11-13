@@ -148,11 +148,6 @@ un_test('fp_cos', mp.cos, TRIG, absmode=True, edge=TE)
 un_test('fp_tan', mp.tan, TRIG, absmode=True, edge=[0, 1, -1, 1e-10, 0.785398, 1.5, 100])
 un_test('fp_atn', mp.atan, mix(lambda: rflt(-30, 30), lambda: rnd_in(-3, 3), rint),
         edge=[0, 1, -1, 1e-20, 1e20, mp.sqrt(3), 2 - mp.sqrt(3), 65535])
-ASD = lambda: rnd_in(-1, 1)
-un_test('fp_asn', mp.asin, mix(ASD, lambda: rflt(-30, 0)), errdom=lambda x: abs(x) > 1,
-        edge=[0, 1, -1, 0.5, -0.5, 1e-10, 0.999999, 1.0001])
-un_test('fp_acs', mp.acos, mix(ASD, lambda: rflt(-30, 0)), errdom=lambda x: abs(x) > 1,
-        edge=[0, 1, -1, 0.5, -0.5, 1e-10, 0.999999, -0.999999, 1.0001])
 un_test('fp_exp', mp.exp, mix(lambda: rnd_in(-88, 88), lambda: rnd_in(-1, 1), lambda: rflt(-30, 0)),
         edge=[0, 1, -1, 88, -88, 88.7, 89, -89.5, 1e-10, 10])
 POS = mix(lambda: abs(rflt(-60, 60)), lambda: rnd_in(0.5, 2), lambda: mp.mpf(random.randint(1, 65535)))

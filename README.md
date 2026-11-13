@@ -12,7 +12,7 @@ The boot message reads:
 OpticOS (c) 2026 Optica Technology
 ```
 
-**Status: Phases 0–4 complete.** The ROM boots, loads ordinary game tapes, runs structured OpticBASIC programs, and has a Sinclair-style line editor. Phase 5 (size squeeze and the remaining statements) is next. The design is in the [specification (PDF)](docs/spec.pdf) ([Markdown](docs/spec.md)); §4.8 lists what is built and what is not yet.
+**Status: Phases 0–4 complete; Phase 5 under way.** The ROM boots, loads ordinary game tapes, runs structured OpticBASIC programs, and has a Sinclair-style line editor. Phase 5a added `INPUT`, `DATA`/`READ`/`RESTORE` and `SAVE`/`LOAD`/`VERIFY`. The design is in the [specification (PDF)](docs/spec.pdf) ([Markdown](docs/spec.md)); §4.8 lists what is built and what is not yet.
 
 | Phase | What it delivered | Report |
 |---|---|---|
@@ -20,6 +20,7 @@ OpticOS (c) 2026 Optica Technology
 | 2 | Clean-room floating point: + − × ÷, SQR, SIN/COS/TAN/ATN, EXP/LN, STR$/VAL, RND | [docs/phase2](docs/phase2/README.md), [maths API](docs/maths.md) |
 | 3 | Tokenised interpreter with no line numbers | [docs/phase3](docs/phase3/README.md) |
 | 4 | ZX-style line editor: current-line marker, EDIT, AUTO | [docs/phase4](docs/phase4/README.md) |
+| 5a | Size pass (ASN/ACS dropped), INPUT, DATA/READ/RESTORE, SAVE/LOAD/VERIFY with CODE | [docs/phase5](docs/phase5/README.md) |
 
 ## Screenshots
 
@@ -39,13 +40,14 @@ All are from real [Fuse](https://fuse-emulator.sourceforge.net/) with traps and 
   - named procedures and functions with parameters, dynamic `LOCAL` and recursion; procedures are called by bare name
   - block `IF` / `ELSEIF` / `ELSE` / `ENDIF`, `WHILE` / `WEND`, `REPEAT` / `UNTIL`, `FOR` / `NEXT`, and `TRY` / `CATCH` / `ENDTRY` error handling
   - floats, 16-bit integers (`a%`), strings up to 255 characters with a garbage-collected heap, and arrays of up to 3 dimensions
+  - `INPUT`, `DATA` / `READ` / `RESTORE`, and `SAVE` / `LOAD` / `VERIFY` of programs and `CODE` on a standard tape signal
   - the usual maths and string functions, plus `INKEY$`, `FRAMES`, `MAX`, `MIN`, hex (`&FF`) and binary (`%1010`) literals
   - an indenting `LIST`: the indentation is not stored but recomputed from the block structure
 - **Keywords are typed letter by letter** and tokenised on entry. The keyword legends on the keys are ignored.
 - **Tape compatibility.** The standard ROM tape format and entry points (`LD-BYTES`, `SA-BYTES`, `BEEPER`, the RST vectors and others) are kept, so `LOAD ""` loads ordinary games, including ones with a BASIC loader, through a small legacy shim.
 - **Clean-room implementation.** OpticOS contains no Sinclair, Amstrad or Tasword code or artwork. A build check confirms that no run of 12 or more bytes is shared with the original ROM.
 
-Still to come (Phase 5): `INPUT`, `DATA`/`READ`, `SAVE`/`VERIFY`, graphics (`PLOT`, `DRAW`, `CIRCLE`), `BEEP`, `CASE`, `EXIT`, `SWAP`, `INSTR`, `STRING$`, `HEX$`, `UPPER$`, `ERR$`, and `MODE 32`/UDGs from BASIC.
+Still to come (Phase 5): graphics (`PLOT`, `DRAW`, `CIRCLE`), `BEEP`, `CASE`, `EXIT`, `SWAP`, `INSTR`, `STRING$`, `HEX$`, `UPPER$`, `ERR$`, and `MODE 32`/UDGs from BASIC.
 
 ## A short example
 
@@ -93,27 +95,29 @@ fuse-sdl --machine 48 --rom-48 build/opticos.rom --no-traps --no-detect-loader -
 
 Fuse needs `--no-traps` so that its tape traps don't bypass the OpticOS tape routines. The two loader flags make tapes load in real time, which is how the tests run. `build/` is gitignored. You need `pasmo` 0.5.3, `gcc` and Python 3 with Pillow.
 
-## ROM byte usage (after Phase 4)
+## ROM byte usage (after Phase 5a)
 
-14,426 of 16,384 bytes are placed, leaving **1,958 free**. The largest parts:
+14,899 of 16,384 bytes are placed, leaving **1,485 free**. The largest parts:
 
 | Part | Bytes |
 |---|---:|
-| Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,434 |
+| Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,417 |
 | Floating-point core | 1,424 |
-| Tokeniser, keyword table, LIST | 1,575 |
+| Tokeniser, keyword table, LIST | 1,611 |
 | Expression evaluator and functions | 1,362 |
-| Transcendental functions | 1,320 |
-| Variables, arrays, string heap and GC | 1,286 |
-| Legacy loader shim | 838 |
+| Transcendental functions | 1,243 |
+| Variables, arrays, string heap and GC | 1,297 |
+| Legacy loader shim | 845 |
 | Number ↔ text conversion | 738 |
 | 64-column printing and the screen | 578 |
-| Errors and messages | 490 |
-| Input line and line editor | 654 |
+| Errors and messages | 502 |
+| Input line and line editor | 684 |
+| INPUT, DATA / READ / RESTORE | 182 |
+| Tape commands: SAVE / LOAD / VERIFY | 404 |
 | Font (96 glyphs at 4×8) | 384 |
-| Everything else (restarts, keyboard, tape, beeper, fixed-address stubs) | 1,343 |
+| Everything else (restarts, keyboard, tape signal, beeper, fixed-address stubs) | 1,228 |
 
-On the [spec's budget](docs/spec.md#82-budget) the full planned feature list is still about 1 KB too big for the ROM once a 256-byte safety margin is kept. Phase 5 starts by shrinking the code to make room.
+On the [spec's budget](docs/spec.md#82-budget) the full planned feature list is still about 1,180 bytes too big for the ROM once a 256-byte safety margin is kept. [docs/phase5](docs/phase5/README.md) lists the options for closing the gap.
 
 ## The boot screen
 

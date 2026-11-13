@@ -1096,14 +1096,6 @@ st_randomize:
         call ev_expr
         call pop_int
 sr_go:  jp fp_randomize
-st_load: call tk                ; LOAD "": a tape program (legacy)
-        cp 6
-        jp nz,err_syn
-        inc hl
-        ld a,(hl)
-        or a
-        jp nz,err_syn
-        jp lg_cmd_load
 
 ; ---------------------------------------------------- program lines (editor)
 ; p_ins: insert the tokenised line at TKB before line HL -> HL = it

@@ -12,13 +12,15 @@ LG_PSEP  equ $5B4E              ; PRINT: last item was a separator
 m_leg_s:
 
 ; LOAD "" typed at the console: fetch a program and run it
-lg_cmd_load:
-        ld a,$FF
-        ld (LG_NAME),a
 lg_prog:
         xor a
         ld (LG_WANT),a
         call lg_fetch
+        ld hl,(LEGPROG)         ; "OB": an OpticOS program
+        ld de,$424F
+        or a
+        sbc hl,de
+        jp z,ob_load
         ld hl,LEGPROG           ; PROG, VARS for PEEK 23635-style loaders
         ld (PROG),hl
         ld de,(HDRBUF+15)
@@ -77,16 +79,20 @@ lf_ok:  ld de,(HDRBUF+11)       ; length
         ld ix,LEGPROG
         ld a,(HDRBUF)
         or a
-        jr z,lf_ld
+        jr z,lf_d
         ld ix,(HDRBUF+13)       ; CODE: start from the header ...
-        ld hl,(LG_DEST)         ; ... unless one was given
+lf_d:   ld hl,(LG_DEST)         ; ... unless one was given
         ld a,h
         or l
         jr z,lf_ld
         push hl
         pop ix
-lf_ld:  ld a,$FF
-        scf
+lf_ld:  ld hl,LG_VF            ; load or verify (then back to load)
+        ld a,(hl)
+        ld (hl),0
+        rra
+        ccf
+        ld a,$FF
         call LD_BYTES
         ret c
         rst 8

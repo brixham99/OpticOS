@@ -721,7 +721,7 @@ fi_z:   ld (hl),0
         ld a,1
         jr fc_go
 f_val:  call str_una
-        inc hl
+fv_top: inc hl                  ; HL = string entry on top -> its value
         inc hl
         ld a,(hl)
         cp 32

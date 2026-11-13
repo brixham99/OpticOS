@@ -40,15 +40,19 @@ ws_init: ld hl,(RAMTOP)
         add hl,de
         ld (TKB),hl
         ld (HTOP),hl
-        ld hl,STATIC            ; A%-Z% and the editor variables
+        ld de,OPROG
+; ws_ld: clear A%-Z% and the editor variables; the program ends at DE
+ws_ld:  ld hl,STATIC
         ld b,CON_LEN+1-STATIC
 wi_z:   ld (hl),0
         inc hl
         djnz wi_z
+        ex de,hl
+        jr pn_e
 p_new:  ld hl,0
         ld (CURL),hl
         ld hl,OPROG
-        ld (PEND),hl
+pn_e:   ld (PEND),hl
         jp p_fix
 ; clr_vars: forget every variable and string (A%-Z% are kept)
 clr_vars:
@@ -59,6 +63,9 @@ clr_vars:
 cv_z:   ld (hl),0
         inc hl
         djnz cv_z
+        ld h,b
+        ld l,b
+        ld (DATAP),hl           ; RESTORE
         ld hl,(HTOP)
         ld (HP),hl
         ret

@@ -81,6 +81,7 @@ secE_end:
         org $05E3
         include "edge.asm"
         include "errors.asm"
+        include "tape.asm"
 secF_end:
 
 ; ---------------------------------------------------------------- $096F
@@ -90,6 +91,7 @@ POKE_RET:
 ; ---------------------------------------------------------------- $0970
         include "print.asm"
         include "edit.asm"
+        include "input.asm"
 secG_end:
 
 ; ---------------------------------------------------------------- $0D6B

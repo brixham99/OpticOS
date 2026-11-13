@@ -1,6 +1,6 @@
 # OpticOS: design specification
 
-**Version 0.5, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brings the document in line with the ROM as built through phase 4: a status table (§4.8), the memory map, the phased plan and the BREAK rule.
+**Version 0.6, 13 November 2026.** The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. **v0.6** (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2).
 Project, ROM and future repo name: **OpticOS**. Boot banner: `OpticOS (c) 2026 Optica Technology`.
 
 This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.
@@ -229,7 +229,7 @@ ERROR n [, msg$]                           ' raise an error
 |---|---|
 | `CLS` | Clears with ATTR_P |
 | `PRINT [AT r,c;] [TAB c;] items` | `;` means no gap. `,` jumps to the next 16-column zone. `'` starts a new line. |
-| `INPUT ["prompt";] v [, v…]` | One-line editor on the bottom row |
+| `INPUT ["prompt";] v [, v…]` | As built: each variable gets its own input line at the print position, edited with the console keys (EDIT and the marker keys are off). A number is read as by VAL. |
 | `INK n`, `PAPER n`, `FLASH 0/1`, `BRIGHT 0/1`, `INVERSE 0/1`, `OVER 0/1` | Can also appear inline in PRINT. `8` means transparent. |
 | `BORDER n` | |
 | `MODE 64` / `MODE 32` | Switches the text width. Also clears the screen and homes the cursor. |
@@ -271,7 +271,7 @@ CAT                            ' list tape headers until BREAK
 
 | Group | Functions |
 |---|---|
-| Maths | `ABS SGN INT SQR EXP LN LOG SIN COS TAN ATN ASN ACS PI RND RND(n) MAX(a,b) MIN(a,b)` |
+| Maths | `ABS SGN INT SQR EXP LN LOG SIN COS TAN ATN PI RND RND(n) MAX(a,b) MIN(a,b)` (ASN and ACS were dropped in v0.6 to save ROM; use `ATN(x/SQR(1-x*x))`) |
 | String | `LEN LEFT$ RIGHT$ MID$ CHR$ ASC STR$ VAL INSTR(a$,b$[,start]) STRING$(n,s$) HEX$(n) UPPER$` |
 | Input | `INKEY$`, `KEY(k$)` (true while that key is held, with no repeat, which suits games), `JOY` (Kempston) |
 | Machine | `PEEK DPEEK IN(port) USR(addr)` (returns BC, as Sinclair does), `FRAMES`, `FREE` |
@@ -341,20 +341,20 @@ UNTIL g% = secret%
 
 ---
 
-### 4.8 Implementation status (as built through phase 4)
+### 4.8 Implementation status (as built through phase 5a)
 
-Everything in §4.1–§4.7 is the target language. This table shows what the ROM actually does after phase 4. Phase 5 works through the "not yet" column (§11).
+Everything in §4.1–§4.7 is the target language. This table shows what the ROM actually does after phase 5a (the size pass and the core I/O statements). Phase 5 works through the "not yet" column (§11).
 
 | Area | Built | Not yet |
 |---|---|---|
 | Structure | `DEF name(params)` … `ENDPROC`, `DEF name(params)` … `RETURN v` … `ENDFN`, one-line `DEF name(p) = expr` (the words `PROC` and `FN` after `DEF` are optional, and `FN` is optional in a call), dynamic `LOCAL`, recursion, bare-name PROC calls, `END`, `STOP`, `REM`, `'` | `LABEL` / `GOTO`, passing arrays by reference |
 | Control flow | one-line and block `IF` / `ELSEIF` / `ELSE` / `ENDIF`, `WHILE` / `WEND`, `REPEAT` / `UNTIL`, `FOR` … `NEXT [v]`, `TRY` / `CATCH` / `ENDTRY`, `ERROR n` | `CASE`, `EXIT`, `ERROR n, msg$` |
-| Data | `LET` or bare assignment, `DIM` (up to 3 dimensions, base 0), `RANDOMIZE` | `SWAP`, `DATA` / `READ` / `RESTORE`, `CLEAR` |
-| Screen | `CLS`, `PRINT` / `?` with `;` `,` `'` `AT` `TAB`, `INK`, `PAPER`, `BORDER` | `INPUT`, `FLASH` / `BRIGHT` / `INVERSE` / `OVER`, colours inside PRINT, `MODE 32` from BASIC, `UDG`, graphics |
+| Data | `LET` or bare assignment, `DIM` (up to 3 dimensions, base 0), `RANDOMIZE`, `DATA` / `READ` / `RESTORE` (a DATA statement must start its line; items are any expressions; RUN restores) | `SWAP`, `CLEAR`, `RESTORE label` |
+| Screen | `CLS`, `PRINT` / `?` with `;` `,` `'` `AT` `TAB`, `INK`, `PAPER`, `BORDER`, `INPUT` | `FLASH` / `BRIGHT` / `INVERSE` / `OVER`, colours inside PRINT, `MODE 32` from BASIC, `UDG`, graphics |
 | Sound and machine | `POKE`, `WAIT` | `BEEP`, `SOUND`, `DPOKE`, `OUT`, `CALL` |
-| Tape | `LOAD ""` (OpticOS or legacy program) | `SAVE`, `VERIFY`, `CODE` / `SCREEN$` forms, `CAT` |
+| Tape | `SAVE "name"`, `SAVE "name" CODE start, length`, `LOAD "name"` / `LOAD ""` (OpticOS or legacy program), `LOAD "name" CODE [start]`, `VERIFY` with the same forms | `SAVE … AUTO`, `SCREEN$` forms, `CAT` |
 | Direct mode | `RUN`, `LIST`, `NEW`, `AUTO`, `EDIT` key, any statement | `RUN label`, `LIST name`, `CONT`, `FIND`, `FREE` |
-| Functions | `ABS SGN INT SQR EXP LN LOG SIN COS TAN ATN ASN ACS PI RND RND(n) MAX MIN LEN LEFT$ RIGHT$ MID$ CHR$ ASC STR$ VAL PEEK ERR TRUE FALSE INKEY$ FRAMES` | `INSTR STRING$ HEX$ UPPER$ KEY JOY DPEEK IN USR FREE POINT ATTR SCREEN$ ERR$ ERRLINE ERRPROC$` |
+| Functions | `ABS SGN INT SQR EXP LN LOG SIN COS TAN ATN PI RND RND(n) MAX MIN LEN LEFT$ RIGHT$ MID$ CHR$ ASC STR$ VAL PEEK ERR TRUE FALSE INKEY$ FRAMES` | `INSTR STRING$ HEX$ UPPER$ KEY JOY DPEEK IN USR FREE POINT ATTR SCREEN$ ERR$ ERRLINE ERRPROC$` |
 
 Differences from the text above, as built:
 
@@ -589,7 +589,7 @@ For `+ - * < = …`, `DIV`, `MOD`, `AND`, `OR` and shifts, if both operands are 
   | Function | Method |
   |---|---|
   | SIN, COS | Reduce to ±π/4, 6 terms |
-  | ATN | Reduce to [0, 1], 8 terms. ASN and ACS are derived from it. |
+  | ATN | Reduce to [0, 1], 8 terms. (ASN and ACS were dropped in v0.6.) |
   | LN | Mantissa in [0.5, 1], 7 terms |
   | EXP | 2^n × series |
   | SQR | Newton iteration, 4–5 steps |
@@ -614,41 +614,43 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 
 ### 8.2 Budget
 
-| # | Module | v0.2 budget | Built after phase 4 | v0.4 budget |
+| # | Module | v0.2 budget | Built after phase 5a | v0.6 budget |
 |---|---|---:|---:|---:|
 | 1 | Restarts, NMI, reset, RAM test, system-variable and channel init | 380 | 292 | 300 |
 | 2 | Boot banner plus the call to print it | 40 | 61 | 65 |
 | 3 | Interrupt routine, keyboard scan, debounce and repeat, key tables | 520 | 355 | 420 |
-| 4 | 64-column print, control codes, AT/TAB, colours, scroll, cursor (INVERSE/OVER to come) | 1,000 | 578 | 800 |
+| 4 | 64-column print, control codes, AT/TAB, colours, scroll, cursor (INVERSE/OVER/FLASH/BRIGHT to come) | 1,000 | 578 | 800 |
 | 5 | MODE 32 | 110 | – | 110 |
 | 6 | Block-graphics generator and 2-column UDG print | 60 | – | 60 |
 | 7 | **4-pixel font, 96 glyphs, 2 per byte** | 384 | 384 | 384 |
 | 8 | Tape low level: SA-BYTES, LD-BYTES, edge routines | 380 | 310 | 330 |
-| 9 | Tape commands: SAVE/LOAD/VERIFY/CAT, headers (only LOAD "" so far) | 520 | 115 | 450 |
-| 10 | Sound: BEEPER, BEEP, SOUND | 160 | 82 | 160 |
+| 9 | Tape commands: SAVE/LOAD/VERIFY with CODE (built); SCREEN$, CAT to come | 520 | 404 | 450 |
+| 10 | Sound: BEEPER (built), BEEP, SOUND | 160 | 82 | 160 |
 | 11 | Graphics: PLOT, DRAW, CIRCLE, POINT, ATTR, SCREEN$ | 620 | – | 620 |
 | 12 | Float core | 1,100 | 1,424 | 1,424 |
 | 13 | Number ↔ string, pr_dec / pr_hex | 550 | 788 | 800 |
-| 14 | Transcendentals, byte-code runner, coefficient tables | 950 | 1,320 | 1,320 |
-| 15–17 | Tokeniser, LIST auto-indent, keyword table, dispatch tables | 1,500 | 1,575 | 1,600 |
+| 14 | Transcendentals, byte-code runner, coefficient tables (ASN/ACS dropped) | 950 | 1,243 | 1,243 |
+| 15–17 | Tokeniser, LIST auto-indent, keyword table, dispatch tables (about 45 keywords still to add, about 270 bytes) | 1,500 | 1,611 | 1,880 |
 | 18 | Expression evaluator and functions | 850 | 1,362 | 1,400 |
-| 19 | Interpreter core: run loop, statements, prepass, PROC/FN/LOCAL/TRY (EXIT etc. to come) | 1,550 | 2,286 | 2,450 |
+| 19 | Interpreter core: run loop, statements, prepass, PROC/FN/LOCAL/TRY (EXIT, SWAP, LABEL etc. to come) | 1,550 | 2,269 | 2,450 |
 | 20 | CASE / WHEN / OTHERWISE | 150 | – | 150 |
-| 21–22 | Variables, arrays, string heap and GC, value and control stacks (INSTR etc. to come) | 1,150 | 1,288 | 1,400 |
-| 23 | I/O and miscellaneous statements (INPUT, DATA/READ, IN/OUT, CALL/USR, KEY, JOY …) | 450 | – | 450 |
-| 24 | Line editor: marker, LIST around it, cursor keys, EDIT, AUTO, 126-character input line, line insert/delete (v0.3 budgeted 1,400 for a full-screen editor) | 1,400 | 585 | 600 |
+| 21–22 | Variables, arrays, string heap and GC, value and control stacks (INSTR etc. to come) | 1,150 | 1,297 | 1,400 |
+| 23 | I/O statements: INPUT, DATA/READ/RESTORE (built); IN/OUT, CALL/USR, KEY, JOY, DPEEK/DPOKE, FREE to come | 450 | 212 | 400 |
+| 24 | Line editor (the 4 bytes of the AUTO keyword are counted in 15–17) | 1,400 | 581 | 600 |
 | 25 | Direct mode and console | 250 | 221 | 250 |
-| 26 | Errors: RST 8 unwind and messages | 450 | 490 | 520 |
-| 27 | Legacy loader shim (Sinclair BASIC subset) | 650 | 838 | 850 |
+| 26 | Errors: RST 8 unwind and messages | 450 | 502 | 560 |
+| 27 | Legacy loader shim (Sinclair BASIC subset) | 650 | 845 | 850 |
 | 28 | Fixed-address stubs and fragmentation loss around fixed points | 200 | 78 | 200 |
-| | **Total** | **15,374** | **14,426** | **17,113** |
-| | **Margin (of 16,384)** | **1,010** | **1,958 free now** | **−729 (over)** |
+| | **Total** | **15,374** | **14,899** | **17,306** |
+| | **Margin (of 16,384)** | **1,010** | **1,485 free now** | **−922 (over)** |
 
 **Rebalance after phase 3 (v0.3).** The maths (items 12–14, +882 bytes) and the interpreter (items 15–22, +1,450 bytes) came out larger than the v0.2 estimates. As agreed, the size reduction is left to phase 5, and the budgets above now record what was built, with room kept for the features each module still lacks. The ROM built so far fits, with 2,543 bytes free (well above the 256-byte margin rule). The free space is in seven gaps between fixed addresses, the largest being 613 bytes, so later modules must be split to fit.
 
 **Rebalance after phase 4 (v0.4).** The full-screen editor (1,400) is replaced by a Sinclair-style line editor, built in 585 bytes and budgeted at 600. That recovers 800 bytes of the overrun. The ROM as built has 1,958 bytes free, spread over seven gaps (the largest now 397 bytes).
 
-**Warning: the full feature list still does not fit.** With the v0.4 budgets the finished ROM would need 17,113 bytes, which is 729 over 16,384, or about **985 bytes over** once the 256-byte margin is kept. Phase 5 has to save about 1 KB, by shrinking the maths and interpreter, cutting features, or both. The likely sources are: the byte-code runner used more widely in the maths (about 300–400); the evaluator and statement code tightened, for example shared argument parsing and RST-based helpers (about 400–600); a smaller legacy shim (about 200); shorter error texts made from keyword tokens (about 150); and dropping or simplifying the MODE 32, CASE or SOUND items if that is still not enough.
+**Rebalance in phase 5a (v0.6).** ASN and ACS were dropped (−87 bytes with their keywords). INPUT, DATA/READ/RESTORE and SAVE/LOAD/VERIFY with CODE were built in 501 bytes (212 + 289), less than their budgets. The v0.4 projection had not counted the keyword table for the keywords still to come, so row 15–17 now includes about 270 bytes for them, and row 26 includes room for a few more messages.
+
+**Warning: the full feature list still does not fit.** With the v0.6 budgets the finished ROM would need 17,306 bytes, which is 922 over 16,384, or about **1,180 bytes over** once the 256-byte margin is kept. The ROM as built has 1,485 bytes free, so about 1,230 bytes are usable for the remaining features, against about 2,400 bytes of budget. Phase 5 has to close that gap with a mix of squeezing and cuts. Candidate squeezes: the remaining maths items (STR$ small-integer path, compare, COS from SIN, EXP terms, VAL, xorshift; about 290), and shared argument parsing and RST helpers in the evaluator and statements (about 300). Candidate cuts, to be agreed with Nathan: SCREEN$(r,c), ATTR and POINT (about 120), CIRCLE (about 90), MODE 32 and UDG print (170), SOUND (about 40), FIND, CONT, ERRLINE and ERRPROC$ (about 150 with their keywords), LABEL/GOTO (about 100), and a trimmed legacy shim (about 150).
 
 The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print logic costs about 100 bytes more than a plain 32-column printer, so the change of display gained roughly 200 bytes overall. Adding an 8×8 font at `$3D00` would bring the total to 16,142, leaving a margin of 242 (1.5%). That is too thin, so the font is left out for now (§12).
 
@@ -781,4 +783,4 @@ Nathan agreed all six recommendations on 13 November 2026.
 6. **`LOCAL` is dynamic, in the BBC style**, not true lexical scope. Lexical scope would need per-PROC symbol tables, at about 300 bytes plus a slower lookup.
 7. **No full-screen editor** (Nathan, later on 13 Nov 2026, for phase 4). Use the ZX BASIC pattern instead: a current-line marker moved with the cursor keys over a LIST, and EDIT to bring that line into the input line (§6.5).
 
-*End of specification v0.5.*
+*End of specification v0.6.*

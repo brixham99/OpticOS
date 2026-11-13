@@ -17,7 +17,7 @@ class Basic:
         s = self.s; assert len(text) <= 126, text
         if not s.run_until(SYM['cg_lp'], 20_000_000): raise TimeoutError('not at prompt')
         s.load(LINEBUF, text.encode()); s.poke(CON_LEN, len(text))
-        s.setregs(PC=SYM['con_enter'])
+        s.setregs(PC=SYM['con_enter'], SP=s.regs()['SP'] + 2)   # leave con_getkey as ENTER would
         if not s.run_until(SYM['cg_lp'], limit): raise TimeoutError('line did not finish: ' + text)
     def enter(self, prog):
         """AUTO, the lines (each goes in after the current line), empty line"""

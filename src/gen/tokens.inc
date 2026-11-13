@@ -36,51 +36,56 @@ T_WAIT       equ $A1
 T_RANDOMIZE  equ $A2
 T_LOAD       equ $A3
 T_AUTO       equ $A4
-T_THEN       equ $A5
-T_TO         equ $A6
-T_STEP       equ $A7
-T_PROC       equ $A8
-T_FN         equ $A9
-T_AND        equ $AA
-T_OR         equ $AB
-T_XOR        equ $AC
-T_NOT        equ $AD
-T_DIV        equ $AE
-T_MOD        equ $AF
-T_AT         equ $B0
-T_TAB        equ $B1
-T_SQR        equ $B2
-T_SIN        equ $B3
-T_COS        equ $B4
-T_TAN        equ $B5
-T_ATN        equ $B6
-T_ASN        equ $B7
-T_ACS        equ $B8
-T_EXP        equ $B9
-T_LN         equ $BA
-T_LOG        equ $BB
-T_INT        equ $BC
-T_ABS        equ $BD
-T_SGN        equ $BE
-T_PI         equ $BF
-T_RND        equ $C0
-T_LEN        equ $C1
-T_LEFTS      equ $C2
-T_RIGHTS     equ $C3
-T_MIDS       equ $C4
-T_CHRS       equ $C5
-T_ASC        equ $C6
-T_STRS       equ $C7
-T_VAL        equ $C8
-T_PEEK       equ $C9
-T_ERR        equ $CA
-T_TRUE       equ $CB
-T_FALSE      equ $CC
-T_INKEYS     equ $CD
-T_FRAMES     equ $CE
-T_MAX        equ $CF
-T_MIN        equ $D0
-T_NSTMT    equ 37
+T_INPUT      equ $A5
+T_DATA       equ $A6
+T_READ       equ $A7
+T_RESTORE    equ $A8
+T_SAVE       equ $A9
+T_VERIFY     equ $AA
+T_THEN       equ $AB
+T_TO         equ $AC
+T_STEP       equ $AD
+T_PROC       equ $AE
+T_FN         equ $AF
+T_AND        equ $B0
+T_OR         equ $B1
+T_XOR        equ $B2
+T_NOT        equ $B3
+T_DIV        equ $B4
+T_MOD        equ $B5
+T_AT         equ $B6
+T_TAB        equ $B7
+T_CODE       equ $B8
+T_SQR        equ $B9
+T_SIN        equ $BA
+T_COS        equ $BB
+T_TAN        equ $BC
+T_ATN        equ $BD
+T_EXP        equ $BE
+T_LN         equ $BF
+T_LOG        equ $C0
+T_INT        equ $C1
+T_ABS        equ $C2
+T_SGN        equ $C3
+T_PI         equ $C4
+T_RND        equ $C5
+T_LEN        equ $C6
+T_LEFTS      equ $C7
+T_RIGHTS     equ $C8
+T_MIDS       equ $C9
+T_CHRS       equ $CA
+T_ASC        equ $CB
+T_STRS       equ $CC
+T_VAL        equ $CD
+T_PEEK       equ $CE
+T_ERR        equ $CF
+T_TRUE       equ $D0
+T_FALSE      equ $D1
+T_INKEYS     equ $D2
+T_FRAMES     equ $D3
+T_MAX        equ $D4
+T_MIN        equ $D5
+T_NSTMT    equ 43
 T_LE       equ $08
 T_GE       equ $09
 T_NE       equ $0A
@@ -124,6 +129,12 @@ kw_tab:
         defb 'R','A','N','D','O','M','I','Z','E'+$80
         defb 'L','O','A','D'+$80
         defb 'A','U','T','O'+$80
+        defb 'I','N','P','U','T'+$80
+        defb 'D','A','T','A'+$80
+        defb 'R','E','A','D'+$80
+        defb 'R','E','S','T','O','R','E'+$80
+        defb 'S','A','V','E'+$80
+        defb 'V','E','R','I','F','Y'+$80
         defb 'T','H','E','N'+$80
         defb 'T','O'+$80
         defb 'S','T','E','P'+$80
@@ -137,13 +148,12 @@ kw_tab:
         defb 'M','O','D'+$80
         defb 'A','T'+$80
         defb 'T','A','B'+$80
+        defb 'C','O','D','E'+$80
         defb 'S','Q','R'+$80
         defb 'S','I','N'+$80
         defb 'C','O','S'+$80
         defb 'T','A','N'+$80
         defb 'A','T','N'+$80
-        defb 'A','S','N'+$80
-        defb 'A','C','S'+$80
         defb 'E','X','P'+$80
         defb 'L','N'+$80
         defb 'L','O','G'+$80
@@ -207,14 +217,18 @@ st_tab:
         defw st_randomize
         defw st_load
         defw st_auto
+        defw st_input
+        defw st_data
+        defw st_read
+        defw st_restore
+        defw st_save
+        defw st_verify
 fnu_tab:
         defw fp_sqr
         defw fp_sin
         defw fp_cos
         defw fp_tan
         defw fp_atn
-        defw fp_asn
-        defw fp_acs
         defw fp_exp
         defw fp_ln
         defw fp_log

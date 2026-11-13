@@ -4,7 +4,7 @@ table{border-collapse:collapse;margin:.6em 0;width:100%;font-size:8.8pt}td,th{bo
 pre{background:#f4f4f7;border:1px solid #dde;padding:6px;font-size:8.3pt;white-space:pre-wrap;page-break-inside:avoid}code{font-family:'DejaVu Sans Mono',monospace;font-size:92%}
 @page{size:A4;margin:16mm 14mm}</style></head><body>
 <h1>OpticOS: design specification</h1>
-<p><strong>Version 0.5, 13 November 2026.</strong> The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brings the document in line with the ROM as built through phase 4: a status table (§4.8), the memory map, the phased plan and the BREAK rule.
+<p><strong>Version 0.6, 13 November 2026.</strong> The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. <strong>v0.6</strong> (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2).
 Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>OpticOS (c) 2026 Optica Technology</code>.</p>
 <p>This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.</p>
 <hr />
@@ -493,7 +493,7 @@ ERROR n [, msg$]                           ' raise an error
 </tr>
 <tr>
 <td><code>INPUT ["prompt";] v [, v…]</code></td>
-<td>One-line editor on the bottom row</td>
+<td>As built: each variable gets its own input line at the print position, edited with the console keys (EDIT and the marker keys are off). A number is read as by VAL.</td>
 </tr>
 <tr>
 <td><code>INK n</code>, <code>PAPER n</code>, <code>FLASH 0/1</code>, <code>BRIGHT 0/1</code>, <code>INVERSE 0/1</code>, <code>OVER 0/1</code></td>
@@ -544,7 +544,7 @@ CAT                            ' list tape headers until BREAK
 <tbody>
 <tr>
 <td>Maths</td>
-<td><code>ABS SGN INT SQR EXP LN LOG SIN COS TAN ATN ASN ACS PI RND RND(n) MAX(a,b) MIN(a,b)</code></td>
+<td><code>ABS SGN INT SQR EXP LN LOG SIN COS TAN ATN PI RND RND(n) MAX(a,b) MIN(a,b)</code> (ASN and ACS were dropped in v0.6 to save ROM; use <code>ATN(x/SQR(1-x*x))</code>)</td>
 </tr>
 <tr>
 <td>String</td>
@@ -620,8 +620,8 @@ REPEAT
 UNTIL g% = secret%
 </code></pre>
 <hr />
-<h3>4.8 Implementation status (as built through phase 4)</h3>
-<p>Everything in §4.1–§4.7 is the target language. This table shows what the ROM actually does after phase 4. Phase 5 works through the "not yet" column (§11).</p>
+<h3>4.8 Implementation status (as built through phase 5a)</h3>
+<p>Everything in §4.1–§4.7 is the target language. This table shows what the ROM actually does after phase 5a (the size pass and the core I/O statements). Phase 5 works through the "not yet" column (§11).</p>
 <table>
 <thead>
 <tr>
@@ -643,13 +643,13 @@ UNTIL g% = secret%
 </tr>
 <tr>
 <td>Data</td>
-<td><code>LET</code> or bare assignment, <code>DIM</code> (up to 3 dimensions, base 0), <code>RANDOMIZE</code></td>
-<td><code>SWAP</code>, <code>DATA</code> / <code>READ</code> / <code>RESTORE</code>, <code>CLEAR</code></td>
+<td><code>LET</code> or bare assignment, <code>DIM</code> (up to 3 dimensions, base 0), <code>RANDOMIZE</code>, <code>DATA</code> / <code>READ</code> / <code>RESTORE</code> (a DATA statement must start its line; items are any expressions; RUN restores)</td>
+<td><code>SWAP</code>, <code>CLEAR</code>, <code>RESTORE label</code></td>
 </tr>
 <tr>
 <td>Screen</td>
-<td><code>CLS</code>, <code>PRINT</code> / <code>?</code> with <code>;</code> <code>,</code> <code>'</code> <code>AT</code> <code>TAB</code>, <code>INK</code>, <code>PAPER</code>, <code>BORDER</code></td>
-<td><code>INPUT</code>, <code>FLASH</code> / <code>BRIGHT</code> / <code>INVERSE</code> / <code>OVER</code>, colours inside PRINT, <code>MODE 32</code> from BASIC, <code>UDG</code>, graphics</td>
+<td><code>CLS</code>, <code>PRINT</code> / <code>?</code> with <code>;</code> <code>,</code> <code>'</code> <code>AT</code> <code>TAB</code>, <code>INK</code>, <code>PAPER</code>, <code>BORDER</code>, <code>INPUT</code></td>
+<td><code>FLASH</code> / <code>BRIGHT</code> / <code>INVERSE</code> / <code>OVER</code>, colours inside PRINT, <code>MODE 32</code> from BASIC, <code>UDG</code>, graphics</td>
 </tr>
 <tr>
 <td>Sound and machine</td>
@@ -658,8 +658,8 @@ UNTIL g% = secret%
 </tr>
 <tr>
 <td>Tape</td>
-<td><code>LOAD ""</code> (OpticOS or legacy program)</td>
-<td><code>SAVE</code>, <code>VERIFY</code>, <code>CODE</code> / <code>SCREEN$</code> forms, <code>CAT</code></td>
+<td><code>SAVE "name"</code>, <code>SAVE "name" CODE start, length</code>, <code>LOAD "name"</code> / <code>LOAD ""</code> (OpticOS or legacy program), <code>LOAD "name" CODE [start]</code>, <code>VERIFY</code> with the same forms</td>
+<td><code>SAVE … AUTO</code>, <code>SCREEN$</code> forms, <code>CAT</code></td>
 </tr>
 <tr>
 <td>Direct mode</td>
@@ -668,7 +668,7 @@ UNTIL g% = secret%
 </tr>
 <tr>
 <td>Functions</td>
-<td><code>ABS SGN INT SQR EXP LN LOG SIN COS TAN ATN ASN ACS PI RND RND(n) MAX MIN LEN LEFT$ RIGHT$ MID$ CHR$ ASC STR$ VAL PEEK ERR TRUE FALSE INKEY$ FRAMES</code></td>
+<td><code>ABS SGN INT SQR EXP LN LOG SIN COS TAN ATN PI RND RND(n) MAX MIN LEN LEFT$ RIGHT$ MID$ CHR$ ASC STR$ VAL PEEK ERR TRUE FALSE INKEY$ FRAMES</code></td>
 <td><code>INSTR STRING$ HEX$ UPPER$ KEY JOY DPEEK IN USR FREE POINT ATTR SCREEN$ ERR$ ERRLINE ERRPROC$</code></td>
 </tr>
 </tbody>
@@ -1003,7 +1003,7 @@ row:  ld   a,(de)      ;  7
 </tr>
 <tr>
 <td>ATN</td>
-<td>Reduce to [0, 1], 8 terms. ASN and ACS are derived from it.</td>
+<td>Reduce to [0, 1], 8 terms. (ASN and ACS were dropped in v0.6.)</td>
 </tr>
 <tr>
 <td>LN</td>
@@ -1043,8 +1043,8 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <th>#</th>
 <th>Module</th>
 <th style="text-align: right;">v0.2 budget</th>
-<th style="text-align: right;">Built after phase 4</th>
-<th style="text-align: right;">v0.4 budget</th>
+<th style="text-align: right;">Built after phase 5a</th>
+<th style="text-align: right;">v0.6 budget</th>
 </tr>
 </thead>
 <tbody>
@@ -1071,7 +1071,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 </tr>
 <tr>
 <td>4</td>
-<td>64-column print, control codes, AT/TAB, colours, scroll, cursor (INVERSE/OVER to come)</td>
+<td>64-column print, control codes, AT/TAB, colours, scroll, cursor (INVERSE/OVER/FLASH/BRIGHT to come)</td>
 <td style="text-align: right;">1,000</td>
 <td style="text-align: right;">578</td>
 <td style="text-align: right;">800</td>
@@ -1106,14 +1106,14 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 </tr>
 <tr>
 <td>9</td>
-<td>Tape commands: SAVE/LOAD/VERIFY/CAT, headers (only LOAD "" so far)</td>
+<td>Tape commands: SAVE/LOAD/VERIFY with CODE (built); SCREEN$, CAT to come</td>
 <td style="text-align: right;">520</td>
-<td style="text-align: right;">115</td>
+<td style="text-align: right;">404</td>
 <td style="text-align: right;">450</td>
 </tr>
 <tr>
 <td>10</td>
-<td>Sound: BEEPER, BEEP, SOUND</td>
+<td>Sound: BEEPER (built), BEEP, SOUND</td>
 <td style="text-align: right;">160</td>
 <td style="text-align: right;">82</td>
 <td style="text-align: right;">160</td>
@@ -1141,17 +1141,17 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 </tr>
 <tr>
 <td>14</td>
-<td>Transcendentals, byte-code runner, coefficient tables</td>
+<td>Transcendentals, byte-code runner, coefficient tables (ASN/ACS dropped)</td>
 <td style="text-align: right;">950</td>
-<td style="text-align: right;">1,320</td>
-<td style="text-align: right;">1,320</td>
+<td style="text-align: right;">1,243</td>
+<td style="text-align: right;">1,243</td>
 </tr>
 <tr>
 <td>15–17</td>
-<td>Tokeniser, LIST auto-indent, keyword table, dispatch tables</td>
+<td>Tokeniser, LIST auto-indent, keyword table, dispatch tables (about 45 keywords still to add, about 270 bytes)</td>
 <td style="text-align: right;">1,500</td>
-<td style="text-align: right;">1,575</td>
-<td style="text-align: right;">1,600</td>
+<td style="text-align: right;">1,611</td>
+<td style="text-align: right;">1,880</td>
 </tr>
 <tr>
 <td>18</td>
@@ -1162,9 +1162,9 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 </tr>
 <tr>
 <td>19</td>
-<td>Interpreter core: run loop, statements, prepass, PROC/FN/LOCAL/TRY (EXIT etc. to come)</td>
+<td>Interpreter core: run loop, statements, prepass, PROC/FN/LOCAL/TRY (EXIT, SWAP, LABEL etc. to come)</td>
 <td style="text-align: right;">1,550</td>
-<td style="text-align: right;">2,286</td>
+<td style="text-align: right;">2,269</td>
 <td style="text-align: right;">2,450</td>
 </tr>
 <tr>
@@ -1178,21 +1178,21 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <td>21–22</td>
 <td>Variables, arrays, string heap and GC, value and control stacks (INSTR etc. to come)</td>
 <td style="text-align: right;">1,150</td>
-<td style="text-align: right;">1,288</td>
+<td style="text-align: right;">1,297</td>
 <td style="text-align: right;">1,400</td>
 </tr>
 <tr>
 <td>23</td>
-<td>I/O and miscellaneous statements (INPUT, DATA/READ, IN/OUT, CALL/USR, KEY, JOY …)</td>
+<td>I/O statements: INPUT, DATA/READ/RESTORE (built); IN/OUT, CALL/USR, KEY, JOY, DPEEK/DPOKE, FREE to come</td>
 <td style="text-align: right;">450</td>
-<td style="text-align: right;">–</td>
-<td style="text-align: right;">450</td>
+<td style="text-align: right;">212</td>
+<td style="text-align: right;">400</td>
 </tr>
 <tr>
 <td>24</td>
-<td>Line editor: marker, LIST around it, cursor keys, EDIT, AUTO, 126-character input line, line insert/delete (v0.3 budgeted 1,400 for a full-screen editor)</td>
+<td>Line editor (the 4 bytes of the AUTO keyword are counted in 15–17)</td>
 <td style="text-align: right;">1,400</td>
-<td style="text-align: right;">585</td>
+<td style="text-align: right;">581</td>
 <td style="text-align: right;">600</td>
 </tr>
 <tr>
@@ -1206,14 +1206,14 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <td>26</td>
 <td>Errors: RST 8 unwind and messages</td>
 <td style="text-align: right;">450</td>
-<td style="text-align: right;">490</td>
-<td style="text-align: right;">520</td>
+<td style="text-align: right;">502</td>
+<td style="text-align: right;">560</td>
 </tr>
 <tr>
 <td>27</td>
 <td>Legacy loader shim (Sinclair BASIC subset)</td>
 <td style="text-align: right;">650</td>
-<td style="text-align: right;">838</td>
+<td style="text-align: right;">845</td>
 <td style="text-align: right;">850</td>
 </tr>
 <tr>
@@ -1227,21 +1227,22 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <td></td>
 <td><strong>Total</strong></td>
 <td style="text-align: right;"><strong>15,374</strong></td>
-<td style="text-align: right;"><strong>14,426</strong></td>
-<td style="text-align: right;"><strong>17,113</strong></td>
+<td style="text-align: right;"><strong>14,899</strong></td>
+<td style="text-align: right;"><strong>17,306</strong></td>
 </tr>
 <tr>
 <td></td>
 <td><strong>Margin (of 16,384)</strong></td>
 <td style="text-align: right;"><strong>1,010</strong></td>
-<td style="text-align: right;"><strong>1,958 free now</strong></td>
-<td style="text-align: right;"><strong>−729 (over)</strong></td>
+<td style="text-align: right;"><strong>1,485 free now</strong></td>
+<td style="text-align: right;"><strong>−922 (over)</strong></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Rebalance after phase 3 (v0.3).</strong> The maths (items 12–14, +882 bytes) and the interpreter (items 15–22, +1,450 bytes) came out larger than the v0.2 estimates. As agreed, the size reduction is left to phase 5, and the budgets above now record what was built, with room kept for the features each module still lacks. The ROM built so far fits, with 2,543 bytes free (well above the 256-byte margin rule). The free space is in seven gaps between fixed addresses, the largest being 613 bytes, so later modules must be split to fit.</p>
 <p><strong>Rebalance after phase 4 (v0.4).</strong> The full-screen editor (1,400) is replaced by a Sinclair-style line editor, built in 585 bytes and budgeted at 600. That recovers 800 bytes of the overrun. The ROM as built has 1,958 bytes free, spread over seven gaps (the largest now 397 bytes).</p>
-<p><strong>Warning: the full feature list still does not fit.</strong> With the v0.4 budgets the finished ROM would need 17,113 bytes, which is 729 over 16,384, or about <strong>985 bytes over</strong> once the 256-byte margin is kept. Phase 5 has to save about 1 KB, by shrinking the maths and interpreter, cutting features, or both. The likely sources are: the byte-code runner used more widely in the maths (about 300–400); the evaluator and statement code tightened, for example shared argument parsing and RST-based helpers (about 400–600); a smaller legacy shim (about 200); shorter error texts made from keyword tokens (about 150); and dropping or simplifying the MODE 32, CASE or SOUND items if that is still not enough.</p>
+<p><strong>Rebalance in phase 5a (v0.6).</strong> ASN and ACS were dropped (−87 bytes with their keywords). INPUT, DATA/READ/RESTORE and SAVE/LOAD/VERIFY with CODE were built in 501 bytes (212 + 289), less than their budgets. The v0.4 projection had not counted the keyword table for the keywords still to come, so row 15–17 now includes about 270 bytes for them, and row 26 includes room for a few more messages.</p>
+<p><strong>Warning: the full feature list still does not fit.</strong> With the v0.6 budgets the finished ROM would need 17,306 bytes, which is 922 over 16,384, or about <strong>1,180 bytes over</strong> once the 256-byte margin is kept. The ROM as built has 1,485 bytes free, so about 1,230 bytes are usable for the remaining features, against about 2,400 bytes of budget. Phase 5 has to close that gap with a mix of squeezing and cuts. Candidate squeezes: the remaining maths items (STR$ small-integer path, compare, COS from SIN, EXP terms, VAL, xorshift; about 290), and shared argument parsing and RST helpers in the evaluator and statements (about 300). Candidate cuts, to be agreed with Nathan: SCREEN$(r,c), ATTR and POINT (about 120), CIRCLE (about 90), MODE 32 and UDG print (170), SOUND (about 40), FIND, CONT, ERRLINE and ERRPROC$ (about 150 with their keywords), LABEL/GOTO (about 100), and a trimmed legacy shim (about 150).</p>
 <p>The 4-pixel font saves 384 bytes compared with an 8×8 set. The 64-column print logic costs about 100 bytes more than a plain 32-column printer, so the change of display gained roughly 200 bytes overall. Adding an 8×8 font at <code>$3D00</code> would bring the total to 16,142, leaving a margin of 242 (1.5%). That is too thin, so the font is left out for now (§12).</p>
 <h3>8.3 Benchmarks</h3>
 <ul>
@@ -1573,6 +1574,6 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <li><strong><code>LOCAL</code> is dynamic, in the BBC style</strong>, not true lexical scope. Lexical scope would need per-PROC symbol tables, at about 300 bytes plus a slower lookup.</li>
 <li><strong>No full-screen editor</strong> (Nathan, later on 13 Nov 2026, for phase 4). Use the ZX BASIC pattern instead: a current-line marker moved with the cursor keys over a LIST, and EDIT to bring that line into the input line (§6.5).</li>
 </ol>
-<p><em>End of specification v0.5.</em></p>
+<p><em>End of specification v0.6.</em></p>
 </body>
 </html>

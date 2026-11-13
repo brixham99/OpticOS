@@ -154,10 +154,6 @@ fp_tan: ld bc,fu_tan
         jr fp_un
 fp_atn: ld bc,fu_atn
         jr fp_un
-fp_asn: ld bc,fu_asn
-        jr fp_un
-fp_acs: ld bc,fu_acs
-        jr fp_un
 fp_exp: ld bc,fu_exp
         jr fp_un
 fp_log: ld bc,fu_log
@@ -245,7 +241,7 @@ fu_neg: ld a,(FA+6)
         ld (FA+6),a
         ret
 
-; ---------------------------------------------------- ATN ASN ACS
+; ---------------------------------------------------- ATN
 fu_atn: ld hl,FA+6
         ld a,(hl)
         ld (hl),0
@@ -281,32 +277,6 @@ fa_3:   pop af
 fa_4:   pop af
         ld (FA+6),a
         ret
-; ASN x = 2 * ATN (x / (1 + SQR (1-x)(1+x)))
-fu_asn: call fu_run
-        defb ST_+3, NEG_, ADD_+K_ONE, ST_+4, LD_+3, ADD_+K_ONE, MUL_+4, END_
-        call fu_sqr
-        call fu_run
-        defb ADD_+K_ONE, ST_+4, LD_+3, DIV_+4, END_
-fu_at2: call fu_atn
-        ld hl,FA+5              ; times 2
-        ld a,(hl)
-        or a
-        ret z
-        inc (hl)
-        ret
-; ACS x = 2 * ATN SQR ((1-x)/(1+x)) for x >= 0, else PI/2 - ASN x
-fu_acs: ld a,(FA+6)
-        or a
-        jr z,fc_p
-        call fu_asn
-        call fu_run
-        defb NEG_, ADD_+K_PI2, END_
-        ret
-fc_p:   call fu_run
-        defb ST_+3, NEG_, ADD_+K_ONE, ST_+4, LD_+3, ADD_+K_ONE, ST_+5
-        defb LD_+4, DIV_+5, END_
-        call fu_sqr
-        jr fu_at2
 
 ; ---------------------------------------------------- SQR
 ; Newton's method from a linear first guess, three steps.  Uses T0, T1.

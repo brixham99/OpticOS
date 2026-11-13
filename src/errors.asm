@@ -19,6 +19,7 @@ ERR_SYN    equ $0D
 ERR_BREAK  equ $0C
 ERR_STRM   equ $17
 ERR_TAPE   equ $1A
+ERR_DATA   equ $14
 ERR_CALC   equ $40
 ERR_LEG    equ $41
 ERR_OK     equ $FF
@@ -93,6 +94,9 @@ err_tab:
         defb ERR_TAPE
         defm "Tape: bad or missing bloc"
         defb 'k'+$80
+        defb ERR_DATA
+        defm "Out of DAT"
+        defb 'A'+$80
         defb ERR_STRM
         defm "No such strea"
         defb 'm'+$80

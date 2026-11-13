@@ -106,7 +106,9 @@ CURL     equ $5D40      ; current line (marker), 0 = above the first line
 ESTART   equ $5D42      ; input line: linear screen position of its text
 EIDX     equ $5D44      ; input line: cursor index
 EMODE    equ $5D45      ; bit 0 insert mode (AUTO), bit 1 EDIT replace pending
-CON_LEN  equ $5D46      ; input line: length
+CON_LEN  equ $5D46
+DATAP    equ $5D47      ; READ: next DATA item (2), 0 = from the start
+LG_VF    equ $5B4E      ; tape: 1 = VERIFY (reset after each block)      ; input line: length
 EBUF     equ $5D50      ; input line buffer (128 bytes, 126 characters)
 EMAX     equ 126
 OPROG    equ $5DD0      ; OpticBASIC program start
