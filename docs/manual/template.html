@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en-GB"><head><meta charset="utf-8"><title>OpticOS User Manual</title>
 <style>
+@font-face { font-family: "Inter Title"; font-weight: 400; src: url(fonts/Inter-Regular.ttf); }
+@font-face { font-family: "Inter Title"; font-weight: 500; src: url(fonts/Inter-Medium.ttf); }
+@font-face { font-family: "Inter Title"; font-weight: 600; src: url(fonts/Inter-SemiBold.ttf); }
 @page { size: 420pt 595.28pt; /* A5 (595.28 pt = 210 mm tall), 420 pt wide so the full-bleed cover reaches the right edge */ margin: 20mm 14mm 16mm 14mm;
   @top-right { content: "OpticOS and OpticBASIC  \2022  User Manual"; font: italic 7.5pt Tinos, serif; color: #555; vertical-align: bottom; padding-bottom: 3mm; }
   @top-left { content: url(img/optica_logo_header.svg); vertical-align: bottom; padding-bottom: 2mm; }
@@ -42,14 +45,13 @@ figcaption { font-style: italic; font-size: 8pt; color: #444; margin-top: 1mm; }
 .cover + .cover { break-before: page; }
 /* title page (the earlier cover design) */
 .cover { page: cover; height: 210mm; width: 148mm; position: relative; text-align: center; overflow: hidden; }
-.cover .frame { position: absolute; inset: 8mm; border: 2.2pt solid #111; }
-.cover .frame2 { position: absolute; inset: 10mm; border: .6pt solid #111; }
+.cover.title { font-family: "Inter Title", "Liberation Sans", sans-serif; } /* title page: Inter (SIL OFL, fonts/OFL.txt), the closest open match to Aptos, as static Latin instances */
 .cover .logo { position: absolute; top: 22mm; left: 0; right: 0; } .cover .logo img { width: 92mm; }
-.cover .t1 { position: absolute; top: 76mm; left: 0; right: 0; font: bold 26pt Tinos, serif; letter-spacing: .08em; }
-.cover .t2 { position: absolute; top: 90mm; left: 0; right: 0; font: bold 12pt Tinos, serif; letter-spacing: .28em; }
+.cover .t1 { position: absolute; top: 76mm; left: 0; right: 0; font: 600 28pt "Inter Title", sans-serif; letter-spacing: -.01em; }
+.cover .t2 { position: absolute; top: 90mm; left: 0; right: 0; font: 400 13pt "Inter Title", sans-serif; }
 .cover .shot { position: absolute; top: 104mm; left: 0; right: 0; } .cover .shot img { width: 92mm; border: 1.5pt solid #111; image-rendering: pixelated; }
-.cover .t3 { position: absolute; bottom: 22mm; left: 0; right: 0; font: bold 9.5pt Tinos, serif; letter-spacing: .2em; }
-.cover .t4 { position: absolute; bottom: 15mm; left: 0; right: 0; font: 8pt Tinos, serif; color: #444; }
+.cover .t3 { position: absolute; bottom: 22mm; left: 0; right: 0; font: 500 10pt "Inter Title", sans-serif; }
+.cover .t4 { position: absolute; bottom: 15mm; left: 0; right: 0; font: 7.5pt "Inter Title", sans-serif; color: #444; }
 .toc { page: plain; break-before: page; }
 .toc h1 { break-before: avoid; }
 .toc ol { list-style: none; padding: 0; margin: 6mm 4mm; font-size: 10.5pt; }
@@ -62,12 +64,11 @@ figcaption { font-style: italic; font-size: 8pt; color: #444; margin-top: 1mm; }
 </style></head><body>
 <section class="cover front"><img src="cover.jpg" alt="OpticOS / OpticBASIC: Introduction, Manuals, Reference, Example Code"></section>
 <section class="cover title">
-  <div class="frame"></div><div class="frame2"></div>
   <div class="logo"><img src="img/optica_logo.png" alt="Optica Technology Design"></div>
-  <div class="t1">OPTICOS</div>
-  <div class="t2">OPTICBASIC USER MANUAL</div>
+  <div class="t1">OpticOS</div>
+  <div class="t2">OpticBASIC User Manual</div>
   <div class="shot"><img src="img/boot.png" alt="The OpticOS start-up screen"></div>
-  <div class="t3">FOR THE 48K ZX SPECTRUM</div>
+  <div class="t3">For the 48K ZX Spectrum</div>
   <div class="t4">ROM v1.0.3 &nbsp;&bull;&nbsp; Manual edition 5, November 2026 &nbsp;&bull;&nbsp; &copy; 2026 Optica Technology Design</div>
 </section>
 <section class="toc"><h1>Contents</h1><ol>{{TOC}}</ol>
