@@ -132,7 +132,6 @@ secI_end:
         include "strfn2.asm"
         include "flow.asm"
         include "error2.asm"
-        include "autold.asm"
 m_tkd_s:
         include "gen/tokdisp.inc"
 m_tkd_e:

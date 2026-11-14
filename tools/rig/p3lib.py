@@ -12,7 +12,7 @@ for l in open(os.path.join(ROOT, 'build/opticos.sym')):
 LINEBUF, CON_LEN = SYM['EBUF'], SYM['CON_LEN']
 class Basic:
     def __init__(self):
-        self.s = Spectrum(ROM); self.s.frame(150)
+        self.s = Spectrum(ROM); self.s.frame(200)
     def line(self, text, limit=400_000_000):
         s = self.s; assert len(text) <= 126, text
         if not s.run_until(SYM['cg_lp'], 20_000_000): raise TimeoutError('not at prompt')

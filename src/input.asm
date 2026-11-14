@@ -120,14 +120,15 @@ m_chm_s:
 chime:  ld de,157               ; 523.25 Hz x 0.3 s
         ld hl,806
         call BEEPER
-        di                      ; BEEPER ends with EI: keep keys off until
-        ld bc,5400              ; the console, so an emulator's auto-load
-ch_gap: dec bc                  ; typing (sent once the keyboard is first
-        ld a,b                  ; read) is not lost under the chime; this
-        or c                    ; loop is a 2-frame gap, as between the
-        jr nz,ch_gap            ; BBC's tones
+        halt                    ; a short gap, as between the BBC's tones
+        halt
         ld de,110               ; 122.2 Hz x 0.9 s
         ld hl,3550
-        jp BEEPER
+        call BEEPER
+        ld b,40                 ; 0.8 s more before the prompt: keys typed
+ch_sw:  halt                    ; until then are dropped, such as an
+        djnz ch_sw              ; emulator's auto-load typing (J"" ENTER)
+        res 5,(iy+FLAGS-ERR_NR) ; and the last key read
+        ret
 m_chm_e:
 

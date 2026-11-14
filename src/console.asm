@@ -118,24 +118,7 @@ c_del:  ld a,(hl)               ; DELETE: the character left of the cursor
         jp k_rd
 prm_t:  defb "]+**"
 con_enter:
-        ld hl,EMODE             ; J"" alone, as an emulator auto-loading types
-        bit 2,(hl)              ; it (J is LOAD on a Sinclair ROM), becomes
-        jr nz,ce_pos            ; LOAD "" and is shown as that; not in INPUT
         ld a,(CON_LEN)
-        cp 3
-        jr nz,ce_pos
-        ld hl,EBUF
-        ld a,(hl)
-        or $20
-        cp 'j'
-        jr nz,ce_pos
-        ld hl,(EBUF+1)
-        ld de,$2222             ; ""
-        or a
-        sbc hl,de
-        jr nz,ce_pos
-        call ce_set             ; (autold.asm)
-ce_pos: ld a,(CON_LEN)
         ld e,a
         ld d,0
         ld hl,EBUF

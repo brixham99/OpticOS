@@ -33,7 +33,7 @@ def T(rows):
     return [r.rstrip('\x7f').rstrip() for r in rows]
 
 def booted():
-    s = Spectrum(ROM); s.frame(150); return s
+    s = Spectrum(ROM); s.frame(200); return s
 
 # 1. boot screen against the mock-up layout
 def t_boot():
@@ -43,7 +43,7 @@ def t_boot():
     check('row 0 has no text (colour bar only)', rows[0] == '', repr(rows[0]))
     check('row 1 blank', rows[1] == '', repr(rows[1]))
     check('boot banner text at row 2', rows[2] == 'OpticOS (c) 2026 Optica Technology Design', repr(rows[2]))
-    check('OpticBASIC version at row 3', rows[3] == 'OpticBASIC v1.0.2-test2', repr(rows[3]))
+    check('OpticBASIC version at row 3', rows[3] == 'OpticBASIC v1.0.2', repr(rows[3]))
     check('row 4 blank, row 5 prompt "] "', rows[4] == '' and rows[5] == ']', repr(rows[4:6]))
     check('rows 6-23 empty', all(r == '' for r in rows[6:]), '')
     check('cursor position row 5 col 2', (s.peek(0x5C89), s.peek(0x5C88)) == (5, 2))
@@ -107,7 +107,7 @@ def t_keys():
 
 # 3. SA-BYTES: record MIC, decode, timing; round trip through LD-BYTES
 def save_block(rom, data, flag=0xFF):
-    s = Spectrum(rom); s.frame(150)
+    s = Spectrum(rom); s.frame(200)
     s.load(0x8000, data)
     s.mic_start(3)
     s.call(SYM['SA_BYTES'], limit=900_000_000, IX=0x8000, DE=len(data), AF=flag << 8)
@@ -143,7 +143,7 @@ def t_save():
     return p, want
 
 def load_block(rom, pulses, length, flag=0xFF, verify=False, ref=None):
-    s = Spectrum(rom); s.frame(150)
+    s = Spectrum(rom); s.frame(200)
     s.tape([NOTOGGLE | 35000] + pulses + [NOTOGGLE | 3500000])
     af = (flag << 8) | (0 if verify else 1)
     r = s.call(0x0556, limit=900_000_000, IX=0x8000, DE=length, AF=af)
@@ -168,7 +168,7 @@ def t_load():
 
 # 4. black-box comparisons with the reference ROM
 def edge_B(rom, P, b0=0):
-    s = Spectrum(rom); s.frame(150)
+    s = Spectrum(rom); s.frame(200)
     s.tape([P, NOTOGGLE | 3500000], play=False)
     import rig
     rig.lib.z_ear_play(1)

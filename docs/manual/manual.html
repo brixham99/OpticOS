@@ -62,7 +62,7 @@ figcaption { font-style: italic; font-size: 8pt; color: #444; margin-top: 1mm; }
   <div class="t2">OPTICBASIC USER MANUAL</div>
   <div class="shot"><img src="img/boot.png" alt="The OpticOS start-up screen"></div>
   <div class="t3">FOR THE 48K ZX SPECTRUM</div>
-  <div class="t4">ROM v1.0.1 &nbsp;&bull;&nbsp; Manual edition 2, November 2026 &nbsp;&bull;&nbsp; &copy; 2026 Optica Technology Design</div>
+  <div class="t4">ROM v1.0.2 &nbsp;&bull;&nbsp; Manual edition 3, November 2026 &nbsp;&bull;&nbsp; &copy; 2026 Optica Technology Design</div>
 </section>
 <section class="toc"><h1>Contents</h1><ol><li><a href="#c1"><span>1</span><em>Introduction</em><b>3</b></a></li>
 <li><a href="#c2"><span>2</span><em>Getting started</em><b>5</b></a></li>
@@ -94,7 +94,7 @@ figcaption { font-style: italic; font-size: 8pt; color: #444; margin-top: 1mm; }
 <p>In syntax lines, <code>[ ]</code> marks something optional, <code>|</code> separates alternatives, and <code>…</code> means "more of the same". Names in <em>italics</em> stand for something you supply.</p>
 <h1 id="c2"><span class="num">2</span>Getting started</h1>
 <h2>The start-up screen</h2>
-<p>Switch on, and after a moment OpticOS draws its start-up screen and plays two notes: a short high one, then a longer low one. They are the BBC Micro's power-on tones played in reverse order, 523 Hz for 0.3 seconds and then 122 Hz for 0.9 seconds. The keyboard is not read while they play, so wait for the second note to finish before typing. A warm start (<code>NEW</code>) does not play them.</p>
+<p>Switch on, and after a moment OpticOS draws its start-up screen and plays two notes: a short high one, then a longer low one. They are the BBC Micro's power-on tones played in reverse order, 523 Hz for 0.3 seconds and then 122 Hz for 0.9 seconds. Keys pressed while they play, or in the moment after, are ignored: start typing once the <code>]</code> prompt appears. (So when an emulator such as Fuse auto-loads a tape by typing <code>LOAD ""</code> for you after a reset, the typing is ignored and you get a clean prompt; type <code>LOAD ""</code> yourself.) <code>NEW</code> restarts the machine in the same way, so it plays them too.</p>
 <figure><img src="img/boot.png"><figcaption>The start-up screen in Fuse.</figcaption></figure>
 
 <p>The top row is a colour bar showing the eight Spectrum colours, normal and then bright. Below it are the copyright line, <code>OpticOS (c) 2026 Optica Technology Design</code>, and the name and version of the BASIC. Then comes the prompt.</p>
@@ -187,7 +187,7 @@ Hello, world!
 <h2>Things to know</h2>
 <ul>
 <li>Every change to the program clears the variables, and the program is checked again before the next RUN.</li>
-<li><code>NEW</code> deletes the program and its variables. <code>LOAD</code> replaces them.</li>
+<li><code>NEW</code> restarts OpticOS exactly as at power-on: the program, its variables and any machine code are wiped, and you get the start-up screen and chime again. <code>LOAD</code> replaces the program and variables.</li>
 <li><code>RUN</code> runs the program from the top. <code>RUN</code> <em>name</em> runs just one procedure (chapter 6).</li>
 <li>When a program stops with an error, the line with the error becomes the current line, so EDIT brings it straight up.</li>
 </ul>
@@ -399,7 +399,7 @@ TRY … CATCH … ENDTRY
 <p><strong>MAX</strong>(<em>a</em>, <em>b</em>), <strong>MIN</strong>(<em>a</em>, <em>b</em>) — The larger or smaller of two numbers.</p>
 <p><strong>MID$</strong>(<em>s$</em>, <em>start</em> [, <em>n</em>]) — <em>n</em> characters from position <em>start</em> (from 1), or the rest of the string. <code>MID$("hello", 2, 3)</code> is "ell".</p>
 <p><strong>MOD</strong> — The remainder after division: <code>10 MOD 3</code> is 1.</p>
-<p><strong>NEW</strong> — Delete the program and variables.</p>
+<p><strong>NEW</strong> — Restart, exactly as at power-on: memory is tested and cleared (the program, all variables and anything POKEd or loaded as CODE), <code>CLEAR</code>'s RAMTOP and the colours go back to their defaults, and the start-up screen, banner and chime appear.</p>
 <p><strong>NEXT</strong> [<em>v</em>] — End a FOR loop.</p>
 <p><strong>NOT</strong> <em>x</em> — Logical or bitwise "not". <code>NOT 0</code> is −1 (TRUE).</p>
 <p><strong>OF</strong> — Used in CASE.</p>
@@ -1523,7 +1523,7 @@ ENDPROC
 <li>Type <code>NEW</code>, then type in the loader below and RUN it. It does <code>CLEAR 59999</code>, POKEs the bytes to 60000–61094 and checks them. Then it saves them, after the program, with <code>SAVE "hbcode" CODE 60000, 1095</code>.</li>
 <li>To play, rewind the tape and type <code>LOAD ""</code>. The game runs as soon as it has loaded, and loads <code>hbcode</code> from the tape by itself.</li>
 </ol>
-<p>To play straight away without a tape, RUN the loader, then type in the game and RUN it. It finds the code already in memory, by the "HB" at 60014, and does not load it.</p>
+<p>If the code is already in memory, the game finds it by the "HB" at 60014 and does not load it again. So straight after step 2 you can rewind and <code>LOAD ""</code> the game at once: <code>LOAD</code> replaces the program but leaves the code alone. Do not type <code>NEW</code> first, because <code>NEW</code> restarts the machine and wipes the code too.</p>
 <pre><code>' =============================================================
 ' HBCODE - type-in loader for Happy Bat's machine code
 ' Type this in and RUN it. It puts the 1,095 bytes of code at

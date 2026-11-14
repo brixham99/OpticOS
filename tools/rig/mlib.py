@@ -50,7 +50,7 @@ def ulp(x):
 class M:
     def __init__(self):
         self.s = Spectrum(ROM)
-        self.s.frame(150)                       # boot to the prompt
+        self.s.frame(200)                       # boot to the prompt
         self.s.poke(ERRW, 0xF0); self.s.poke(ERRW + 1, 0x5F)
     def run(self, name, limit=20_000_000, **regs):
         s = self.s

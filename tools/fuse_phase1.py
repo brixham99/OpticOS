@@ -55,7 +55,7 @@ if __name__ == '__main__':
     rom, out = os.path.abspath(sys.argv[1]), sys.argv[2]
     os.makedirs(out, exist_ok=True)
     subprocess.run(['pkill', '-f', 'fuse-sdl.*opticos'])
-    f = Fuse(rom, traps=TRAPS); time.sleep(3)
+    f = Fuse(rom, traps=TRAPS); time.sleep(4.5)   # boot, chime and the 0.8 s key swallow
     f.shot(os.path.join(out, 'fuse_boot.png'))
     for k in 'hello':
         f.key(k)
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     f.shot(os.path.join(out, 'fuse_console.png')); f.close()
     for tape in sys.argv[3:]:
         name = os.path.splitext(os.path.basename(tape))[0]
-        f = Fuse(rom, os.path.abspath(tape), traps=TRAPS); time.sleep(3)
+        f = Fuse(rom, os.path.abspath(tape), traps=TRAPS); time.sleep(4.5)   # boot, chime and the 0.8 s key swallow
         for k in 'load': f.key(k)
         f.key('space'); f.key('p', mods=('Control_L',)); f.key('p', mods=('Control_L',))
         f.key('Return'); time.sleep(0.3)

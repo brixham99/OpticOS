@@ -2,7 +2,8 @@
 """Run each example in docs/manual/examples in the rig and print the screen text.
 hbloader.bas runs before happybat.bas: it POKEs Happy Bat's machine code to
 60000 (and SAVEs it), so the game finds its code in memory and does not wait
-for the tape.  The game never stops by itself, so it is run for 3 seconds,
+for the tape (NEW wipes memory, so the verifier puts the code back as
+LOAD "hbcode" CODE would).  The game never stops by itself, so it is run for 3 seconds,
 its title screen printed, and then stopped with BREAK."""
 import os, sys, glob
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -17,7 +18,10 @@ for f in files:
     prog = [l.strip() for l in open(f) if l.strip()]
     print('=====', os.path.basename(f))
     if os.path.basename(f) == 'happybat.bas':
-        b.line('NEW'); b.enter(prog); b.cls()
+        # NEW is a full restart and wipes the code, so put the 1,095 bytes back
+        # as LOAD "hbcode" CODE would; the game then finds "HB" at 60014
+        code = s.block(60000, 1095); b.line('NEW'); s.load(60000, bytes(code))
+        b.enter(prog); b.cls()
         assert s.run_until(SYM['cg_lp'], 20_000_000)
         s.load(LINEBUF, b'RUN'); s.poke(CON_LEN, 3)
         s.setregs(PC=SYM['con_enter'], SP=s.regs()['SP'] + 2)

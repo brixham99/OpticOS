@@ -23,7 +23,7 @@ In syntax lines, `[ ]` marks something optional, `|` separates alternatives, and
 
 ## The start-up screen
 
-Switch on, and after a moment OpticOS draws its start-up screen and plays two notes: a short high one, then a longer low one. They are the BBC Micro's power-on tones played in reverse order, 523 Hz for 0.3 seconds and then 122 Hz for 0.9 seconds. The keyboard is not read while they play, so wait for the second note to finish before typing. A warm start (`NEW`) does not play them.
+Switch on, and after a moment OpticOS draws its start-up screen and plays two notes: a short high one, then a longer low one. They are the BBC Micro's power-on tones played in reverse order, 523 Hz for 0.3 seconds and then 122 Hz for 0.9 seconds. Keys pressed while they play, or in the moment after, are ignored: start typing once the `]` prompt appears. (So when an emulator such as Fuse auto-loads a tape by typing `LOAD ""` for you after a reset, the typing is ignored and you get a clean prompt; type `LOAD ""` yourself.) `NEW` restarts the machine in the same way, so it plays them too.
 
 <figure><img src="img/boot.png"><figcaption>The start-up screen in Fuse.</figcaption></figure>
 
@@ -109,7 +109,7 @@ To **delete** a line, put the marker on it and press EDIT twice (the second pres
 ## Things to know
 
 - Every change to the program clears the variables, and the program is checked again before the next RUN.
-- `NEW` deletes the program and its variables. `LOAD` replaces them.
+- `NEW` restarts OpticOS exactly as at power-on: the program, its variables and any machine code are wiped, and you get the start-up screen and chime again. `LOAD` replaces the program and variables.
 - `RUN` runs the program from the top. `RUN` *name* runs just one procedure (chapter 6).
 - When a program stops with an error, the line with the error becomes the current line, so EDIT brings it straight up.
 
@@ -342,7 +342,7 @@ Every keyword and function OpticBASIC has, in alphabetical order. *n*, *x* and *
 
 **MOD** — The remainder after division: `10 MOD 3` is 1.
 
-**NEW** — Delete the program and variables.
+**NEW** — Restart, exactly as at power-on: memory is tested and cleared (the program, all variables and anything POKEd or loaded as CODE), `CLEAR`'s RAMTOP and the colours go back to their defaults, and the start-up screen, banner and chime appear.
 
 **NEXT** [*v*] — End a FOR loop.
 
@@ -816,7 +816,7 @@ To make your own Happy Bat tape:
 2. Type `NEW`, then type in the loader below and RUN it. It does `CLEAR 59999`, POKEs the bytes to 60000–61094 and checks them. Then it saves them, after the program, with `SAVE "hbcode" CODE 60000, 1095`.
 3. To play, rewind the tape and type `LOAD ""`. The game runs as soon as it has loaded, and loads `hbcode` from the tape by itself.
 
-To play straight away without a tape, RUN the loader, then type in the game and RUN it. It finds the code already in memory, by the "HB" at 60014, and does not load it.
+If the code is already in memory, the game finds it by the "HB" at 60014 and does not load it again. So straight after step 2 you can rewind and `LOAD ""` the game at once: `LOAD` replaces the program but leaves the code alone. Do not type `NEW` first, because `NEW` restarts the machine and wipes the code too.
 
 ```
 INCLUDE hbloader.bas

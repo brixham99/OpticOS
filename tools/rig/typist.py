@@ -15,13 +15,19 @@ import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 STATES = {'LOAD': (['j'], 'QUOTE1', 8), 'QUOTE1': (['sym', 'p'], 'QUOTE2', 0),
           'QUOTE2': (['sym', 'p'], 'ENTER', 5), 'ENTER': (['enter'], 'INACTIVE', 0)}
-KEYMAP = {'j': 'j', 'p': 'p', 'sym': '#', 'enter': '\n'}
+# Fuse's "Keystroke" mode (LOADPP): L O A D " " ENTER, letter by letter
+STATES_KEYSTROKE = {'LOAD': (['l'], 'LOAD_O', 2), 'LOAD_O': (['o'], 'LOAD_A', 0),
+          'LOAD_A': (['a'], 'LOAD_D', 5), 'LOAD_D': (['d'], 'QUOTE1', 4),
+          'QUOTE1': (['sym', 'p'], 'QUOTE2', 0), 'QUOTE2': (['sym', 'p'], 'ENTER', 5),
+          'ENTER': (['enter'], 'INACTIVE', 0)}
+KEYMAP = {'j': 'j', 'p': 'p', 'l': 'l', 'o': 'o', 'a': 'a', 'd': 'd', 'sym': '#', 'enter': '\n'}
 class Typist:
-    def __init__(self, s, frames_addr=23672):
+    def __init__(self, s, frames_addr=23672, states=None):
+        self.st = states or STATES
         self.s = s; self.state = 'WAITING'; self.next = 'WAITING'; self.delay = 0
         self.fa = frames_addr; self.log = []; self.n = 0
     def keys(self):
-        if self.state in STATES and self.delay == 0: return STATES[self.state][0]
+        if self.state in self.st and self.delay == 0: return self.st[self.state][0]
         return []
     def frame(self, setkey):
         ks = self.keys()
@@ -32,9 +38,9 @@ class Typist:
         for k in ks: setkey(k, False)
         if read:
             if self.state == 'WAITING': self.next = 'LOAD'
-            elif self.state in STATES and self.delay == 0:
-                self.next = STATES[self.state][1]; self.log.append((self.n, self.state, '+'.join(ks)))
+            elif self.state in self.st and self.delay == 0:
+                self.next = self.st[self.state][1]; self.log.append((self.n, self.state, '+'.join(ks)))
         if self.next != self.state:
-            self.state = self.next; self.delay = STATES.get(self.state, ([], '', 0))[2]
+            self.state = self.next; self.delay = self.st.get(self.state, ([], '', 0))[2]
         if self.delay > 0: self.delay -= 1
         self.n += 1

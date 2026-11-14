@@ -22,7 +22,7 @@ if __name__ == '__main__':
     rom, out = os.path.abspath(sys.argv[1]), sys.argv[2]
     os.makedirs(out, exist_ok=True)
     subprocess.run(['pkill', '-f', 'fuse-sdl.*opticos'])
-    f = Fuse(rom); time.sleep(3)
+    f = Fuse(rom); time.sleep(4.5)   # boot, chime and the 0.8 s key swallow
     type_line(f, 'AUTO')
     for l in PROG: type_line(f, l)
     type_line(f, '')

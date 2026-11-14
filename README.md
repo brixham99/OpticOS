@@ -106,15 +106,15 @@ Since v1.0.1 the ROM keeps the tape layout that emulator traps expect, so Fuse's
 
 ## ROM byte usage (Phase 5 complete)
 
-16,163 of 16,384 bytes are placed, leaving **221 free** (the margin rule is to keep at least 221 spare; it was 256 until v1.0.1). By module, as `tools/check_layout.py` reports them:
+16,157 of 16,384 bytes are placed, leaving **227 free** in v1.0.2 (the margin rule is to keep at least 221 spare; it was 256 until v1.0.1). By module, as `tools/check_layout.py` reports them:
 
 | Part | Bytes |
 |---|---:|
-| Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,391 |
+| Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,386 |
 | Tokeniser, keyword table, LIST | 1,800 |
 | Float core (+ - * /, normalise, compare, conversions, small-int ops) | 1,422 |
 | Expression evaluator and functions | 1,329 |
-| Variables, arrays, string heap + GC, value and control stacks | 1,301 |
+| Variables, arrays, string heap + GC, value and control stacks | 1,290 |
 | Transcendentals, byte-code runner, coefficient tables | 1,148 |
 | Legacy loader shim (interpreter, expressions, PRINT) | 845 |
 | Number <-> string (STR$/PRINT formatting, VAL) | 709 |
@@ -130,20 +130,20 @@ Since v1.0.1 the ROM keeps the tape layout that emulator traps expect, so Fuse's
 | Restarts, NMI, reset, RAM test, sysvars, channels | 300 |
 | Line editor: marker, LIST around it, cursor up/down, EDIT | 268 |
 | Graphics: PLOT, DRAW, DRAW TO | 236 |
-| BEEP, OUT, DPOKE, CALL, SWAP; start-up chime | 216 |
+| BEEP, OUT, DPOKE, CALL, SWAP; start-up chime | 226 |
 | INPUT, DATA / READ / RESTORE | 183 |
 | Sound: BEEPER | 82 |
 | Fixed-address stubs (CHAN-OPEN, PR-STRING, PIXEL-ADD, $096F) | 78 |
 | Boot banner + version text, calls | 70 |
 | Number output for the legacy shim and console (pr_dec, pr_hex) | 50 |
 
-The free bytes are spread over twelve gaps between the ROM's fixed addresses, the largest 62 bytes.
+The free bytes are spread over twelve gaps between the ROM's fixed addresses, the largest 48 bytes.
 
 ## The boot screen
 
 The mock-up above matches the ROM's real boot screen pixel for pixel (the rig checks this). It is a faithful ZX Spectrum frame: 256×192 pixels of bitmap, with a 32-pixel black border, giving a 320×256 image (and a 3× nearest-neighbour upscale here so the text is readable). Paper is black, ink is white, bright is off.
 
-Row 0 is a colour bar made from attribute cells only: 16 swatches, each two cells wide, showing black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Row 1 is blank. Row 2 holds the banner, `OpticOS (c) 2026 Optica Technology Design`, and row 3 the BASIC's name and version, `OpticBASIC v1.0.1`. Row 4 is blank. Row 5 shows the OpticOS prompt `] ` with the cursor block (character 127) at column 2. `]` is the direct-mode prompt everywhere. Everything below the bar is white on black. The font has no copyright glyph — a © is illegible at 3 pixels wide — so the banner uses ASCII `(c)`, as the specification requires.
+Row 0 is a colour bar made from attribute cells only: 16 swatches, each two cells wide, showing black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Row 1 is blank. Row 2 holds the banner, `OpticOS (c) 2026 Optica Technology Design`, and row 3 the BASIC's name and version, `OpticBASIC v1.0.2`. Row 4 is blank. Row 5 shows the OpticOS prompt `] ` with the cursor block (character 127) at column 2. `]` is the direct-mode prompt everywhere. Everything below the bar is white on black. The font has no copyright glyph — a © is illegible at 3 pixels wide — so the banner uses ASCII `(c)`, as the specification requires.
 
 The native 1× frame is [`assets/opticos_boot.png`](assets/opticos_boot.png).
 

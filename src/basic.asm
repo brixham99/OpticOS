@@ -1076,8 +1076,7 @@ st_list: ld hl,OPROG            ; the whole program, marker included
 st_auto: ld hl,EMODE            ; AUTO: typed lines go into the program
         set 0,(hl)
         ret
-st_new: call p_new
-        jp st_end
+st_new: rst 0                   ; NEW is a full cold start, as at power-on
 st_border: call ev_u8
         ld a,e
         and 7

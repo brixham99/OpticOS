@@ -14,7 +14,7 @@ def enter(f, lines):
     for l in lines: type_line(f, l)
     type_line(f, '')
 subprocess.run(['pkill', '-f', 'fuse-sdl.*opticos'])
-f = Fuse(os.path.abspath(os.path.join(ROOT, 'build/opticos.rom'))); time.sleep(3)
+f = Fuse(os.path.abspath(os.path.join(ROOT, 'build/opticos.rom'))); time.sleep(4.5)   # boot, chime and the 0.8 s key swallow
 f.shot(os.path.join(OUT, 'boot.png'))
 enter(f, prog('guess.bas'))
 type_line(f, 'CLS'); type_line(f, 'LIST'); time.sleep(1); f.shot(os.path.join(OUT, 'list_guess.png'))

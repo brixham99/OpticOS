@@ -69,10 +69,6 @@ wi_z:   ld (hl),0
         inc hl
         djnz wi_z
         ex de,hl
-        jr pn_e
-p_new:  ld hl,0
-        ld (CURL),hl
-        ld hl,OPROG
 pn_e:   ld (PEND),hl
         jp p_fix
 ; clr_vars: forget every variable and string (A%-Z% are kept)

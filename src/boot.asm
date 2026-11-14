@@ -61,8 +61,9 @@ bt_st:  ld a,(hl)
         ld (BORDCR),a
         ld a,64
         ld (OMODE),a
-        im 1                    ; interrupts (and so the keyboard) stay off
-        call CLS                ; until the console: see chime
+        im 1
+        ei
+        call CLS
         ld hl,$5800             ; row 0: colour bar, 16 swatches of two
         ld b,0                  ; attribute cells (paper = ink, no pixels)
 bt_bar: ld a,b
@@ -97,12 +98,12 @@ bt_nb:  ld (hl),a
         ld de,0                 ; seed RND from FRAMES
         call fp_randomize
         call ws_init
-        call chime
+        call chime              ; (also drops keys typed before the prompt)
         jp console
 
 banner: defm "OpticOS (c) 2026 Optica Technology Desig"
         defb 'n'+$80
-banner2: defm "OpticBASIC v1.0.2-test"
+banner2: defm "OpticBASIC v1.0."
         defb '2'+$80
 
 chan_init:                      ; Sinclair layout: out, in, letter
