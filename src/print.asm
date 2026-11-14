@@ -109,7 +109,8 @@ po_comma:
         ld (S_POSN),a
         ret
 
-pr_nl:  ld hl,(S_POSN)
+pr_nl:  inc (iy+NLCT-ERR_NR)     ; newlines, for LIST's pause
+        ld hl,(S_POSN)
         ld l,0
         inc h
         ld a,h

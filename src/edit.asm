@@ -22,7 +22,7 @@ lt_l:   ld a,(hl)
         jr c,lt_o
         ld a,(BCN)
         or a
-        jr z,lt_1
+        jp z,lt_pg              ; LIST: pause at each screenful
         dec a
         jr z,lt_xp
         ld (BCN),a

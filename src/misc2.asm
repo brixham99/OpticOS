@@ -12,18 +12,20 @@ sw_l:   ld a,d
         ret z
         ei
         halt
-        ld a,$7F
+        call brk_chk
+        dec de
+        jr sw_l
+; brk_chk: report "Break" if CAPS SHIFT + SPACE is held (A lost)
+brk_chk: ld a,$7F
         in a,($FE)
         rra
-        jr c,sw_n
+        ret c
         ld a,$FE
         in a,($FE)
         rra
-        jr c,sw_n
+        ret c
         rst 8
         defb ERR_BREAK
-sw_n:   dec de
-        jr sw_l
 st_randomize:
         ld de,0
         rst $18

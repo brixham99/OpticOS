@@ -20,7 +20,7 @@ Build it with `make` or `./build.sh`, which runs `pasmo --bin src/opticos.asm` a
 | Keyboard | `keyboard.asm` | Matrix scan in the ISR: debounce, REPDEL/REPPER auto-repeat, CAPS/SYMBOL, caps lock (CAPS+2), E mode (CAPS+SYM then Y U F G D S A for `[ ] { } \ \| ~`), CAPS+digit editing codes, LAST_K and FLAGS bit 5 |
 | Print | `print.asm` | 64-column output with the 4×8 font at `$3E80`, masked nibble merge, INVERSE, OVER, INK/PAPER/FLASH/BRIGHT (including 8 = transparent), AT, TAB, comma, backspace, wrap, scroll, RST 16 through CURCHL. PR_OUT is at `$0970`, so `POKE 23739,111` turns it into the RET at `$096F`. |
 | CLS | `cls.asm` | CLS at `$0D6B` and CL-ALL at `$0DAF` |
-| Tape | `save.asm`, `load.asm`, `edge.asm` | SA-BYTES at `$04C2`, LD-BYTES at `$0556`, LD-EDGE-2/1 at `$05E3`/`$05E7` (358 T delay, 59 T per sample, the same B/C/carry contract), common exit with BREAK reported as error D |
+| Tape | `save.asm`, `load.asm`, `edge.asm` | SA-BYTES at `$04C2`, LD-BYTES at `$0556`, LD-EDGE-2/1 at `$05E3`/`$05E7` (358 T delay, 59 T per sample, the same B/C/carry contract; since v1.0.3 a 326 T delay and a 32 T longer exit after an edge, for the new stripe colours, so edge-to-edge timing is unchanged), common exit with BREAK reported as error D |
 | Sound | `sound.asm` | BEEPER at `$03B5`: DE = cycles, HL = period, with a period of 8·HL+241 T |
 | Stubs | `stubs.asm` | CHAN-OPEN at `$1601`, PR-STRING at `$203C`, PIXEL-ADD at `$22AA` (the Sinclair 175−y convention) |
 | Errors | `errors.asm` | RST 8 handler (ERR_NR, then unwinding to ERR_SP) and OpticOS messages |

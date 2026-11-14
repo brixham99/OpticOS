@@ -14,7 +14,7 @@ The boot message reads:
 OpticOS (c) 2026 Optica Technology Design
 ```
 
-**Status: Phases 0–5 complete.** The planned feature list (after the cuts in spec §12) is built and fits the 16K ROM with 221 bytes to spare. The ROM boots, loads ordinary game tapes, runs structured OpticBASIC programs, and has a Sinclair-style line editor. The **[user manual (PDF)](docs/manual/OpticOS_User_Manual.pdf)** covers the whole system, with worked examples ([source](docs/manual)). The **[example tape](examples)** (`.tap` and `.tzx`) holds the manual's examples and three more, verified in Fuse. Still to do before a v1.0: a check on real hardware and a real TV. The design is in the [specification (PDF)](docs/spec.pdf) ([Markdown](docs/spec.md)); §4.8 lists what is built.
+**Status: Phases 0–5 complete.** The planned feature list (after the cuts in spec §12) is built and fits the 16K ROM with 116 bytes to spare (v1.0.3, below the 221-byte margin rule). The ROM boots, loads ordinary game tapes, runs structured OpticBASIC programs, and has a Sinclair-style line editor. The **[user manual (PDF)](docs/manual/OpticOS_User_Manual.pdf)** covers the whole system, with worked examples ([source](docs/manual)). The **[example tape](examples)** (`.tap` and `.tzx`) holds the manual's examples and three more, verified in Fuse. Still to do before a v1.0: a check on real hardware and a real TV. The design is in the [specification (PDF)](docs/spec.pdf) ([Markdown](docs/spec.md)); §4.8 lists what is built.
 
 | Phase | What it delivered | Report |
 |---|---|---|
@@ -42,7 +42,7 @@ All are from real [Fuse](https://fuse-emulator.sourceforge.net/) with traps and 
 
 - A drop-in 16K ROM for the 48K Spectrum, on emulators such as Fuse (not yet tried on real hardware).
 - **64-column text** in an original 4×8 font, with colours (`INK PAPER FLASH BRIGHT INVERSE OVER`, also inside PRINT), scrolling and `PRINT AT`/`TAB`.
-- **Graphics and sound:** `PLOT`, `DRAW dx,dy`, `DRAW TO x,y` on the full 256×192 screen, and `BEEP duration, pitch`. At a cold start it plays the BBC Micro's two power-on tones in reverse: 523 Hz for 0.3 s, then 122 Hz for 0.9 s (spec §6.7).
+- **Graphics and sound:** `PLOT`, `DRAW dx,dy`, `DRAW TO x,y` on the full 256×192 screen, and `BEEP duration, pitch`. At a cold start it plays the BBC Micro's two power-on tones in reverse, at half their length: 523 Hz for 0.15 s, then 122 Hz for 0.45 s (spec §6.7).
 - **OpticBASIC with no line numbers:**
   - named procedures and functions with parameters, dynamic `LOCAL` and recursion; procedures are called by bare name
   - block `IF` / `ELSEIF` / `ELSE` / `ENDIF`, `CASE` / `WHEN` / `OTHERWISE` / `ENDCASE`, `WHILE` / `WEND`, `REPEAT` / `UNTIL`, `FOR` / `NEXT`, `EXIT WHILE` / `REPEAT` / `FOR`, and `TRY` / `CATCH` / `ENDTRY` with `ERROR n [, msg$]`
@@ -50,7 +50,7 @@ All are from real [Fuse](https://fuse-emulator.sourceforge.net/) with traps and 
   - `INPUT`, `DATA` / `READ` / `RESTORE [procname]`, `CLEAR [ramtop]`, `FREE`, and `SAVE` / `LOAD` / `VERIFY` of programs and `CODE` on a standard tape signal; `SAVE "x" AUTO procname` starts a program when it loads, and `RUN procname` runs one PROC
   - the usual maths and string functions plus `INSTR`, `STRING$`, `HEX$`, `UPPER$`, `ERR$`, `INKEY$`, `KEY(k$)` (several keys at once, for games), `FRAMES`, `MAX`, `MIN`, hex (`&FF`) and binary (`%1010`) literals
   - machine access: `PEEK`/`POKE`, `DPEEK`/`DPOKE`, `IN`/`OUT` (`IN 31` reads a Kempston joystick), `USR`, `CALL`, `BORDER`, and `SWAP a, b`
-  - an indenting `LIST`: the indentation is not stored but recomputed from the block structure
+  - an indenting `LIST`: the indentation is not stored but recomputed from the block structure; it pauses after each screenful with `cont?` (Y for more)
 - **Keywords are typed letter by letter** and tokenised on entry. The keyword legends on the keys are ignored.
 - **Tape compatibility.** The standard ROM tape format and entry points (`LD-BYTES`, `SA-BYTES`, `BEEPER`, the RST vectors and others) are kept, so `LOAD ""` loads ordinary games, including ones with a BASIC loader, through a small legacy shim.
 - **Clean-room implementation.** OpticOS contains no Sinclair, Amstrad or Tasword code or artwork. A build check confirms that no run of 12 or more bytes is shared with the original ROM.
@@ -82,7 +82,7 @@ There is no full-screen editor. Editing follows the ZX BASIC pattern: the progra
 | Key | Action |
 |---|---|
 | `AUTO`, then ENTER on an empty line | Start, then stop, entering lines. Each new line goes in after the current one. |
-| `LIST` | List the program with `>` on the current line |
+| `LIST` | List the program with `>` on the current line, a screenful at a time: at `cont?` press Y for more, any other key to stop with the marker on the screenful's first line |
 | CAPS+7 / CAPS+6 | Move the marker up / down and relist around it |
 | CAPS+1 (EDIT) | Copy the current line into the input line (prompt `*`), then ENTER to replace it |
 | EDIT, EDIT, ENTER | Delete the current line |
@@ -110,29 +110,29 @@ On The Spectrum from Retro Games, use the `.tzx` tapes: its instant `.tap` loadi
 
 ## ROM byte usage (Phase 5 complete)
 
-16,157 of 16,384 bytes are placed, leaving **227 free** in v1.0.2 (the margin rule is to keep at least 221 spare; it was 256 until v1.0.1). By module, as `tools/check_layout.py` reports them:
+16,268 of 16,384 bytes are placed, leaving **116 free** in v1.0.3, **105 below the margin rule** of at least 221 spare (it was 256 until v1.0.1; v1.0.2 had 227 free). v1.0.3's new tape stripe colours cost 10 bytes and the LIST `cont?` pause 101; the shorter chime cost nothing. By module, as `tools/check_layout.py` reports them:
 
 | Part | Bytes |
 |---|---:|
-| Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,386 |
-| Tokeniser, keyword table, LIST | 1,800 |
+| Interpreter: run loop, statements, prepass, PROC/FN, TRY | 2,394 |
+| Tokeniser, keyword table, LIST | 1,848 |
 | Float core (+ - * /, normalise, compare, conversions, small-int ops) | 1,422 |
 | Expression evaluator and functions | 1,329 |
 | Variables, arrays, string heap + GC, value and control stacks | 1,290 |
 | Transcendentals, byte-code runner, coefficient tables | 1,148 |
 | Legacy loader shim (interpreter, expressions, PRINT) | 845 |
 | Number <-> string (STR$/PRINT formatting, VAL) | 709 |
-| 64-column print, control codes, colours, scroll, CLS, RST 16 | 581 |
+| 64-column print, control codes, colours, scroll, CLS, RST 16 | 584 |
 | Errors: RST 8 handler and messages | 491 |
 | String and machine functions: INSTR STRING$ HEX$ UPPER$ ERR$ IN USR DPEEK KEY FREE | 465 |
 | Direct mode and console: input line with insert/delete/cursor | 422 |
-| Tape commands: SAVE / LOAD / VERIFY, CODE, headers, name match | 418 |
+| Tape commands: SAVE / LOAD / VERIFY, CODE, headers, name match | 428 |
 | 4-pixel font | 384 |
 | Interrupt routine, keyboard scan, key tables | 355 |
 | Tape low level: SA-BYTES, LD-BYTES, edges, tape_ret | 317 |
-| CASE, EXIT, ERROR n [,msg$], CLEAR [n], PROC-name lookup | 302 |
+| CASE, EXIT, ERROR n [,msg$], CLEAR [n], PROC-name lookup | 343 |
 | Restarts, NMI, reset, RAM test, sysvars, channels | 300 |
-| Line editor: marker, LIST around it, cursor up/down, EDIT | 268 |
+| Line editor: marker, LIST around it, cursor up/down, EDIT | 269 |
 | Graphics: PLOT, DRAW, DRAW TO | 236 |
 | BEEP, OUT, DPOKE, CALL, SWAP; start-up chime | 226 |
 | INPUT, DATA / READ / RESTORE | 183 |
@@ -141,13 +141,13 @@ On The Spectrum from Retro Games, use the `.tzx` tapes: its instant `.tap` loadi
 | Boot banner + version text, calls | 70 |
 | Number output for the legacy shim and console (pr_dec, pr_hex) | 50 |
 
-The free bytes are spread over twelve gaps between the ROM's fixed addresses, the largest 48 bytes.
+The free bytes are spread over about eleven gaps between the ROM's fixed addresses, the largest 27 bytes.
 
 ## The boot screen
 
 The mock-up above matches the ROM's real boot screen pixel for pixel (the rig checks this). It is a faithful ZX Spectrum frame: 256×192 pixels of bitmap, with a 32-pixel black border, giving a 320×256 image (and a 3× nearest-neighbour upscale here so the text is readable). Paper is black, ink is white, bright is off.
 
-Row 0 is a colour bar made from attribute cells only: 16 swatches, each two cells wide, showing black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Row 1 is blank. Row 2 holds the banner, `OpticOS (c) 2026 Optica Technology Design`, and row 3 the BASIC's name and version, `OpticBASIC v1.0.2`. Row 4 is blank. Row 5 shows the OpticOS prompt `] ` with the cursor block (character 127) at column 2. `]` is the direct-mode prompt everywhere. Everything below the bar is white on black. The font has no copyright glyph — a © is illegible at 3 pixels wide — so the banner uses ASCII `(c)`, as the specification requires.
+Row 0 is a colour bar made from attribute cells only: 16 swatches, each two cells wide, showing black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Row 1 is blank. Row 2 holds the banner, `OpticOS (c) 2026 Optica Technology Design`, and row 3 the BASIC's name and version, `OpticBASIC v1.0.3`. Row 4 is blank. Row 5 shows the OpticOS prompt `] ` with the cursor block (character 127) at column 2. `]` is the direct-mode prompt everywhere. Everything below the bar is white on black. The font has no copyright glyph — a © is illegible at 3 pixels wide — so the banner uses ASCII `(c)`, as the specification requires.
 
 The native 1× frame is [`assets/opticos_boot.png`](assets/opticos_boot.png).
 

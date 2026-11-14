@@ -90,7 +90,7 @@
 |������������                                �������������
 |������������                                        ���������
 |Drawn in 18 seconds
---- LIST
+--- LIST (4 screenfuls, Y at each cont?)
 |  ' the central cross in whole cells: white border, red centre
 |  PRINT AT 5,0;PAPER 7;STRING$(64," ");
 |  PRINT AT 10,0;PAPER 7;STRING$(64," ");
@@ -148,7 +148,7 @@
 |Code OK: 1095 bytes at 60000.
 |Saving hbcode. Start the tape.
 |Done.
---- LIST
+--- LIST (8 screenfuls, Y at each cont?)
 |DATA 60920,$C6,$10,$F5,$CD,$1,$EE,$F1,$C6,6489
 |DATA 60928,$7,$E6,$F8,$6F,$26,$0,$29,$29,2460
 |DATA 60936,$7C,$C6,$58,$67,$7D,$F6,$8,$6F,4241
@@ -187,7 +187,7 @@
 |  SPACE  flap                               BREAK  stop
 --- in memory: RAMTOP 59999, code signature b'HB'
 --- BREAK: ['Break, line 88']
---- LIST
+--- LIST (8 screenfuls, Y at each cont?)
 |  FOR n%=0 TO 4
 |    BEEP 0.06,12-n%*5
 |  NEXT

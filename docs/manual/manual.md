@@ -23,7 +23,7 @@ In syntax lines, `[ ]` marks something optional, `|` separates alternatives, and
 
 ## The start-up screen
 
-Switch on, and after a moment OpticOS draws its start-up screen and plays two notes: a short high one, then a longer low one. They are the BBC Micro's power-on tones played in reverse order, 523 Hz for 0.3 seconds and then 122 Hz for 0.9 seconds. Keys pressed while they play, or in the moment after, are ignored: start typing once the `]` prompt appears. (So when an emulator such as Fuse auto-loads a tape by typing `LOAD ""` for you after a reset, the typing is ignored and you get a clean prompt; type `LOAD ""` yourself.) `NEW` restarts the machine in the same way, so it plays them too.
+Switch on, and after a moment OpticOS draws its start-up screen and plays two notes: a short high one, then a longer low one. They are the BBC Micro's power-on tones played in reverse order and at half their length, 523 Hz for 0.15 seconds and then 122 Hz for 0.45 seconds. Keys pressed while they play, or in the moment after, are ignored: start typing once the `]` prompt appears. (So when an emulator such as Fuse auto-loads a tape by typing `LOAD ""` for you after a reset, the typing is ignored and you get a clean prompt; type `LOAD ""` yourself.) `NEW` restarts the machine in the same way, so it plays them too.
 
 <figure><img src="img/boot.png"><figcaption>The start-up screen in Fuse.</figcaption></figure>
 
@@ -94,7 +94,7 @@ Type `AUTO`. The prompt changes to `+`, and each line you type now goes into the
 
 ## LIST and the marker
 
-`LIST` lists the whole program, with `>` in front of the current line. CAPS+7 and CAPS+6 move the marker up and down one line and relist about ten lines either side of it. If you move up from the first line, the marker goes *above* it, and the next line you add goes at the top of the program.
+`LIST` lists the whole program, with `>` in front of the current line. A long program is listed a screenful at a time: when the screen is full, LIST shows `cont?` on the bottom line and waits. Press Y to see the next screenful, or any other key to stop; the marker then moves to the first line of the screenful you were looking at, so EDIT or the cursor keys carry on from there. BREAK stops with a "Break" report and leaves the marker where it was. CAPS+7 and CAPS+6 move the marker up and down one line and relist about ten lines either side of it. If you move up from the first line, the marker goes *above* it, and the next line you add goes at the top of the program.
 
 <figure><img src="img/list_guess.png"><figcaption>LIST shows the structure by indentation. The marker is on the last line.</figcaption></figure>
 
@@ -328,7 +328,7 @@ Every keyword and function OpticBASIC has, in alphabetical order. *n*, *x* and *
 
 **LET** — Optional: `LET x = 1` is the same as `x = 1`.
 
-**LIST** — List the whole program, indented, with `>` at the current line.
+**LIST** — List the whole program, indented, with `>` at the current line. After each screenful it shows `cont?`: Y lists the next screenful, any other key stops with the marker on the first line of that screenful, and BREAK stops with "Break".
 
 **LN** *x* — Natural logarithm. **LOG** *x* — Logarithm to base 10. `LOG 1000` is 3.
 
@@ -509,7 +509,7 @@ OpticOS uses the standard Spectrum tape signal and headers, so its tapes can be 
 | `LOAD "name" CODE [start]` | Load a block of memory, at the address it was saved from or at *start* |
 | `VERIFY "name"` … | Check a saved program or block against memory, with the same forms as LOAD |
 
-To save a picture of the screen, save its memory: `SAVE "pic" CODE 16384, 6912`. While loading, OpticOS shows each header it finds, such as `Bytes: name`. BREAK stops a load.
+To save a picture of the screen, save its memory: `SAVE "pic" CODE 16384, 6912`. While loading, OpticOS shows each header it finds, such as `Bytes: name`. BREAK stops a load. The border stripes red and black while it reads the tape's lead-in tone, then magenta and green while it reads the data; LOAD and VERIFY both show these colours. SAVE shows red and cyan, then blue and yellow.
 
 OpticOS programs are saved with ordinary "Program:" headers, so other tools list them as BASIC programs. Their data begins with a short signature, and that is how `LOAD` tells an OpticBASIC program from a Sinclair one.
 
@@ -522,7 +522,7 @@ The Spectrum from Retro Games loads `.tap` files instantly only with the ROMs it
 3. Type `LOAD ""` and press ENTER.
 4. Hold HOME and press **Down** to open the tape controller, then press **play**.
 
-The border shows the usual stripes while the tape plays. The Spectrum's *Tape loading speed* setting makes it load faster.
+The border shows red and black stripes, then magenta and green, while the tape plays. The Spectrum's *Tape loading speed* setting makes it load faster.
 
 On The Spectrum, `.tap` files do not load under OpticOS, and nor does pressing ENTER in Media select to auto-load a tape. On Fuse and other emulators, `.tap` files load as usual.
 

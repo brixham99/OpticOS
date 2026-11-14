@@ -52,4 +52,17 @@ pfind:  rst $18
         call id_skip
         pop hl
         ret
+; LIST's pause: lt_pg is in list.asm; its two exits and messages are here.
+lp_y:   ld (iy+NLCT-ERR_NR),0   ; Y: a new screenful starts with this line
+        pop hl
+        push hl
+        ld (LPGT),hl
+        jp lt_1
+lp_st:  ld hl,(LPGT)            ; any other key: stop, marker on the first
+        ld (CURL),hl            ; line of the screenful just shown
+        jp lt_xp
+lp_m:   defm "cont?",8,8,8,8
+        defb 8+$80
+lp_e:   defm "     ",8,8,8,8
+        defb 8+$80
 m_err2_e:

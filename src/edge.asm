@@ -1,16 +1,19 @@
 ; edge.asm - LD-EDGE-2 ($05E3) and LD-EDGE-1 ($05E7).
-; B = timing counter (incremented every 59 T after a 358 T delay),
-; C bit 5 = last EAR level, bits 0-2 = border colour.
+; B = timing counter (incremented every 59 T after a 326 T delay),
+; C = stripe state: CPL on every edge (bit 5 = last EAR level); le_col
+; turns it into the border colour.  v1.0.3: the exit path after an edge is
+; 32 T longer than before and the delay 32 T shorter, so the time from an
+; edge being seen to the next sample is unchanged (and the 59 T loop too).
 ; Carry clear on return = time-out (B wrapped) or SPACE pressed.
 m_edge_s:
 LD_EDGE2:
         call LD_EDGE1
         ret nc
 LD_EDGE1:
-        ld a,22
+        ld a,20                 ; 20 x 16 T (+7 -5 +4) = 326 T, was 22 (358 T)
 le_dly: dec a
         jr nz,le_dly
-        or a                    ; 358 T so far, carry clear
+        or a                    ; 326 T so far, carry clear
 le_lp:  ld a,$7F                ; 59 T per sample
         inc b
         ret z
@@ -20,14 +23,13 @@ le_lp:  ld a,$7F                ; 59 T per sample
         xor c
         and $20
         jr z,le_lp
-        ld a,c                  ; edge: flip level and border colour
+        ld a,c                  ; edge: flip level and stripe state
         cpl
         ld c,a
-        and 7
-        xor 8
-        out ($FE),a
-        scf
-        ret
+        or 0                    ; 2 x 7 T: with le_col, 32 T more than the
+        or 0                    ; old AND 7 / XOR 8 / OUT / SCF / RET
+        jp le_col
+        defb 0
 ob_sig: defb "OB",1,0           ; (tape.asm) data at $0605, where SAVE-ETC-level traps sit
 m_edge_e:
 

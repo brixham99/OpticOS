@@ -164,4 +164,14 @@ ol_1:   ld (CH_ADD),hl
         ld hl,0
         ld (CURLN),hl
         jp st_run
+; le_col: the border colour for stripe state A = C (from LD-EDGE-1).
+; Leader C = $0F / $F0 -> red / black; data C = $0C / $F3 (after XOR 3)
+; -> green / magenta.  MIC (bit 3) stays set, as before.
+le_col: rlca
+        xor 4
+        and c
+        or 8
+        out ($FE),a
+        scf
+        ret
 m_tp_e:

@@ -330,4 +330,26 @@ pbs_n:  djnz pbs_l
         ld a,'0'
         rst 16
         ret
+; lt_pg (from lst, LIST only; the line is on the stack): after 23 newlines
+; since the screenful began, ask "cont?" on the bottom row.  Y continues
+; (lp_y); any other key stops (lp_st).  BREAK at the prompt reports "Break".
+lt_pg:  ld a,(iy+NLCT-ERR_NR)
+        cp 23
+        jp c,lt_1
+        ld hl,lp_m
+        call pr_msg
+        ld hl,FLAGS
+        res 5,(hl)              ; drop keys pressed while listing
+lp_w:   halt
+        call brk_chk
+        bit 5,(hl)
+        jr z,lp_w
+        res 5,(hl)
+        ld hl,lp_e              ; rub the prompt out, back to column 0
+        call pr_msg
+        ld a,(LAST_K)
+        or $20
+        cp 'y'
+        jp z,lp_y
+        jp lp_st
 m_lst_e:

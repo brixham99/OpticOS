@@ -43,7 +43,7 @@ def t_boot():
     check('row 0 has no text (colour bar only)', rows[0] == '', repr(rows[0]))
     check('row 1 blank', rows[1] == '', repr(rows[1]))
     check('boot banner text at row 2', rows[2] == 'OpticOS (c) 2026 Optica Technology Design', repr(rows[2]))
-    check('OpticBASIC version at row 3', rows[3] == 'OpticBASIC v1.0.2', repr(rows[3]))
+    check('OpticBASIC version at row 3', rows[3] == 'OpticBASIC v1.0.3', repr(rows[3]))
     check('row 4 blank, row 5 prompt "] "', rows[4] == '' and rows[5] == ']', repr(rows[4:6]))
     check('rows 6-23 empty', all(r == '' for r in rows[6:]), '')
     check('cursor position row 5 col 2', (s.peek(0x5C89), s.peek(0x5C88)) == (5, 2))
@@ -175,15 +175,27 @@ def edge_B(rom, P, b0=0):
     r = s.call(0x05E7, limit=5_000_000, BC=(b0 << 8) | 0x00)
     return (r['BC'] >> 8, r['AF'] & 1, r['BC'] & 255)
 
+def edge_chain(rom, P1, P2):
+    s = Spectrum(rom); s.frame(200)
+    s.tape([P1, P2, NOTOGGLE | 3500000], play=False)
+    import rig
+    rig.lib.z_ear_play(1)
+    r = s.call(0x05E3, limit=5_000_000, BC=0)
+    return (r['BC'] >> 8, r['AF'] & 1, r['BC'] & 255)
+
 def t_ref():
     if not REF:
         check('reference comparisons', True, 'skipped (no --ref)'); return
-    worst = 0; rows = []
-    for P in range(300, 16000, 97):
-        a = edge_B(ROM, P); b = edge_B(REF, P)
-        worst = max(worst, abs(a[0] - b[0]) if a[1] == b[1] else 99)
-        if a[2] != b[2]: worst = 99
-    check('LD-EDGE-1 B/C/carry vs reference, 300-16000 T', worst <= 1, 'max |dB| = %d' % worst)
+    # v1.0.3: the delay before the first sample is 32 T shorter and the exit
+    # after an edge 32 T longer (for the stripe colours), so from a cold CALL
+    # everything happens 32 T earlier; edge-to-edge it is cycle-identical.
+    bad = sum(edge_B(ROM, P) != edge_B(REF, P + 32) for P in range(300, 16000, 97))
+    check('LD-EDGE-1 B/C/carry vs reference (cold call, +32 T), 300-16000 T', bad == 0, '%d mismatches' % bad)
+    bad = 0
+    for P1 in (1000, 2168):
+        for P2 in list(range(300, 16500, 97)) + list(range(14000, 16000, 7)):
+            bad += edge_chain(ROM, P1, P2) != edge_chain(REF, P1 + 32, P2)
+    check('LD-EDGE-2 second edge vs reference, exact (incl. time-out edge)', bad == 0, '%d mismatches' % bad)
     random.seed(3)
     data = bytes(random.randrange(256) for _ in range(200))
     p = save_block(ROM, data)

@@ -114,3 +114,5 @@ EMAX     equ 126
 EMSGN    equ $5D49      ; ERROR n, msg$: the n whose message is in EMBUF, $FF none
 EMBUF    equ $5DD0      ; ERROR n, msg$: the message, bit-7 terminated (28)
 OPROG    equ $5DF0      ; OpticBASIC program start (the tape signature is at OPROG-4)
+NLCT     equ $5C8C      ; newlines printed (LIST's pause; Sinclair SCR_CT's place)
+LPGT     equ $5D4A      ; LIST: first line of the screenful shown (2)

@@ -4,7 +4,8 @@ hbloader.bas runs before happybat.bas: it POKEs Happy Bat's machine code to
 60000 (and SAVEs it), so the game finds its code in memory and does not wait
 for the tape (NEW wipes memory, so the verifier puts the code back as
 LOAD "hbcode" CODE would).  The game never stops by itself, so it is run for 3 seconds,
-its title screen printed, and then stopped with BREAK."""
+its title screen printed, and then stopped with BREAK.  LIST pauses after each
+screenful (v1.0.3), so the verifier answers Y at each cont? prompt."""
 import os, sys, glob
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'tools', 'rig'))
@@ -33,4 +34,9 @@ for f in files:
         print('--- BREAK:', [r for r in b.screen() if 'Break' in r])
     else:
         for r in b.run(prog, limit=3_000_000_000): print('|' + r)
-    b.line('LIST'); print('--- LIST'); [print('|' + r) for r in b.screen() if r]
+    # LIST pauses with "cont?" after each screenful (v1.0.3): answer Y each time
+    s.load(LINEBUF, b'LIST'); s.poke(CON_LEN, 4); s.setregs(PC=SYM['con_enter'], SP=s.regs()['SP'] + 2)
+    pages = 1
+    while s.run_until2(SYM['lp_w'], SYM['cg_lp'], 400_000_000) == 1:
+        pages += 1; s.key('y'); s.frame(4); s.key('y', False); s.frame(4)
+    print('--- LIST' + (' (%d screenfuls, Y at each cont?)' % pages if pages > 1 else '')); [print('|' + r) for r in b.screen() if r]

@@ -17,9 +17,10 @@ LD_BYTES:                       ; (trap layout: see save.asm)
         out ($FE),a
         in a,($FE)
         rra                     ; $0562: an instruction boundary
-        and $20
-        or $02
-        ld c,a                  ; C bit 5 = EAR level, bits 0-2 = border
+        ld c,$0F                ; stripe state: leader red / black (le_col).  A
+        nop                     ; first edge against the wrong EAR level just
+        nop                     ; fails the pilot timing and restarts the
+        nop                     ; leader search
 lb_wait:
         ld h,0                  ; need 256 good pilot cycles in a row
         cp a
@@ -44,7 +45,7 @@ lb_sync:
         call LD_EDGE1           ; second sync edge
         ret nc
         ld a,c
-        xor $03                 ; blue / yellow stripes for data
+        xor $03                 ; magenta / green stripes for data
         ld c,a
         call lb_byte            ; flag byte
         ret nc

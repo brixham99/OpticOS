@@ -117,12 +117,12 @@ m_in_e:
 ; uninitialised SN76489's tone (4 MHz / 32 / 1023 = 122.2 Hz, about 0.9 s).
 ; BEEPER: HL = 437500 / f - 30, DE = f * seconds.
 m_chm_s:
-chime:  ld de,157               ; 523.25 Hz x 0.3 s
+chime:  ld de,78                ; 523.25 Hz x 0.15 s
         ld hl,806
         call BEEPER
         halt                    ; a short gap, as between the BBC's tones
         halt
-        ld de,110               ; 122.2 Hz x 0.9 s
+        ld de,55                ; 122.2 Hz x 0.45 s
         ld hl,3550
         call BEEPER
         ld b,40                 ; 0.8 s more before the prompt: keys typed

@@ -4,7 +4,7 @@ table{border-collapse:collapse;margin:.6em 0;width:100%;font-size:8.8pt}td,th{bo
 pre{background:#f4f4f7;border:1px solid #dde;padding:6px;font-size:8.3pt;white-space:pre-wrap;page-break-inside:avoid}code{font-family:'DejaVu Sans Mono',monospace;font-size:92%}
 @page{size:A4;margin:16mm 14mm}</style></head><body>
 <h1>OpticOS: design specification</h1>
-<p><strong>Version 0.15, 14 November 2026.</strong> The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. <strong>v0.6</strong> (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). <strong>v0.7</strong> (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). <strong>v0.8</strong> (phase 5c) records the last cuts as decision 13 (array parameters by reference, <code>CALL</code> register arguments, <code>CAT</code>, the OpticBASIC <code>SCREEN$</code> tape forms, <code>JOY</code>), builds CASE, EXIT, <code>ERROR n, msg$</code>, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2). <strong>v0.9</strong> removes the last UDG mentions (§4.7, §5.4, §6.1, §9), records <code>TAB(c)</code> as built, lengthens the boot banner to <code>OpticOS (c) 2026 Optica Technology Design</code>, records the measured nesting limits (§4.8), corrects §6.1 (codes 128–255 print as <code>?</code>; no block graphics) and points to the user manual (<code>docs/manual</code>). <strong>v0.10</strong> fixes PROG (<code>DPEEK 23635</code> now gives the program start, 24048), makes <code>ERROR n</code> without a message report <code>Error n</code>, enlarges the stacks below RAMTOP on 48K machines (decision 15), and completes the company name, Optica Technology Design. <strong>v0.11</strong> halves the 48K stacks (decision 15) and adds the example tape (<code>examples/</code>). <strong>v0.12</strong> (after the v1.0 release) makes the tape routines safe under emulators that trap them (§3.1). <strong>v0.13</strong> makes colour 8 (transparent) work for PLOT and DRAW as well as PRINT (§6.4), adds error 21, "Keyword as name", for a DEF whose name is a keyword (§7.2), and adds <code>flag</code> to the example tape. <strong>v0.14</strong> (ROM v1.0.1) changes the boot version line to <code>OpticBASIC v1.0.1</code> and records the margin rule agreed by Nathan: at least 221 bytes free (it was 256); two error jumps became relative jumps to pay for the 2 longer banner bytes. <strong>v0.15</strong> (ROM v1.0.2) makes <code>NEW</code> a full cold start, exactly as at power-on (§6.5), and drops keys typed before the boot prompt appears (§6.7), so an emulator's auto-load typing does nothing; the boot version line becomes <code>OpticBASIC v1.0.2</code>. 227 bytes free.
+<p><strong>Version 0.16, 14 November 2026.</strong> The design decisions in §12 were agreed the same day. v0.3 rebalanced the §8.2 budget after phase 3. v0.4 replaced the full-screen editor with a Sinclair-style line editor (§6.5, §6.6, decision 7) and rebalanced the budget again. v0.5 brought the document in line with the ROM as built through phase 4. <strong>v0.6</strong> (phase 5a) records INPUT, DATA/READ/RESTORE and the tape commands as built, drops ASN/ACS, and re-projects the budget (§8.2). <strong>v0.7</strong> (phase 5b) records Nathan's cuts as decisions 8–11 (§12), the squeezes, and graphics, colours, BEEP, the string and machine functions and SWAP as built, and adds the start-up chime (§6.7). <strong>v0.8</strong> (phase 5c) records the last cuts as decision 13 (array parameters by reference, <code>CALL</code> register arguments, <code>CAT</code>, the OpticBASIC <code>SCREEN$</code> tape forms, <code>JOY</code>), builds CASE, EXIT, <code>ERROR n, msg$</code>, CLEAR, FREE, KEY and the PROC-name forms of RUN, RESTORE and SAVE … AUTO, and completes the feature list within the 256-byte margin (§8.2). <strong>v0.9</strong> removes the last UDG mentions (§4.7, §5.4, §6.1, §9), records <code>TAB(c)</code> as built, lengthens the boot banner to <code>OpticOS (c) 2026 Optica Technology Design</code>, records the measured nesting limits (§4.8), corrects §6.1 (codes 128–255 print as <code>?</code>; no block graphics) and points to the user manual (<code>docs/manual</code>). <strong>v0.10</strong> fixes PROG (<code>DPEEK 23635</code> now gives the program start, 24048), makes <code>ERROR n</code> without a message report <code>Error n</code>, enlarges the stacks below RAMTOP on 48K machines (decision 15), and completes the company name, Optica Technology Design. <strong>v0.11</strong> halves the 48K stacks (decision 15) and adds the example tape (<code>examples/</code>). <strong>v0.12</strong> (after the v1.0 release) makes the tape routines safe under emulators that trap them (§3.1). <strong>v0.13</strong> makes colour 8 (transparent) work for PLOT and DRAW as well as PRINT (§6.4), adds error 21, "Keyword as name", for a DEF whose name is a keyword (§7.2), and adds <code>flag</code> to the example tape. <strong>v0.14</strong> (ROM v1.0.1) changes the boot version line to <code>OpticBASIC v1.0.1</code> and records the margin rule agreed by Nathan: at least 221 bytes free (it was 256); two error jumps became relative jumps to pay for the 2 longer banner bytes. <strong>v0.15</strong> (ROM v1.0.2) makes <code>NEW</code> a full cold start, exactly as at power-on (§6.5), and drops keys typed before the boot prompt appears (§6.7), so an emulator's auto-load typing does nothing; the boot version line becomes <code>OpticBASIC v1.0.2</code>. 227 bytes free. <strong>v0.16</strong> (ROM v1.0.3, Nathan's requests) halves both start-up notes (523 Hz for 0.15 s, then 122 Hz for 0.45 s; §6.7), changes the LOAD border stripes to red/black for the pilot tone and magenta/green for the data (§3.1), and makes LIST pause after each screenful with <code>cont?</code> (§6.5); the boot version line becomes <code>OpticBASIC v1.0.3</code>. 116 bytes free, 105 below the 221-byte margin rule (§8.2).
 Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>OpticOS (c) 2026 Optica Technology Design</code>.</p>
 <p>This document covers design and planning only. The Z80 snippets in it are there to show technique. They are not the implementation.</p>
 <hr />
@@ -124,6 +124,7 @@ Project, ROM and future repo name: <strong>OpticOS</strong>. Boot banner: <code>
 </tbody>
 </table>
 <p>OpticOS programs are saved as <strong>type 0</strong> headers, so tape catalogues still say "Program:". The data block begins with the 4-byte signature <code>"OB" $01 $00</code>. On LOAD, a type-0 block without this signature is a Sinclair BASIC program and is handed to the legacy loader (§3.4).</p>
+<p><strong>Border stripes (v1.0.3).</strong> While LOAD reads the tape the border changes colour on every edge of the signal: <strong>red and black</strong> during the pilot tone and sync, then <strong>magenta and green</strong> for the data (it was red/cyan and blue/yellow before v1.0.3). The stripe state is kept in C, inverted on every edge, and turned into a colour by <code>le_col</code> (<code>RLCA / XOR 4 / AND C / OR 8</code>, MIC bit set): C starts at <code>$0F</code>/<code>$F0</code> for the pilot and is switched to <code>$0C</code>/<code>$F3</code> (<code>XOR $03</code>) when the data starts. To make room for the colour code the exit after an edge is 32 T longer and the delay before the first sample 32 T shorter (326 T, was 358 T), so the time from one edge being seen to the next sample, the 59 T sample loop and the time-out are all unchanged; only a cold <code>CALL $05E7</code> samples 32 T earlier. <code>tools/rig/test_phase1.py</code> checks LD-EDGE-1 and LD-EDGE-2 against the reference ROM, edge for edge. SAVE has its own border code and still shows red/cyan for the pilot and blue/yellow for the data.</p>
 <p><strong>Tape traps (v0.12).</strong> Emulators that load <code>.tap</code> files instantly, or save them quickly, do it by trapping the ROM's tape routines at fixed addresses and returning through fixed points, without playing any signal. OpticOS keeps that layout so a trap either works or cannot misfire. The addresses come from Fuse's public source (<code>tape.c</code>, <code>z80/opcodes_base.c</code>) and the documented entry convention (IX = start, DE = length, A = flag, carry set = LOAD), not from the Sinclair code:</p>
 <table>
 <thead>
@@ -578,7 +579,7 @@ VERIFY …                       ' same forms as LOAD
 ' OpticBASIC (SCREEN$ is CODE 16384,6912); legacy loaders keep LOAD &quot;&quot; SCREEN$
 </code></pre>
 <p><strong>Direct-mode commands</strong></p>
-<p><code>RUN [procname]</code> (with a name: the prepass, then a call of that PROC; at its end OpticOS returns to the prompt), <code>LIST</code>, <code>NEW</code> (since v1.0.2 a full cold start, exactly as at power-on: RAM test and clear, RAMTOP and colours to their defaults, colour bar, banner, chime and prompt; it is <code>RST 0</code>), <code>AUTO</code>, <code>EDIT</code> (key). <code>FREE</code> is a function: <code>PRINT FREE</code>. (<code>CONT</code> and <code>FIND</code> were dropped in v0.7, decision 10.) Any statement can also be typed in direct mode.</p>
+<p><code>RUN [procname]</code> (with a name: the prepass, then a call of that PROC; at its end OpticOS returns to the prompt), <code>LIST</code> (pausing with <code>cont?</code> after each screenful, §6.5), <code>NEW</code> (since v1.0.2 a full cold start, exactly as at power-on: RAM test and clear, RAMTOP and colours to their defaults, colour bar, banner, chime and prompt; it is <code>RST 0</code>), <code>AUTO</code>, <code>EDIT</code> (key). <code>FREE</code> is a function: <code>PRINT FREE</code>. (<code>CONT</code> and <code>FIND</code> were dropped in v0.7, decision 10.) Any statement can also be typed in direct mode.</p>
 <h3>4.5 Functions</h3>
 <table>
 <thead>
@@ -848,7 +849,7 @@ row:  ld   a,(de)      ;  7
 <p>There is no full-screen editor. Editing follows the Sinclair pattern: a <strong>current line</strong>, marked <code>&gt;</code> when listed, which you move with the cursor keys and copy into the input line with EDIT.</p>
 <ul>
 <li><strong>The current line</strong> is held as a pointer to the line (<code>CURL</code>), not as a number. 0 means "above the first line". It is set by entering, editing or deleting a line, by the cursor keys, and by an uncaught error (the failing line becomes current). NEW and LOAD reset it.</li>
-<li><strong>LIST</strong> lists the whole program with <code>&gt;</code> in front of the current line. <strong>Cursor up/down</strong> (CAPS+7 / CAPS+6) move the marker one line and relist about ten lines either side of it, on a cleared screen. Moving up from the first line goes above it, so the next inserted line goes at the top.</li>
+<li><strong>LIST</strong> lists the whole program with <code>&gt;</code> in front of the current line. Since v1.0.3 it <strong>pauses after each screenful</strong> (23 rows, counting each row of a wrapped line) and shows <code>cont?</code> on the bottom row: Y (either case) lists the next screenful, any other key stops and puts the marker on the first line of the screenful just shown, and BREAK stops with "Break". The prompt is rubbed out before LIST goes on or stops. A program that fits on the screen lists without a pause. <strong>Cursor up/down</strong> (CAPS+7 / CAPS+6) move the marker one line and relist about ten lines either side of it, on a cleared screen. Moving up from the first line goes above it, so the next inserted line goes at the top.</li>
 <li><strong>The input line</strong> holds up to 126 characters (two rows at 64 columns), with a cursor. CAPS+5 / CAPS+8 move left and right, characters are inserted at the cursor, and DELETE (CAPS+0) removes the character to its left. The prompt shows the mode: <code>]</code> direct, <code>+</code> AUTO, <code>*</code> editing a line.</li>
 <li><strong>EDIT</strong> (CAPS+1) detokenises the current line into the input line, without its indentation, and the prompt becomes <code>*</code>. ENTER tokenises the line and puts it in place of the current line. Pressing EDIT again empties the input line, so <strong>EDIT, EDIT, ENTER deletes the current line</strong>, and the line before it becomes current.</li>
 <li><strong>Entering new lines: AUTO.</strong> Typed lines run at once, unless the <code>AUTO</code> command has been given. In AUTO mode (prompt <code>+</code>) each line typed goes in <strong>after the current line</strong> and becomes the current line, so a program is typed from top to bottom. An empty line ends AUTO mode. This replaces the temporary <code>&gt;</code> prefix of phase 3.</li>
@@ -928,7 +929,7 @@ row:  ld   a,(de)      ;  7
 </tr>
 <tr>
 <td>3</td>
-<td><code>OpticBASIC v1.0.2</code>, the name and version of the BASIC</td>
+<td><code>OpticBASIC v1.0.3</code>, the name and version of the BASIC</td>
 </tr>
 <tr>
 <td>4</td>
@@ -958,7 +959,7 @@ row:  ld   a,(de)      ;  7
 <tr>
 <td>First</td>
 <td>about 122 Hz, about 0.9 s</td>
-<td>523.25 Hz, 0.3 s (BEEPER DE=157, HL=806)</td>
+<td>523.25 Hz, 0.15 s (BEEPER DE=78, HL=806)</td>
 </tr>
 <tr>
 <td>Gap</td>
@@ -968,11 +969,11 @@ row:  ld   a,(de)      ;  7
 <tr>
 <td>Second</td>
 <td>523.25 Hz, 0.3 s</td>
-<td>122.2 Hz, 0.9 s (DE=110, HL=3550)</td>
+<td>122.2 Hz, 0.45 s (DE=55, HL=3550)</td>
 </tr>
 </tbody>
 </table>
-<p>The rig measures 523.3 Hz for 0.30 s, then 121.9 Hz for 0.90 s. The chime adds about 1.25 s to the cold start, with interrupts off while BEEPER runs. FRAMES does not advance during it. After it the cold start waits 40 more frames (0.8 s) and then clears the key-ready flag (FLAGS bit 5) before the console prints the prompt, so any key pressed before the prompt appears is dropped (v1.0.2). This is what makes an emulator's auto-load typing harmless: Fuse's phantom typist (File &gt; Open with auto-load on) resets the machine and types <code>J""</code> ENTER or <code>LOAD""</code> ENTER, the Sinclair way, from the first frame the keyboard is read, which on OpticOS is during the chime. All of it lands before the prompt and is dropped, so the screen shows a clean <code>]</code> prompt and the user types <code>LOAD ""</code> (<code>tools/rig/test_autoload.py</code>). The prompt appears about 177 frames (3.5 s) after power-on, so the rigs wait 200 frames before typing (<code>p3lib</code> injects lines directly) and the Fuse scripts 4.5 s. <code>NEW</code> is a cold start (§6.5), so it plays the chime too (<code>tools/rig/test_new.py</code>).</p>
+<p>Since v1.0.3 (Nathan's request) each note is half as long as the BBC's, at the same pitches: BEEPER's DE is the duration in cycles, so it is halved and HL (the pitch) is kept. The rig measures 523.3 Hz for 0.15 s, then 121.9 Hz for 0.45 s (0.30 s and 0.90 s before v1.0.3). The chime adds about 0.64 s to the cold start (1.24 s before), with interrupts off while BEEPER runs. FRAMES does not advance during it. After it the cold start waits 40 more frames (0.8 s) and then clears the key-ready flag (FLAGS bit 5) before the console prints the prompt, so any key pressed before the prompt appears is dropped (v1.0.2). This is what makes an emulator's auto-load typing harmless: Fuse's phantom typist (File &gt; Open with auto-load on) resets the machine and types <code>J""</code> ENTER or <code>LOAD""</code> ENTER, the Sinclair way, from the first frame the keyboard is read, which on OpticOS is during the chime. All of it lands before the prompt and is dropped, so the screen shows a clean <code>]</code> prompt and the user types <code>LOAD ""</code> (<code>tools/rig/test_autoload.py</code>). The prompt appears about 146 frames (2.9 s) after power-on (177 frames, 3.5 s, before v1.0.3), and Fuse's typist finishes about 0.6 s before it, as before. The rigs wait 200 frames before typing (<code>p3lib</code> injects lines directly) and the Fuse scripts 4.5 s. <code>NEW</code> is a cold start (§6.5), so it plays the chime too (<code>tools/rig/test_new.py</code>).</p>
 <hr />
 <h2>7. Interpreter design</h2>
 <h3>7.1 The tokeniser</h3>
@@ -1139,7 +1140,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <td>4</td>
 <td>64-column print, control codes, colours, scroll, CLS, RST 16</td>
-<td style="text-align: right;">581</td>
+<td style="text-align: right;">584</td>
 </tr>
 <tr>
 <td>8</td>
@@ -1159,7 +1160,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <td>9</td>
 <td>Tape commands: SAVE / LOAD / VERIFY, CODE, headers, name match</td>
-<td style="text-align: right;">418</td>
+<td style="text-align: right;">428</td>
 </tr>
 <tr>
 <td>27</td>
@@ -1199,17 +1200,17 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <td>15</td>
 <td>Tokeniser, keyword table, LIST</td>
-<td style="text-align: right;">1,800</td>
+<td style="text-align: right;">1,848</td>
 </tr>
 <tr>
 <td>19</td>
 <td>Interpreter: run loop, statements, prepass, PROC/FN, TRY</td>
-<td style="text-align: right;">2,386</td>
+<td style="text-align: right;">2,394</td>
 </tr>
 <tr>
 <td>19-20</td>
 <td>CASE, EXIT, ERROR n [,msg$], CLEAR [n], PROC-name lookup</td>
-<td style="text-align: right;">302</td>
+<td style="text-align: right;">343</td>
 </tr>
 <tr>
 <td>25</td>
@@ -1219,7 +1220,7 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <td>24</td>
 <td>Line editor: marker, LIST around it, cursor up/down, EDIT</td>
-<td style="text-align: right;">268</td>
+<td style="text-align: right;">269</td>
 </tr>
 <tr>
 <td>25</td>
@@ -1254,16 +1255,17 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <tr>
 <td></td>
 <td><strong>Total</strong> (v0.2 budget: 15,374)</td>
-<td style="text-align: right;"><strong>16,157</strong></td>
+<td style="text-align: right;"><strong>16,268</strong></td>
 </tr>
 <tr>
 <td></td>
 <td><strong>Free (of 16,384)</strong></td>
-<td style="text-align: right;"><strong>227</strong> in v1.0.2 (221 in v1.0.1; margin rule: at least 221 since v1.0.1, agreed by Nathan; it was 256 before. 261 before v0.13's colour-8 and keyword-name fixes, 264 before the trap-safe tape layout, 283 before the longer boot banner)</td>
+<td style="text-align: right;"><strong>116</strong> in v1.0.3, <strong>105 below the 221-byte margin rule</strong> (227 in v1.0.2, 221 in v1.0.1; margin rule: at least 221 since v1.0.1, agreed by Nathan; it was 256 before. 261 before v0.13's colour-8 and keyword-name fixes, 264 before the trap-safe tape layout, 283 before the longer boot banner)</td>
 </tr>
 </tbody>
 </table>
-<p>The ROM builds its own version of this table (<code>build/bytes.md</code>, from <code>tools/check_layout.py</code>). The free bytes are spread over twelve gaps between the fixed addresses (the largest is 48 bytes).</p>
+<p>The ROM builds its own version of this table (<code>build/bytes.md</code>, from <code>tools/check_layout.py</code>). The free bytes are spread over about eleven gaps between the fixed addresses (the largest is 27 bytes).</p>
+<p><strong>v1.0.3 (spec v0.16).</strong> The new stripe colours cost 10 bytes (the out-of-line <code>le_col</code> and the stripe state set at the start of LOAD). The LIST pause costs 101 bytes (the page check and prompt in LIST, 48; the continue/stop exits and the two prompt strings, 41; the screenful row count in the newline code, 3; LIST's entry, 8; the editor's jump, 1). The shorter chime and the version line cost nothing. That leaves 116 bytes free, 105 short of the margin rule. Cuts that would restore it have been suggested to Nathan but not made.</p>
 <p><strong>Rebalance after phase 3 (v0.3).</strong> The maths (items 12–14, +882 bytes) and the interpreter (items 15–22, +1,450 bytes) came out larger than the v0.2 estimates. As agreed, the size reduction is left to phase 5, and the budgets above now record what was built, with room kept for the features each module still lacks. The ROM built so far fits, with 2,543 bytes free (well above the 256-byte margin rule). The free space is in seven gaps between fixed addresses, the largest being 613 bytes, so later modules must be split to fit.</p>
 <p><strong>Rebalance after phase 4 (v0.4).</strong> The full-screen editor (1,400) is replaced by a Sinclair-style line editor, built in 585 bytes and budgeted at 600. That recovers 800 bytes of the overrun. The ROM as built has 1,958 bytes free, spread over seven gaps (the largest now 397 bytes).</p>
 <p><strong>Rebalance in phase 5a (v0.6).</strong> ASN and ACS were dropped (−87 bytes with their keywords). INPUT, DATA/READ/RESTORE and SAVE/LOAD/VERIFY with CODE were built in 501 bytes (212 + 289), less than their budgets. The v0.4 projection had not counted the keyword table for the keywords still to come, so row 15–17 now includes about 270 bytes for them, and row 26 includes room for a few more messages.</p>
@@ -1612,5 +1614,5 @@ everything else: modules packed into the gaps by the link script (first-fit, lar
 <li><strong>Agreed (Nathan, 13 Nov 2026): RST <code>$28</code> enters the OpticOS maths byte-code</strong> (it was "Calculator not supported", decision 5). The interpreter's 37 calls become one byte each, saving about 99 bytes with the message. Without this the ROM would have about 185 bytes free, below the 256-byte margin. Machine code that calls the Sinclair calculator fails on OpticOS either way, but it no longer stops with an error message.</li>
 <li><strong>Agreed (Nathan, 13 Nov 2026, v0.10; halved in v0.11): larger stacks on 48K.</strong> The workspace below RAMTOP is 4,864 bytes on a 48K machine (machine stack 2,048, control stack 2,048, value stack 512, direct line 256), up from 1,856, so recursion goes about four to five times deeper than before v0.10 (§4.8). It costs RAM, not ROM: FREE on a fresh 48K machine is 36,447 bytes (39,455 before v0.10; v0.10's 9,216-byte workspace left 32,095, and Nathan asked for the sizes to be halved). A 16K machine keeps a 2,048-byte workspace (512 / 768 / 512 / 256), because a large one would not fit. The sizes are in a 4-byte table for each RAM size (<code>ws_t48</code>, <code>ws_t16</code> in <code>src/vars.asm</code>, in 256-byte pages, so the value stack is 512, not half of 768), which CLEAR also uses for its check.</li>
 </ol>
-<p><em>End of specification v0.15.</em></p>
+<p><em>End of specification v0.16.</em></p>
 </body></html>

@@ -1071,6 +1071,8 @@ st_run: ld a,1                  ; prepass always (it clears the variables)
         ld hl,OPROG
         jp go_line
 st_list: ld hl,OPROG            ; the whole program, marker included
+        ld (LPGT),hl
+        ld (iy+NLCT-ERR_NR),0
         ld b,0
         jp lst
 st_auto: ld hl,EMODE            ; AUTO: typed lines go into the program
