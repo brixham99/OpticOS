@@ -64,7 +64,7 @@ MODS = [
   ('Interpreter: run loop, statements, prepass, PROC/FN, TRY', '19', 1900, r('m_bas_s', 'm_bas_e') + r('m_ms2_s', 'm_ms2_e')),
   ('CASE, EXIT, ERROR n [,msg$], CLEAR [n], PROC-name lookup', '19-20', 450,
       r('m_cas_s', 'm_cas_e') + r('m_ext_s', 'm_ext_e') + r('m_err2_s', 'm_err2_e') + r('m_clr_s', 'm_clr_e')),
-  ('Direct mode and console: input line with insert/delete/cursor', '25', 250, r('m_con_s', 'm_con_e')),
+  ('Direct mode and console: input line with insert/delete/cursor', '25', 250, r('m_con_s', 'm_con_e') + r('m_ald_s', 'm_ald_e')),
   ('Line editor: marker, LIST around it, cursor up/down, EDIT', '24', 1400, r('m_edt_s', 'm_edt_e')),
   ('INPUT, DATA / READ / RESTORE', '25', 200, r('m_in_s', 'm_in_e')),
   ('Graphics: PLOT, DRAW, DRAW TO', '11', 620, r('m_gfx_s', 'm_gfx_e')),

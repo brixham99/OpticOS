@@ -43,7 +43,7 @@ def t_boot():
     check('row 0 has no text (colour bar only)', rows[0] == '', repr(rows[0]))
     check('row 1 blank', rows[1] == '', repr(rows[1]))
     check('boot banner text at row 2', rows[2] == 'OpticOS (c) 2026 Optica Technology Design', repr(rows[2]))
-    check('OpticBASIC version at row 3', rows[3] == 'OpticBASIC v1.0.2-test', repr(rows[3]))
+    check('OpticBASIC version at row 3', rows[3] == 'OpticBASIC v1.0.2-test2', repr(rows[3]))
     check('row 4 blank, row 5 prompt "] "', rows[4] == '' and rows[5] == ']', repr(rows[4:6]))
     check('rows 6-23 empty', all(r == '' for r in rows[6:]), '')
     check('cursor position row 5 col 2', (s.peek(0x5C89), s.peek(0x5C88)) == (5, 2))
@@ -63,7 +63,7 @@ def t_boot():
     ours = s.image(scale=1, border=True)
     # a -test build differs only in its version line (row 3, checked as text
     # above), so that row is left out of the comparison for test builds
-    skip = range(32 + 24, 32 + 32) if rows[3].endswith('-test') else ()
+    skip = range(32 + 24, 32 + 32) if '-test' in rows[3] else ()
     diff = sum(1 for y in range(mock.height) if y not in skip for x in range(mock.width) if mock.getpixel((x, y)) != ours.getpixel((x, y)))
     check('boot screen matches assets/opticos_boot.png exactly' + (' (but row 3)' if skip else ''), diff == 0, '%d differing pixels' % diff)
     s.image().save(os.path.join(SHOTS, 'rig_boot.png'))

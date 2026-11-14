@@ -102,8 +102,8 @@ bt_nb:  ld (hl),a
 
 banner: defm "OpticOS (c) 2026 Optica Technology Desig"
         defb 'n'+$80
-banner2: defm "OpticBASIC v1.0.2-tes"
-        defb 't'+$80
+banner2: defm "OpticBASIC v1.0.2-test"
+        defb '2'+$80
 
 chan_init:                      ; Sinclair layout: out, in, letter
         defw PR_OUT, key_in

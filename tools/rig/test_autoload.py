@@ -23,6 +23,9 @@ cl = s.peek(CON_LEN)
 line = bytes(s.peek(LINEBUF + i) for i in range(cl)).decode('latin1')
 check('typist: all four keys taken', [x[2] for x in t.log] == ['j', 'sym+p', 'sym+p', 'enter'], t.log)
 check('typist: J"" runs as LOAD ""', line == 'LOAD ""', repr(line))
+b0 = p3lib.Basic.__new__(p3lib.Basic); b0.s = s
+shown = [r for r in b0.screen() if r]
+check('typist: the line is shown as ] LOAD "" (no j"", no error)', shown[-1:] == [']' + ' LOAD ""'] and not any('rror' in r for r in shown), shown)
 check('typist: in the tape loader (LD-BYTES)', 0x0556 <= s.regs()['PC'] < 0x0605, '%04X' % s.regs()['PC'])
 for txt in ('J""', 'j""'):
     b = p3lib.Basic()

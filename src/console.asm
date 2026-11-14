@@ -118,7 +118,24 @@ c_del:  ld a,(hl)               ; DELETE: the character left of the cursor
         jp k_rd
 prm_t:  defb "]+**"
 con_enter:
+        ld hl,EMODE             ; J"" alone, as an emulator auto-loading types
+        bit 2,(hl)              ; it (J is LOAD on a Sinclair ROM), becomes
+        jr nz,ce_pos            ; LOAD "" and is shown as that; not in INPUT
         ld a,(CON_LEN)
+        cp 3
+        jr nz,ce_pos
+        ld hl,EBUF
+        ld a,(hl)
+        or $20
+        cp 'j'
+        jr nz,ce_pos
+        ld hl,(EBUF+1)
+        ld de,$2222             ; ""
+        or a
+        sbc hl,de
+        jr nz,ce_pos
+        call ce_set             ; (autold.asm)
+ce_pos: ld a,(CON_LEN)
         ld e,a
         ld d,0
         ld hl,EBUF
@@ -133,29 +150,8 @@ con_enter:
         bit 2,(hl)
         res 2,(hl)
         ret nz                  ; back to INPUT
-        ld hl,EBUF              ; J"" alone (an emulator auto-loading types
-        ld a,(hl)               ; J, which is LOAD on a Sinclair ROM, then
-        or $20                  ; "" and ENTER) runs as LOAD ""
-        cp 'j'
-        jr nz,ce_go
-        ld de,ce_ld+5
-        ld b,3
-ce_q:   inc hl
-        ld a,(de)
-        cp (hl)
-        jr nz,ce_go
-        inc de
-        djnz ce_q
-        ld hl,ce_ld
-        ld de,EBUF
-        ld c,8
-        ldir
-        ld a,7
-        ld (CON_LEN),a
-ce_go:  call con_line
+        call con_line
         jp con_new
-ce_ld:  defm "LOAD \"\""
-        defb 0
 ; con_inp: read one line into EBUF (CON_LEN) at the print position
 con_inp: xor a
         ld (CON_LEN),a
