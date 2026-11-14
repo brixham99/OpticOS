@@ -133,8 +133,29 @@ con_enter:
         bit 2,(hl)
         res 2,(hl)
         ret nz                  ; back to INPUT
-        call con_line
+        ld hl,EBUF              ; J"" alone (an emulator auto-loading types
+        ld a,(hl)               ; J, which is LOAD on a Sinclair ROM, then
+        or $20                  ; "" and ENTER) runs as LOAD ""
+        cp 'j'
+        jr nz,ce_go
+        ld de,ce_ld+5
+        ld b,3
+ce_q:   inc hl
+        ld a,(de)
+        cp (hl)
+        jr nz,ce_go
+        inc de
+        djnz ce_q
+        ld hl,ce_ld
+        ld de,EBUF
+        ld c,8
+        ldir
+        ld a,7
+        ld (CON_LEN),a
+ce_go:  call con_line
         jp con_new
+ce_ld:  defm "LOAD \"\""
+        defb 0
 ; con_inp: read one line into EBUF (CON_LEN) at the print position
 con_inp: xor a
         ld (CON_LEN),a

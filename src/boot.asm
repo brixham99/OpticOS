@@ -61,9 +61,8 @@ bt_st:  ld a,(hl)
         ld (BORDCR),a
         ld a,64
         ld (OMODE),a
-        im 1
-        ei
-        call CLS
+        im 1                    ; interrupts (and so the keyboard) stay off
+        call CLS                ; until the console: see chime
         ld hl,$5800             ; row 0: colour bar, 16 swatches of two
         ld b,0                  ; attribute cells (paper = ink, no pixels)
 bt_bar: ld a,b
