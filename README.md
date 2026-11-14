@@ -104,6 +104,10 @@ fuse-sdl --machine 48 --rom-48 build/opticos.rom --no-traps --no-detect-loader -
 
 Since v1.0.1 the ROM keeps the tape layout that emulator traps expect, so Fuse's tape traps work and `.tap` files load at once; v1.0 itself needs `--no-traps`. The second line turns the traps and loader acceleration off, so tapes load from the real signal in real time, as on a Spectrum; the tests run both ways. `build/` is gitignored. You need `pasmo` 0.5.3, `gcc` and Python 3 with Pillow.
 
+### On The Spectrum (2024)
+
+On The Spectrum from Retro Games, use the `.tzx` tapes: its instant `.tap` loading only works with ROMs it recognises, and pressing ENTER in Media select to auto-load does not work with OpticOS. In Media select pick the `.tzx` and press **M** (not ENTER), close the menu, type `LOAD ""`, then hold HOME and press Down to open the tape controller and press play. On Fuse and other emulators `.tap` files load as usual. See the manual, "Loading on The Spectrum (2024)".
+
 ## ROM byte usage (Phase 5 complete)
 
 16,157 of 16,384 bytes are placed, leaving **227 free** in v1.0.2 (the margin rule is to keep at least 221 spare; it was 256 until v1.0.1). By module, as `tools/check_layout.py` reports them:

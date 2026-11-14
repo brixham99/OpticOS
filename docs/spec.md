@@ -94,6 +94,8 @@ OpticOS programs are saved as **type 0** headers, so tape catalogues still say "
 
 The legacy loader and OpticBASIC's LOAD read a header with one 17-byte call and a data block with one call of the header's length, as a trap expects. The tape signature `OB` $01 $00 lies at $0605 and the error-message table over $0767–$0808, so no OpticOS code is fetched where traps on the Sinclair ROM's higher-level tape entry points (the SAVE/LOAD command and header and block loading) would sit; LOAD reaches nothing at a published tape entry point before $0556. `tools/check_layout.py` checks the bytes, and `tools/rig/test_traps.py` loads and saves through emulated Fuse, entry and Spectranet traps. v1.0 lacked this layout and crashed on The Spectrum (Retro Games, 2024) when loading a `.tap`.
 
+**The Spectrum (Retro Games, 2024).** Its instant `.tap` loading only works with the ROMs it recognises, not through any of the trap points above, so `.tap` files and Media select's auto-load (ENTER) do not load under OpticOS there. Its `.tzx` playback is a real tape signal and loads normally: attach the `.tzx` with M in Media select, type `LOAD ""`, then start the tape from the tape controller (HOME + Down, play). Tested with ROM v1.0.2 on 14 Nov 2026; the user manual has the steps.
+
 ### 3.2 Fixed entry points
 
 Each one is either the real routine or a 3-byte `JP` stub at the original address. Its register contract is documented and tested.
@@ -824,4 +826,4 @@ Nathan agreed the first six recommendations on 13 November 2026; decisions 7–1
 14. **Agreed (Nathan, 13 Nov 2026): RST `$28` enters the OpticOS maths byte-code** (it was "Calculator not supported", decision 5). The interpreter's 37 calls become one byte each, saving about 99 bytes with the message. Without this the ROM would have about 185 bytes free, below the 256-byte margin. Machine code that calls the Sinclair calculator fails on OpticOS either way, but it no longer stops with an error message.
 15. **Agreed (Nathan, 13 Nov 2026, v0.10; halved in v0.11): larger stacks on 48K.** The workspace below RAMTOP is 4,864 bytes on a 48K machine (machine stack 2,048, control stack 2,048, value stack 512, direct line 256), up from 1,856, so recursion goes about four to five times deeper than before v0.10 (§4.8). It costs RAM, not ROM: FREE on a fresh 48K machine is 36,447 bytes (39,455 before v0.10; v0.10's 9,216-byte workspace left 32,095, and Nathan asked for the sizes to be halved). A 16K machine keeps a 2,048-byte workspace (512 / 768 / 512 / 256), because a large one would not fit. The sizes are in a 4-byte table for each RAM size (`ws_t48`, `ws_t16` in `src/vars.asm`, in 256-byte pages, so the value stack is 512, not half of 768), which CLEAR also uses for its check.
 
-*End of specification v0.14.*
+*End of specification v0.15.*

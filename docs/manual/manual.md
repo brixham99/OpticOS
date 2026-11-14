@@ -11,7 +11,7 @@ This manual describes OpticOS and OpticBASIC exactly as they are built. Every ex
 ## What you need
 
 - A 48K ZX Spectrum, or an emulator. OpticOS also starts on a 16K machine, with less room for programs.
-- The ROM file `opticos.rom` (16,384 bytes). In Fuse, start with `fuse --machine 48 --rom-48 opticos.rom --no-traps` to load from the real tape signal, as on a real Spectrum, or leave the tape traps on to load `.tap` files at once (this needs ROM v1.0.1 or later; v1.0 itself needs `--no-traps`). On real hardware the ROM goes in an EPROM in place of the original; this has not yet been tried.
+- The ROM file `opticos.rom` (16,384 bytes). In Fuse, start with `fuse --machine 48 --rom-48 opticos.rom --no-traps` to load from the real tape signal, as on a real Spectrum, or leave the tape traps on to load `.tap` files at once (this needs ROM v1.0.1 or later; v1.0 itself needs `--no-traps`). On The Spectrum from Retro Games, put `opticos.rom` on its USB stick as `/THESPECTRUM/roms/48.rom` and load `.tzx` tapes (chapter 8, "Loading on The Spectrum (2024)"). On real hardware the ROM goes in an EPROM in place of the original; this has not yet been tried.
 
 ## How this manual is laid out
 
@@ -498,7 +498,7 @@ BREAK and STOP cannot be caught; they always return to the prompt.
 
 # Tape
 
-OpticOS uses the standard Spectrum tape signal and headers, so its tapes can be read by other tools, and tape images (`.tap` and `.tzx`) work in emulators. Emulators that load `.tap` files instantly do it by trapping the ROM's tape routines. ROMs from v1.0.1 on keep the layout these traps expect, and have been tested with Fuse's traps on; The Spectrum from Retro Games has not yet been retested. With v1.0, turn the traps off in Fuse (`--no-traps`); on The Spectrum, v1.0 crashes when loading a `.tap`, so try the `.tzx` tape, which The Spectrum's manual says it plays in real time.
+OpticOS uses the standard Spectrum tape signal and headers, so its tapes can be read by other tools, and tape images (`.tap` and `.tzx`) work in emulators. Emulators that load `.tap` files instantly do it by trapping the ROM's tape routines. ROMs from v1.0.1 on keep the layout these traps expect, and have been tested with Fuse's traps on; with v1.0, turn the traps off in Fuse (`--no-traps`). On The Spectrum from Retro Games, use the `.tzx` tapes, as described below.
 
 | Command | What it does |
 |---|---|
@@ -512,6 +512,19 @@ OpticOS uses the standard Spectrum tape signal and headers, so its tapes can be 
 To save a picture of the screen, save its memory: `SAVE "pic" CODE 16384, 6912`. While loading, OpticOS shows each header it finds, such as `Bytes: name`. BREAK stops a load.
 
 OpticOS programs are saved with ordinary "Program:" headers, so other tools list them as BASIC programs. Their data begins with a short signature, and that is how `LOAD` tells an OpticBASIC program from a Sinclair one.
+
+## Loading on The Spectrum (2024)
+
+The Spectrum from Retro Games loads `.tap` files instantly only with the ROMs it recognises, so with OpticOS use the `.tzx` version of a tape (for example `opticos_examples.tzx` or `happybat.tzx`), which it plays as a real tape signal:
+
+1. Press HOME, choose **Media select**, pick the `.tzx` file and press **M** to attach it (not ENTER).
+2. Close the menu to return to the OpticOS prompt.
+3. Type `LOAD ""` and press ENTER.
+4. Hold HOME and press **Down** to open the tape controller, then press **play**.
+
+The border shows the usual stripes while the tape plays. The Spectrum's *Tape loading speed* setting makes it load faster.
+
+On The Spectrum, `.tap` files do not load under OpticOS, and nor does pressing ENTER in Media select to auto-load a tape. On Fuse and other emulators, `.tap` files load as usual.
 
 ## Loading commercial games
 
