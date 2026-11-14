@@ -143,6 +143,75 @@
 |  ENDCASE
 |>UNTIL g%=secret%
 |]
+===== hbloader.bas
+|]
+|Code OK: 1095 bytes at 60000.
+|Saving hbcode. Start the tape.
+|Done.
+--- LIST
+|DATA 60920,$C6,$10,$F5,$CD,$1,$EE,$F1,$C6,6489
+|DATA 60928,$7,$E6,$F8,$6F,$26,$0,$29,$29,2460
+|DATA 60936,$7C,$C6,$58,$67,$7D,$F6,$8,$6F,4241
+|DATA 60944,$73,$2C,$73,$C9,$6F,$E6,$7,$F6,5304
+|DATA 60952,$40,$67,$7D,$1F,$1F,$1F,$E6,$18,2912
+|DATA 60960,$B4,$67,$7D,$17,$17,$E6,$E0,$6F,4804
+|DATA 60968,$C9,$24,$7C,$E6,$7,$C0,$7D,$C6,5211
+|DATA 60976,$20,$6F,$D8,$7C,$D6,$8,$67,$C9,4845
+|DATA 60984,$77,$B,$78,$B1,$C8,$54,$5D,$13,3516
+|DATA 60992,$ED,$B0,$C9,$4,$20,$87,$E1,$C5,5329
+|DATA 61000,$A3,$EF,$F7,$7D,$BE,$3E,$7C,$F,4192
+|DATA 61008,$F0,$2,$40,$4,$20,$7,$E0,$5,2262
+|DATA 61016,$A0,$7F,$FE,$FF,$FF,$ED,$B7,$CE,7822
+|DATA 61024,$73,$83,$C1,$F,$F,$F,$F,$8,1350
+|DATA 61032,$3,$8,$3,$0,$E,$0,$E,$3,220
+|DATA 61040,$8,$3,$8,$E,$0,$E,$0,$8,242
+|DATA 61048,$3,$8,$3,$0,$E,$0,$E,$8,260
+|DATA 61056,$8,$8,$8,$FF,$FF,$83,$83,$E,4158
+|DATA 61064,$E,$38,$38,$E0,$E0,$83,$83,$E,4125
+|DATA 61072,$E,$88,$88,$F,$BF,$FF,$E0,$0,4807
+|DATA 61080,$0,$FB,$FF,$FE,$0,$7F,$BF,$FF,6422
+|DATA 61088,$FE,$0,$7,$FB,$FF,$FF,$E0,5652
+|>DATA 128134
+|]
+===== happybat.bas
+|  HAPPY BAT             SCORE 0               BEST 0
+|                            H A P P Y    B A T
+|                          Fly the bat through the gaps
+|                          in the pipes. Do not touch a
+|                ####      pipe, the ground or the sky!
+|                ####
+|                          SPACE    flap your wings
+|                          Score a point for each pipe.
+|                            Press SPACE to start
+|################################################################
+|  SPACE  flap                               BREAK  stop
+--- in memory: RAMTOP 59999, code signature b'HB'
+--- BREAK: ['Break, line 88']
+--- LIST
+|  FOR n%=0 TO 4
+|    BEEP 0.06,12-n%*5
+|  NEXT
+|  FOR r%=7 TO 14
+|    PRINT AT r%,24;PAPER 2;INK 7;BRIGHT 1;box$;
+|  NEXT
+|  PRINT AT 8,29;PAPER 2;INK 6;BRIGHT 1;"G A M E    O V E R";
+|  PRINT AT 10,31;PAPER 2;INK 7;BRIGHT 1;"Score  ";score%;
+|  IF score%>best%
+|    best%=score%
+|    PRINT AT 11,31;PAPER 2;INK 6;BRIGHT 1;FLASH 1;"A new best!";
+|  ELSE
+|    PRINT AT 11,31;PAPER 2;INK 7;BRIGHT 1;"Best   ";best%;
+|  ENDIF
+|  PRINT AT 13,27;PAPER 2;INK 5;BRIGHT 1;"SPACE to fly again";
+|  header
+|  footer
+|  WAIT 40
+|  release
+|  REPEAT
+|    WAIT 1
+|  UNTIL KEY(" ")
+|ENDPROC
+|]
 ===== sort.bas
 |]
 |APPLE 5

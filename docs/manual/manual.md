@@ -758,3 +758,94 @@ INCLUDE flag.bas
 ```
 
 <figure><img src="img/run_flag.png"><figcaption>The finished flag. It takes about 18 seconds and prints how long it took.</figcaption></figure>
+
+## Happy Bat
+
+Happy Bat is a complete game in the style of Flappy Bird. Fly the bat through the gaps in the pipes and score a point for each one you pass. Touching a pipe, the ground or the sky ends the game. At first the gaps are wide and the pipes far apart, and both close up as the score rises. SPACE flaps the bat's wings and BREAK stops the program. The game is on the example tape: type `LOAD "happybat"` and it runs by itself. Its own repository is [brixham99/happy-bat](https://github.com/brixham99/happy-bat).
+
+<figure class="pair"><img src="img/run_happybat_title.png"><img src="img/run_happybat_play.png"><figcaption>The title screen, and the bat flying between two pipes.</figcaption></figure>
+
+The example shows how to share a game between OpticBASIC and machine code. An OpticBASIC statement takes a few hundredths of a second, which is far too slow to move pipes a few pixels at a time. So the work is divided:
+
+* **OpticBASIC** runs the game: the title screen, when each pipe appears and where its gap is, how the game gets harder, the score and best score, the game-over box, and starting again.
+* **Machine code** (1,095 bytes at 60000–61094) does everything that touches the screen in each step. It scrolls the ground, moves and draws up to four pipes, reads SPACE, applies gravity and the flap, and draws the bat, checking whether it has hit anything.
+
+One step moves everything 4 pixels and takes two frames, so the game runs at about 23 steps a second. The BASIC loop in PROC `play` is only four statements a step.
+
+CALL and USR cannot pass register values, so BASIC POKEs the values the code needs into a small parameter block, and `USR 60003` hands back the result of each step in BC:
+
+| Address | Use |
+|---|---|
+| `CALL 60000` | A new playfield: clear it, colour it, draw the ground, no pipes; the bat at rest at line PEEK 60009 |
+| `r% = USR 60003` | One step. 0 = flying, 1 = crashed, 2 = a pipe got past the bat (a point) |
+| `CALL 60006` | Colour the bat red (game over) |
+| 60009 | The bat's top line in the playfield, 0–152 |
+| 60010, 60011 | The next pipe's gap: its first line, and the first line below it |
+| 60012 | POKE 1 to start that pipe at the right-hand edge |
+| 60013 | 1 = play; 0 = title (the ground scrolls; no gravity, no pipes) |
+| 60014–60015 | "HB": the code is in memory |
+| 60016–60019 | Gravity 2, flap 18, fastest fall 20 (in quarter pixels a step), and 2 frames a step |
+
+The gap starts at 78 lines and closes by 2 lines a point, down to 52 from a score of 13: `MAX(52, 78 - 2 * score%)`. A new pipe comes every 32 steps at first, then one step sooner every 2 points, down to 24 steps.
+
+| Address | Contents |
+|---|---|
+| 24048–59999 | The program (5,507 bytes), its variables and the stacks. `CLEAR 59999` keeps BASIC below the code |
+| 60000–60019 | The jump table (`init`, `step`, `dead`) and the parameter block |
+| 60020–60060 | The code's own variables, with a table of four pipes at 60034 |
+| 60061–60994 | The code |
+| 60995–61094 | The two pictures of the bat (16×8), the ground patterns and the pipe patterns |
+
+The machine code must leave IX, IY and the alternate registers alone, because OpticBASIC uses them. It waits for the next frame with HALT, and reads FRAMES (23672) to pace itself. With the game loaded, `PRINT FREE` shows about 25,400 bytes free, and the figure stays the same however many games are played.
+
+The program starts with `CLEAR 59999`, then loads the code with `LOAD "hbcode" CODE` unless the code is already there. `CLEAR` must be in the main program, not in a procedure, so the tape saves the program with `SAVE "happybat" AUTO start`, and PROC `start` simply does `RUN`.
+
+```
+INCLUDE happybat.bas
+```
+
+<figure class="pair"><img src="img/run_happybat_score.png"><img src="img/run_happybat_over.png"><figcaption>The score rising, and a new best score at game over.</figcaption></figure>
+
+### Entering the machine code
+
+You do not need an assembler to make the machine code. The program below holds all 1,095 bytes as DATA lines. Each line has its address, 8 bytes in hex (`$C3` is 195) and a check number: the line's bytes multiplied by 1, 2, 3 … 8 and added together. That catches a mistyped byte, and also two bytes typed the wrong way round. If a line is wrong, the program stops with that line's address, for example `Check the line at 60024`. A line left out stops it with `DATA out of step at …`. The last DATA item is the sum of every byte.
+
+To make your own Happy Bat tape:
+
+1. Type in the game above and save it: `SAVE "happybat" AUTO start`. Leave the tape where it stopped.
+2. Type `NEW`, then type in the loader below and RUN it. It does `CLEAR 59999`, POKEs the bytes to 60000–61094 and checks them. Then it saves them, after the program, with `SAVE "hbcode" CODE 60000, 1095`.
+3. To play, rewind the tape and type `LOAD ""`. The game runs as soon as it has loaded, and loads `hbcode` from the tape by itself.
+
+To play straight away without a tape, RUN the loader, then type in the game and RUN it. It finds the code already in memory, by the "HB" at 60014, and does not load it.
+
+```
+INCLUDE hbloader.bas
+```
+
+The annotated assembler source, `happybat.asm`, is printed in full in the next chapter.
+
+# Happy Bat's machine code
+
+This is the complete source of Happy Bat's machine code. It is written for the pasmo assembler (`pasmo --bin happybat.asm hbcode.bin`). The DATA lines in the previous chapter are its output. Like the rest of OpticOS, it is original, clean-room code: it uses and calls no Sinclair ROM code. It touches only the screen, the keyboard and speaker port, FRAMES and its own variables.
+
+The main routines are:
+
+| Routine | What it does |
+|---|---|
+| `init` | Clears the playfield, sets its colours, draws the ground and resets the pipes and the bat |
+| `step` | One step: wait for the frame, take the bat off, move the bat (`phys`), move and draw the pipes (`pipes`), scroll the ground (`ground`), then test the bat for a crash and draw it again (`bat_on`). Returns 0, 1 or 2 in BC |
+| `dead` | Turns the bat's colour cells red |
+| `phys` | Reads SPACE on port $7FFE, flaps once per press with a click on the speaker, adds gravity and limits the fall; hitting the top or the ground is a crash |
+| `pipes`, `pipe1`, `seg` | Moves each pipe 4 pixels left, starts a new one when BASIC asks, counts a point as a pipe passes the bat, and draws the pipes clipped at the screen edges |
+| `ground` | Scrolls the ground 4 pixels with RLD |
+| `bat_on`, `bat_off`, `bat_xor` | Tests the bat's 16×8 picture against the screen with AND, then draws or removes it with XOR |
+| `pace`, `ln_addr`, `fill` | Waits for the next step, works out a screen line's address, and fills memory |
+
+<div class="asm" markdown="1">
+
+```
+INCLUDE happybat.asm
+```
+
+</div>
+

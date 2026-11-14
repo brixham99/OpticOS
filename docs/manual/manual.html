@@ -22,6 +22,8 @@ ul { margin: 0 0 2.5mm; padding-left: 5mm; } li { margin-bottom: 1mm; }
 code { font: 8.3pt "IBM Plex Mono", monospace; }
 pre { font: 7.9pt/1.35 "IBM Plex Mono", monospace; background: #f3f3ef; border-left: 2pt solid #111; padding: 2mm 3mm; margin: 0 0 3mm; white-space: pre-wrap; break-inside: avoid; }
 pre code { font: inherit; }
+.asm pre { font-size: 6.3pt; line-height: 1.3; break-inside: auto; }
+pre.long, .long pre { break-inside: auto; }
 table { border-collapse: collapse; width: 100%; margin: 0 0 3.5mm; font-size: 8.4pt; break-inside: auto; }
 th, td { border-bottom: .5pt solid #bbb; padding: 1mm 1.5mm; text-align: left; vertical-align: top; }
 th { border-bottom: 1.2pt solid #111; font-variant: small-caps; letter-spacing: .04em; }
@@ -74,7 +76,8 @@ figcaption { font-style: italic; font-size: 8pt; color: #444; margin-top: 1mm; }
 <li><a href="#c10"><span>10</span><em>Machine code</em><b>29</b></a></li>
 <li><a href="#c11"><span>11</span><em>Memory map and system variables</em><b>31</b></a></li>
 <li><a href="#c12"><span>12</span><em>Limits and differences from Sinclair BASIC</em><b>34</b></a></li>
-<li><a href="#c13"><span>13</span><em>Worked examples</em><b>36</b></a></li></ol>
+<li><a href="#c13"><span>13</span><em>Worked examples</em><b>36</b></a></li>
+<li><a href="#c14"><span>14</span><em>Happy Bat's machine code</em><b>56</b></a></li></ol>
 <p class="colophon">OpticOS and OpticBASIC &copy; 2026 Optica Technology Design. ZX Spectrum is a trademark of its owners; OpticOS is not connected with Sinclair Research or Amstrad. Screenshots are from the Fuse emulator.</p></section>
 <h1 id="c1"><span class="num">1</span>Introduction</h1>
 <p>OpticOS is a new 16K ROM for the 48K ZX Spectrum. It replaces the Sinclair ROM, and it brings its own language, <strong>OpticBASIC</strong>: a structured BASIC with named procedures and functions, block IF, CASE, WHILE, REPEAT and TRY, and no line numbers at all. Text is printed at <strong>64 columns</strong> in a 4-pixel font, so a listing shows twice as much as on a Sinclair screen.</p>
@@ -1249,4 +1252,1206 @@ PAPER 0: INK 7
 PRINT AT 22, 0; &quot;Drawn in &quot;; INT((FRAMES - t) / 5) / 10; &quot; seconds&quot;;
 </code></pre>
 <figure><img src="img/run_flag.png"><figcaption>The finished flag. It takes about 18 seconds and prints how long it took.</figcaption></figure>
+
+<h2>Happy Bat</h2>
+<p>Happy Bat is a complete game in the style of Flappy Bird. Fly the bat through the gaps in the pipes and score a point for each one you pass. Touching a pipe, the ground or the sky ends the game. At first the gaps are wide and the pipes far apart, and both close up as the score rises. SPACE flaps the bat's wings and BREAK stops the program. The game is on the example tape: type <code>LOAD "happybat"</code> and it runs by itself. Its own repository is <a href="https://github.com/brixham99/happy-bat">brixham99/happy-bat</a>.</p>
+<figure class="pair"><img src="img/run_happybat_title.png"><img src="img/run_happybat_play.png"><figcaption>The title screen, and the bat flying between two pipes.</figcaption></figure>
+
+<p>The example shows how to share a game between OpticBASIC and machine code. An OpticBASIC statement takes a few hundredths of a second, which is far too slow to move pipes a few pixels at a time. So the work is divided:</p>
+<ul>
+<li><strong>OpticBASIC</strong> runs the game: the title screen, when each pipe appears and where its gap is, how the game gets harder, the score and best score, the game-over box, and starting again.</li>
+<li><strong>Machine code</strong> (1,095 bytes at 60000–61094) does everything that touches the screen in each step. It scrolls the ground, moves and draws up to four pipes, reads SPACE, applies gravity and the flap, and draws the bat, checking whether it has hit anything.</li>
+</ul>
+<p>One step moves everything 4 pixels and takes two frames, so the game runs at about 23 steps a second. The BASIC loop in PROC <code>play</code> is only four statements a step.</p>
+<p>CALL and USR cannot pass register values, so BASIC POKEs the values the code needs into a small parameter block, and <code>USR 60003</code> hands back the result of each step in BC:</p>
+<table>
+<thead>
+<tr>
+<th>Address</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CALL 60000</code></td>
+<td>A new playfield: clear it, colour it, draw the ground, no pipes; the bat at rest at line PEEK 60009</td>
+</tr>
+<tr>
+<td><code>r% = USR 60003</code></td>
+<td>One step. 0 = flying, 1 = crashed, 2 = a pipe got past the bat (a point)</td>
+</tr>
+<tr>
+<td><code>CALL 60006</code></td>
+<td>Colour the bat red (game over)</td>
+</tr>
+<tr>
+<td>60009</td>
+<td>The bat's top line in the playfield, 0–152</td>
+</tr>
+<tr>
+<td>60010, 60011</td>
+<td>The next pipe's gap: its first line, and the first line below it</td>
+</tr>
+<tr>
+<td>60012</td>
+<td>POKE 1 to start that pipe at the right-hand edge</td>
+</tr>
+<tr>
+<td>60013</td>
+<td>1 = play; 0 = title (the ground scrolls; no gravity, no pipes)</td>
+</tr>
+<tr>
+<td>60014–60015</td>
+<td>"HB": the code is in memory</td>
+</tr>
+<tr>
+<td>60016–60019</td>
+<td>Gravity 2, flap 18, fastest fall 20 (in quarter pixels a step), and 2 frames a step</td>
+</tr>
+</tbody>
+</table>
+<p>The gap starts at 78 lines and closes by 2 lines a point, down to 52 from a score of 13: <code>MAX(52, 78 - 2 * score%)</code>. A new pipe comes every 32 steps at first, then one step sooner every 2 points, down to 24 steps.</p>
+<table>
+<thead>
+<tr>
+<th>Address</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>24048–59999</td>
+<td>The program (5,507 bytes), its variables and the stacks. <code>CLEAR 59999</code> keeps BASIC below the code</td>
+</tr>
+<tr>
+<td>60000–60019</td>
+<td>The jump table (<code>init</code>, <code>step</code>, <code>dead</code>) and the parameter block</td>
+</tr>
+<tr>
+<td>60020–60060</td>
+<td>The code's own variables, with a table of four pipes at 60034</td>
+</tr>
+<tr>
+<td>60061–60994</td>
+<td>The code</td>
+</tr>
+<tr>
+<td>60995–61094</td>
+<td>The two pictures of the bat (16×8), the ground patterns and the pipe patterns</td>
+</tr>
+</tbody>
+</table>
+<p>The machine code must leave IX, IY and the alternate registers alone, because OpticBASIC uses them. It waits for the next frame with HALT, and reads FRAMES (23672) to pace itself. With the game loaded, <code>PRINT FREE</code> shows about 25,400 bytes free, and the figure stays the same however many games are played.</p>
+<p>The program starts with <code>CLEAR 59999</code>, then loads the code with <code>LOAD "hbcode" CODE</code> unless the code is already there. <code>CLEAR</code> must be in the main program, not in a procedure, so the tape saves the program with <code>SAVE "happybat" AUTO start</code>, and PROC <code>start</code> simply does <code>RUN</code>.</p>
+<pre><code>' =============================================================
+' HAPPY BAT - a Flappy Bird-style game for OpticOS v1.0.1
+' OpticBASIC runs the game: title, pipes and their gaps, score,
+' best score, game over and restart. A machine-code block
+' &quot;hbcode&quot; (60000-61094, source happybat.asm) does the work that
+' touches thousands of screen bytes each step: scrolling the
+' ground, moving and drawing the pipes, and moving, drawing and
+' testing the bat, with gravity and the flap key.
+'
+' Machine code, called with CALL / USR. They take no register
+' arguments, so BASIC POKEs what the code needs first:
+'   CALL 60000      new playfield: clear, colour, draw ground;
+'                   the bat starts at line PEEK 60009, at rest
+'   r% = USR 60003  one step: 0 = flying, 1 = crashed, 2 = a
+'                   pipe got past the bat (a point)
+'   CALL 60006      colour the bat red (game over)
+' Bytes BASIC POKEs:
+'   60009 bat's top line (0-152)   60010 gap top  60011 gap end
+'   60012 1 = start a new pipe     60013 1 = play, 0 = title
+'   60014-60015 &quot;HB&quot;: the code is loaded
+'   60016 gravity  60017 flap speed  60018 fastest fall
+'   60019 frames per step (speeds are in quarter pixels a step)
+' =============================================================
+' Main program. CLEAR 59999 keeps BASIC below 60000, then the
+' code is loaded from tape unless it is already in memory.
+CLEAR 59999
+IF PEEK(60014) &lt;&gt; 72 OR PEEK(60015) &lt;&gt; 66 THEN LOAD &quot;hbcode&quot; CODE
+RANDOMIZE
+best% = 0
+' the game-over box's rows, made once so no string is left over
+box$ = STRING$(28, &quot; &quot;)
+title
+REPEAT
+  play
+  game_over
+UNTIL FALSE
+'
+DEF PROC start
+  ' The tape saves the program with AUTO start, so this runs
+  ' once it has loaded. RUN begins again at the top, where the
+  ' main program can use CLEAR (it must not be in a PROC).
+  RUN
+ENDPROC
+'
+DEF PROC header
+  ' The score line along the top: name, score and best score.
+  PRINT AT 0, 2; PAPER 1; INK 6; BRIGHT 1; &quot;HAPPY BAT&quot;;
+  PRINT AT 0, 24; PAPER 1; INK 7; BRIGHT 1; &quot;SCORE &quot;; score%; &quot;   &quot;;
+  PRINT AT 0, 46; PAPER 1; INK 7; BRIGHT 1; &quot;BEST &quot;; best%; &quot;   &quot;;
+ENDPROC
+'
+DEF PROC footer
+  ' The help text on the bottom row, black on the green grass:
+  ' on the title and game-over screens only (CALL 60000 clears
+  ' it when a game starts).
+  PRINT AT 23, 2; PAPER 4; INK 0; BRIGHT 1; &quot;SPACE  flap&quot;; TAB(44); &quot;BREAK  stop&quot;;
+ENDPROC
+'
+DEF PROC release
+  ' Wait until SPACE is let go, so one press is not read twice.
+  WHILE KEY(&quot; &quot;)
+  WEND
+ENDPROC
+'
+DEF PROC title
+  ' The title screen. CALL 60000 then POKE 60013, 0 is title
+  ' mode: only the ground scrolls, and BASIC bobs the bat up
+  ' and down on the spot until SPACE is pressed.
+  LOCAL t%, r%
+  BORDER 0: PAPER 1: INK 7: BRIGHT 1: CLS
+  score% = 0
+  CALL 60000
+  POKE 60013, 0
+  header
+  footer
+  PRINT AT 5, 28; PAPER 8; INK 6; BRIGHT 1; &quot;H A P P Y    B A T&quot;;
+  PRINT AT 8, 26; PAPER 8; INK 7; BRIGHT 1; &quot;Fly the bat through the gaps&quot;;
+  PRINT AT 9, 26; PAPER 8; INK 7; BRIGHT 1; &quot;in the pipes. Do not touch a&quot;;
+  PRINT AT 10, 26; PAPER 8; INK 7; BRIGHT 1; &quot;pipe, the ground or the sky!&quot;;
+  PRINT AT 13, 26; PAPER 8; INK 5; BRIGHT 1; &quot;SPACE    flap your wings&quot;;
+  PRINT AT 14, 26; PAPER 8; INK 5; BRIGHT 1; &quot;Score a point for each pipe.&quot;;
+  PRINT AT 18, 28; PAPER 8; INK 6; BRIGHT 1; FLASH 1; &quot;Press SPACE to start&quot;;
+  t% = 0
+  REPEAT
+    t% = t% + 1
+    POKE 60009, 60 + ABS(t% MOD 16 - 8)
+    r% = USR 60003
+  UNTIL KEY(&quot; &quot;)
+  release
+ENDPROC
+'
+DEF PROC play
+  ' One game. The flight itself (SPACE, gravity, the top and
+  ' the ground) is in the machine code, so that no press is
+  ' missed; BASIC sets its constants here. Each pass of the
+  ' loop is one step of 2 frames (25 a second): USR 60003
+  ' moves everything 4 pixels and reports a crash or a point.
+  ' BASIC starts a new pipe every n% steps: 32 (128 pixels
+  ' apart) at first, closing up to 24 (96 pixels) as the score
+  ' rises (see new_pipe). The bottom row is left empty in play.
+  LOCAL n%, r%, g%, gap%
+  POKE 60016, 2: ' gravity
+  POKE 60017, 18: ' flap
+  POKE 60018, 20: ' fastest fall
+  POKE 60019, 2: ' frames per step
+  POKE 60009, 64: ' the bat starts in the middle
+  CALL 60000
+  score% = 0
+  header
+  n% = 24: g% = 56: ' the first pipe comes after 24 steps
+  REPEAT
+    r% = USR 60003
+    n% = n% - 1: IF n% = 0 THEN new_pipe
+    IF r% = 2 THEN point
+  UNTIL r% = 1
+ENDPROC
+'
+DEF PROC new_pipe
+  ' Start the next pipe. Its gap is near the last one (g% moves
+  ' up to 32 lines) and keeps its caps inside the playfield.
+  ' Easy at first: the gap is 78 lines at score 0 and closes 2
+  ' lines a point, down to 52 from score 13. The next pipe
+  ' comes 32 steps later at first, one step sooner every 2
+  ' points, down to 24 steps from score 16.
+  gap% = MAX(52, 78 - 2 * score%)
+  n% = MAX(24, 32 - (score% &gt;&gt; 1))
+  g% = g% + 8 * RND(9) - 40
+  g% = MAX(16, MIN(g%, 144 - gap%))
+  POKE 60010, g%
+  POKE 60011, g% + gap%
+  POKE 60012, 1
+ENDPROC
+'
+DEF PROC point
+  ' The bat got past a pipe: one more point.
+  score% = score% + 1
+  PRINT AT 0, 30; PAPER 1; INK 7; BRIGHT 1; score%;
+  BEEP 0.01, 48
+ENDPROC
+'
+DEF PROC game_over
+  ' The bat turns red and a falling tune plays. A new best score
+  ' is kept in best%, which lasts until the program is run
+  ' again. Then SPACE starts the next game.
+  LOCAL n%, r%
+  CALL 60006
+  FOR n% = 0 TO 4
+    BEEP 0.06, 12 - n% * 5
+  NEXT
+  FOR r% = 7 TO 14
+    PRINT AT r%, 24; PAPER 2; INK 7; BRIGHT 1; box$;
+  NEXT
+  PRINT AT 8, 29; PAPER 2; INK 6; BRIGHT 1; &quot;G A M E    O V E R&quot;;
+  PRINT AT 10, 31; PAPER 2; INK 7; BRIGHT 1; &quot;Score  &quot;; score%;
+  IF score% &gt; best%
+    best% = score%
+    PRINT AT 11, 31; PAPER 2; INK 6; BRIGHT 1; FLASH 1; &quot;A new best!&quot;;
+  ELSE
+    PRINT AT 11, 31; PAPER 2; INK 7; BRIGHT 1; &quot;Best   &quot;; best%;
+  ENDIF
+  PRINT AT 13, 27; PAPER 2; INK 5; BRIGHT 1; &quot;SPACE to fly again&quot;;
+  header
+  footer
+  WAIT 40
+  release
+  REPEAT
+    WAIT 1
+  UNTIL KEY(&quot; &quot;)
+ENDPROC
+</code></pre>
+<figure class="pair"><img src="img/run_happybat_score.png"><img src="img/run_happybat_over.png"><figcaption>The score rising, and a new best score at game over.</figcaption></figure>
+
+<h3>Entering the machine code</h3>
+<p>You do not need an assembler to make the machine code. The program below holds all 1,095 bytes as DATA lines. Each line has its address, 8 bytes in hex (<code>$C3</code> is 195) and a check number: the line's bytes multiplied by 1, 2, 3 … 8 and added together. That catches a mistyped byte, and also two bytes typed the wrong way round. If a line is wrong, the program stops with that line's address, for example <code>Check the line at 60024</code>. A line left out stops it with <code>DATA out of step at …</code>. The last DATA item is the sum of every byte.</p>
+<p>To make your own Happy Bat tape:</p>
+<ol>
+<li>Type in the game above and save it: <code>SAVE "happybat" AUTO start</code>. Leave the tape where it stopped.</li>
+<li>Type <code>NEW</code>, then type in the loader below and RUN it. It does <code>CLEAR 59999</code>, POKEs the bytes to 60000–61094 and checks them. Then it saves them, after the program, with <code>SAVE "hbcode" CODE 60000, 1095</code>.</li>
+<li>To play, rewind the tape and type <code>LOAD ""</code>. The game runs as soon as it has loaded, and loads <code>hbcode</code> from the tape by itself.</li>
+</ol>
+<p>To play straight away without a tape, RUN the loader, then type in the game and RUN it. It finds the code already in memory, by the "HB" at 60014, and does not load it.</p>
+<pre><code>' =============================================================
+' HBCODE - type-in loader for Happy Bat's machine code
+' Type this in and RUN it. It puts the 1,095 bytes of code at
+' 60000-61094, checks every line, and saves them to tape
+' as &quot;hbcode&quot; CODE 60000,1095, for happybat.bas to load.
+' Each DATA line: its address, 8 bytes in hex ($C3 = 195),
+' and a check number: the bytes weighted 1, 2, 3 ... 8, added.
+' A wrong line stops the program with its address, so you can
+' find it; the last DATA item is the sum of all the bytes.
+' =============================================================
+CLEAR 59999
+a = 60000: t = 0
+REPEAT
+  READ d
+  IF d &lt;&gt; a THEN ERROR 200, &quot;DATA out of step at &quot; + STR$ a
+  s = 0
+  FOR i = 1 TO MIN(8, 61095 - a)
+    READ b: POKE a, b: a = a + 1
+    s = s + i * b: t = t + b
+  NEXT
+  READ k
+  IF k &lt;&gt; s THEN ERROR 201, &quot;Check the line at &quot; + STR$ d
+UNTIL a = 61095
+READ k
+IF k &lt;&gt; t THEN ERROR 202, &quot;Total wrong: &quot; + STR$ t
+PRINT &quot;Code OK: 1095 bytes at 60000.&quot;
+PRINT &quot;Saving hbcode. Start the tape.&quot;
+SAVE &quot;hbcode&quot; CODE 60000, 1095
+PRINT &quot;Done.&quot;
+DATA 60000, $C3, $9D, $EA, $C3, $22, $EB, $C3, $CC, 6568
+DATA 60008, $ED, $48, $28, $58, $00, $01, $48, $42, 1891
+DATA 60016, $02, $12, $14, $02, $20, $01, $00, $00, 272
+DATA 60024, $00, $00, $43, $EE, $00, $00, $00, $00, 1153
+DATA 60032, $00, $00, $80, $80, $80, $80, $80, $80, 4224
+DATA 60040, $80, $80, $80, $80, $80, $80, $80, $80, 4608
+DATA 60048, $80, $80, $00, $00, $00, $00, $00, $00, 384
+DATA 60056, $00, $00, $00, $00, $00, $0E, $10, $79, 1164
+DATA 60064, $CD, $14, $EE, $06, $20, $AF, $77, $2C, 3378
+DATA 60072, $10, $FC, $0C, $79, $FE, $C0, $20, $EF, 5598
+DATA 60080, $21, $40, $58, $01, $80, $02, $3E, $4C, 2123
+DATA 60088, $CD, $38, $EE, $21, $C0, $5A, $01, $20, 2926
+DATA 60096, $00, $3E, $66, $CD, $38, $EE, $21, $E0, 4981
+DATA 60104, $5A, $01, $20, $00, $3E, $60, $CD, $38, 2957
+DATA 60112, $EE, $11, $83, $EE, $0E, $B0, $79, $CD, 5230
+DATA 60120, $14, $EE, $06, $10, $1A, $77, $2C, $13, 1882
+DATA 60128, $1A, $77, $2C, $1B, $10, $F6, $13, $13, 2345
+DATA 60136, $0C, $79, $FE, $B8, $20, $E8, $21, $82, 4575
+DATA 60144, $EA, $01, $10, $00, $3E, $80, $CD, $38, 3245
+DATA 60152, $EE, $AF, $32, $7C, $EA, $32, $7D, $EA, 5451
+DATA 60160, $32, $7E, $EA, $32, $6C, $EA, $67, $6F, 4757
+DATA 60168, $22, $76, $EA, $3C, $32, $6D, $EA, $32, 4154
+DATA 60176, $78, $EA, $3A, $69, $EA, $6F, $29, $29, 3633
+DATA 60184, $22, $74, $EA, $3A, $78, $5C, $32, $7F, 3718
+DATA 60192, $EA, $C9, $CD, $5D, $EB, $CD, $B1, $ED, 7163
+DATA 60200, $AF, $32, $80, $EA, $32, $81, $EA, $3A, 4721
+DATA 60208, $6D, $EA, $B7, $28, $06, $CD, $74, $EB, 5238
+DATA 60216, $CD, $F5, $EB, $CD, $FA, $EC, $21, $7D, 6117
+DATA 60224, $EA, $34, $CD, $87, $ED, $79, $B7, $28, 5005
+DATA 60232, $03, $32, $80, $EA, $01, $01, $00, $3A, 1898
+DATA 60240, $80, $EA, $B7, $C0, $0C, $3A, $81, $EA, 5096
+DATA 60248, $B7, $C0, $0E, $00, $C9, $21, $7F, $EA, 4573
+DATA 60256, $3A, $78, $5C, $96, $47, $3A, $73, $EA, 4554
+DATA 60264, $3D, $B8, $38, $03, $76, $18, $F1, $3A, 3494
+DATA 60272, $78, $5C, $77, $C9, $3E, $7F, $DB, $FE, 6102
+DATA 60280, $2F, $E6, $01, $21, $78, $EA, $46, $77, 4088
+DATA 60288, $28, $11, $05, $28, $0E, $3A, $71, $EA, 3330
+DATA 60296, $ED, $44, $6F, $26, $FF, $22, $76, $EA, 5035
+DATA 60304, $CD, $E1, $EB, $2A, $76, $EA, $3A, $70, 4824
+DATA 60312, $EA, $5F, $16, $00, $19, $CB, $7C, $20, 2957
+DATA 60320, $0D, $3A, $72, $EA, $5F, $7C, $B7, $20, 4163
+DATA 60328, $04, $7D, $BB, $38, $01, $EB, $22, $76, 3636
+DATA 60336, $EA, $ED, $5B, $74, $EA, $19, $CB, $7C, 5178
+DATA 60344, $28, $05, $21, $00, $00, $18, $0D, $E5, 2216
+DATA 60352, $11, $61, $02, $B7, $ED, $52, $E1, $38, 4649
+DATA 60360, $08, $21, $60, $02, $3E, $01, $32, $80, 2060
+DATA 60368, $EA, $22, $74, $EA, $CB, $3C, $CB, $1D, 4614
+DATA 60376, $CB, $3C, $CB, $1D, $7D, $32, $69, $EA, 4580
+DATA 60384, $C9, $06, $18, $78, $E6, $01, $07, $07, 2026
+DATA 60392, $07, $07, $D3, $FE, $78, $C6, $08, $3D, 4002
+DATA 60400, $20, $FD, $10, $EF, $C9, $3A, $6C, $EA, 5523
+DATA 60408, $B7, $28, $22, $AF, $32, $6C, $EA, $21, 3865
+DATA 60416, $82, $EA, $11, $04, $00, $06, $04, $7E, 1737
+DATA 60424, $FE, $80, $28, $05, $19, $10, $F8, $18, 2799
+DATA 60432, $0C, $36, $40, $23, $3A, $6A, $EA, $77, 3968
+DATA 60440, $23, $3A, $6B, $EA, $77, $21, $82, $EA, 4983
+DATA 60448, $06, $04, $C5, $E5, $CD, $30, $EC, $E1, 6286
+DATA 60456, $11, $04, $00, $19, $C1, $10, $F3, $C9, 4495
+DATA 60464, $7E, $FE, $80, $C8, $3D, $77, $FE, $08, 4679
+DATA 60472, $20, $06, $3E, $01, $32, $81, $EA, $7E, 3904
+DATA 60480, $C6, $08, $FE, $49, $38, $03, $36, $80, 2968
+DATA 60488, $C9, $23, $7E, $32, $92, $EA, $23, $7E, 4236
+DATA 60496, $32, $93, $EA, $2B, $2B, $7E, $11, $93, 3484
+DATA 60504, $EE, $01, $9D, $EE, $CB, $47, $28, $06, 3432
+DATA 60512, $11, $98, $EE, $01, $A2, $EE, $ED, $53, 5600
+DATA 60520, $97, $EA, $ED, $43, $99, $EA, $CB, $2F, 5564
+DATA 60528, $0E, $05, $CB, $7F, $28, $18, $ED, $44, 3688
+DATA 60536, $47, $79, $90, $4F, $58, $16, $00, $2A, 1969
+DATA 60544, $97, $EA, $19, $22, $97, $EA, $2A, $99, 4507
+DATA 60552, $EA, $19, $22, $99, $EA, $AF, $32, $94, 4752
+DATA 60560, $EA, $81, $D6, $20, $38, $06, $47, $79, 3043
+DATA 60568, $90, $C8, $D8, $4F, $79, $32, $95, $EA, 5328
+DATA 60576, $2A, $97, $EA, $22, $9B, $EA, $3A, $92, 4935
+DATA 60584, $EA, $D6, $04, $47, $AF, $CD, $DC, $EC, 6491
+DATA 60592, $2A, $99, $EA, $22, $9B, $EA, $3A, $92, 4939
+DATA 60600, $EA, $D6, $04, $06, $04, $CD, $DC, $EC, 5376
+DATA 60608, $3A, $93, $EA, $06, $04, $CD, $DC, $EC, 5756
+DATA 60616, $2A, $97, $EA, $22, $9B, $EA, $3A, $93, 4943
+DATA 60624, $EA, $C6, $04, $4F, $3E, $A0, $91, $47, 3811
+DATA 60632, $79, $C3, $DC, $EC, $C6, $10, $CD, $14, 4796
+DATA 60640, $EE, $3A, $94, $EA, $B5, $6F, $C5, $E5, 6516
+DATA 60648, $EB, $2A, $9B, $EA, $ED, $4B, $95, $EA, 6270
+DATA 60656, $ED, $B0, $E1, $CD, $29, $EE, $C1, $10, 5196
+DATA 60664, $ED, $C9, $3A, $7E, $EA, $5F, $16, $00, 3211
+DATA 60672, $21, $63, $EE, $19, $EB, $0E, $B0, $79, 4504
+DATA 60680, $CD, $14, $EE, $7D, $F6, $1F, $6F, $1A, 3860
+DATA 60688, $CD, $27, $ED, $13, $13, $13, $13, $0C, 1508
+DATA 60696, $79, $FE, $B8, $20, $EA, $3A, $7E, $EA, 5581
+DATA 60704, $3C, $E6, $03, $32, $7E, $EA, $C9, $ED, 6066
+DATA 60712, $6F, $2D, $ED, $6F, $2D, $ED, $6F, $2D, 4140
+DATA 60720, $ED, $6F, $2D, $ED, $6F, $2D, $ED, $6F, 4914
+DATA 60728, $2D, $ED, $6F, $2D, $ED, $6F, $2D, $ED, 5094
+DATA 60736, $6F, $2D, $ED, $6F, $2D, $ED, $6F, $2D, 4140
+DATA 60744, $ED, $6F, $2D, $ED, $6F, $2D, $ED, $6F, 4914
+DATA 60752, $2D, $ED, $6F, $2D, $ED, $6F, $2D, $ED, 5094
+DATA 60760, $6F, $2D, $ED, $6F, $2D, $ED, $6F, $2D, 4140
+DATA 60768, $ED, $6F, $2D, $ED, $6F, $2D, $ED, $6F, 4914
+DATA 60776, $2D, $ED, $6F, $2D, $ED, $6F, $2D, $ED, 5094
+DATA 60784, $6F, $2D, $ED, $6F, $2D, $ED, $6F, $2D, 4140
+DATA 60792, $ED, $6F, $2D, $ED, $6F, $2D, $ED, $6F, 4914
+DATA 60800, $2D, $ED, $6F, $2D, $ED, $6F, $C9, $3A, 4754
+DATA 60808, $7D, $EA, $E6, $02, $21, $43, $EE, $28, 3844
+DATA 60816, $03, $21, $53, $EE, $22, $7A, $EA, $EB, 5690
+DATA 60824, $3A, $69, $EA, $32, $79, $EA, $CD, $D4, 6310
+DATA 60832, $ED, $C5, $3A, $79, $EA, $1E, $4E, $CD, 4825
+DATA 60840, $F8, $ED, $3E, $01, $32, $7C, $EA, $C1, 5088
+DATA 60848, $C9, $3A, $7C, $EA, $B7, $C8, $AF, $32, 5365
+DATA 60856, $7C, $EA, $ED, $5B, $7A, $EA, $3A, $79, 5055
+DATA 60864, $EA, $CD, $D4, $ED, $3A, $79, $EA, $1E, 5122
+DATA 60872, $4C, $C3, $F8, $ED, $3A, $79, $EA, $1E, 5052
+DATA 60880, $4A, $C3, $F8, $ED, $C6, $10, $06, $08, 3348
+DATA 60888, $0E, $00, $F5, $CD, $14, $EE, $7D, $F6, 5940
+DATA 60896, $08, $6F, $1A, $A6, $B1, $4F, $1A, $AE, 3905
+DATA 60904, $77, $13, $2C, $1A, $A6, $B1, $4F, $1A, 3046
+DATA 60912, $AE, $77, $13, $F1, $3C, $10, $E3, $C9, 5026
+DATA 60920, $C6, $10, $F5, $CD, $01, $EE, $F1, $C6, 6489
+DATA 60928, $07, $E6, $F8, $6F, $26, $00, $29, $29, 2460
+DATA 60936, $7C, $C6, $58, $67, $7D, $F6, $08, $6F, 4241
+DATA 60944, $73, $2C, $73, $C9, $6F, $E6, $07, $F6, 5304
+DATA 60952, $40, $67, $7D, $1F, $1F, $1F, $E6, $18, 2912
+DATA 60960, $B4, $67, $7D, $17, $17, $E6, $E0, $6F, 4804
+DATA 60968, $C9, $24, $7C, $E6, $07, $C0, $7D, $C6, 5211
+DATA 60976, $20, $6F, $D8, $7C, $D6, $08, $67, $C9, 4845
+DATA 60984, $77, $0B, $78, $B1, $C8, $54, $5D, $13, 3516
+DATA 60992, $ED, $B0, $C9, $04, $20, $87, $E1, $C5, 5329
+DATA 61000, $A3, $EF, $F7, $7D, $BE, $3E, $7C, $0F, 4192
+DATA 61008, $F0, $02, $40, $04, $20, $07, $E0, $05, 2262
+DATA 61016, $A0, $7F, $FE, $FF, $FF, $ED, $B7, $CE, 7822
+DATA 61024, $73, $83, $C1, $0F, $0F, $0F, $0F, $08, 1350
+DATA 61032, $03, $08, $03, $00, $0E, $00, $0E, $03, 220
+DATA 61040, $08, $03, $08, $0E, $00, $0E, $00, $08, 242
+DATA 61048, $03, $08, $03, $00, $0E, $00, $0E, $08, 260
+DATA 61056, $08, $08, $08, $FF, $FF, $83, $83, $0E, 4158
+DATA 61064, $0E, $38, $38, $E0, $E0, $83, $83, $0E, 4125
+DATA 61072, $0E, $88, $88, $0F, $BF, $FF, $E0, $00, 4807
+DATA 61080, $00, $FB, $FF, $FE, $00, $7F, $BF, $FF, 6422
+DATA 61088, $FE, $00, $07, $FB, $FF, $FF, $E0, 5652
+DATA 128134
+</code></pre>
+<p>The annotated assembler source, <code>happybat.asm</code>, is printed in full in the next chapter.</p>
+<h1 id="c14"><span class="num">14</span>Happy Bat's machine code</h1>
+<p>This is the complete source of Happy Bat's machine code. It is written for the pasmo assembler (<code>pasmo --bin happybat.asm hbcode.bin</code>). The DATA lines in the previous chapter are its output. Like the rest of OpticOS, it is original, clean-room code: it uses and calls no Sinclair ROM code. It touches only the screen, the keyboard and speaker port, FRAMES and its own variables.</p>
+<p>The main routines are:</p>
+<table>
+<thead>
+<tr>
+<th>Routine</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>init</code></td>
+<td>Clears the playfield, sets its colours, draws the ground and resets the pipes and the bat</td>
+</tr>
+<tr>
+<td><code>step</code></td>
+<td>One step: wait for the frame, take the bat off, move the bat (<code>phys</code>), move and draw the pipes (<code>pipes</code>), scroll the ground (<code>ground</code>), then test the bat for a crash and draw it again (<code>bat_on</code>). Returns 0, 1 or 2 in BC</td>
+</tr>
+<tr>
+<td><code>dead</code></td>
+<td>Turns the bat's colour cells red</td>
+</tr>
+<tr>
+<td><code>phys</code></td>
+<td>Reads SPACE on port $7FFE, flaps once per press with a click on the speaker, adds gravity and limits the fall; hitting the top or the ground is a crash</td>
+</tr>
+<tr>
+<td><code>pipes</code>, <code>pipe1</code>, <code>seg</code></td>
+<td>Moves each pipe 4 pixels left, starts a new one when BASIC asks, counts a point as a pipe passes the bat, and draws the pipes clipped at the screen edges</td>
+</tr>
+<tr>
+<td><code>ground</code></td>
+<td>Scrolls the ground 4 pixels with RLD</td>
+</tr>
+<tr>
+<td><code>bat_on</code>, <code>bat_off</code>, <code>bat_xor</code></td>
+<td>Tests the bat's 16×8 picture against the screen with AND, then draws or removes it with XOR</td>
+</tr>
+<tr>
+<td><code>pace</code>, <code>ln_addr</code>, <code>fill</code></td>
+<td>Waits for the next step, works out a screen line's address, and fills memory</td>
+</tr>
+</tbody>
+</table>
+<div class="asm">
+<pre><code>; =============================================================================
+; happybat.asm - the machine-code half of Happy Bat, for OpticOS v1.0.1
+; Assemble with pasmo:   pasmo --bin happybat.asm hbcode.bin
+;
+; Written from scratch for OpticOS (clean room): no Sinclair ROM code is used
+; or called.  The code touches only the screen, the keyboard/speaker port and
+; its own variables, and reads the frame counter FRAMES (23672), whose
+; address OpticOS keeps.  It does not use IX, IY or the alternate registers,
+; so the OpticBASIC interpreter's state is left alone.  It needs interrupts on
+; (they are, under OpticBASIC) because it waits for frames with HALT.
+;
+; OpticBASIC's CALL and USR take no register arguments, so BASIC POKEs the
+; parameter block below, and USR 60003 hands back the result of a step in BC.
+;
+; Screen layout (pixel lines from the top of the screen):
+;   lines   0- 15  character rows 0-1: the score line, printed by BASIC
+;   lines  16-175  the playfield, 160 lines: sky, pipes and the bat
+;   lines 176-183  character row 22: the ground, which scrolls
+;   lines 184-191  character row 23: help text, printed by BASIC
+; Horizontal positions are counted in nibbles (4 pixels = one character at
+; 64 columns): the screen is 64 nibbles wide and everything moves one nibble
+; left per step.
+; =============================================================================
+
+PF_TOP   equ 16             ; first screen line of the playfield
+PF_H     equ 160            ; playfield height in lines
+GR_TOP   equ 176            ; first line of the ground
+SC_END   equ 184            ; one past the ground's last line
+YMAX     equ 152            ; lowest top line for the 8-line bat
+BAT_COL  equ 8              ; the bat's byte column: x = 64-79
+BAT_NIB  equ 16             ; ... = nibble 16
+NPIPE    equ 4              ; pipe slots (pipes 24 nibbles apart: at most 4)
+FREE     equ $80            ; x value marking a free slot
+A_SKY    equ $4C            ; bright, blue paper, green ink (pipes)
+A_BAT    equ $4E            ; bright, blue paper, yellow ink (the bat)
+A_DEAD   equ $4A            ; bright, blue paper, red ink (a dead bat)
+A_GROUND equ $66            ; bright, green paper, yellow ink
+A_BASE   equ $60            ; bright, green paper, black ink (row 23)
+ATTRS    equ $5800          ; start of the attribute map
+FRAMES   equ 23672          ; OpticOS frame counter (low byte)
+
+        org 60000
+
+; ---- entry points: the addresses BASIC calls ---------------------------------
+        jp init             ; 60000  CALL 60000: new playfield
+        jp step             ; 60003  USR 60003: one step -&gt; BC = 0, 1 or 2
+        jp dead             ; 60006  CALL 60006: colour the bat red
+
+; ---- parameters, POKEd (and PEEKed) by BASIC -------------------------------
+baty:   defb 72             ; 60009  bat's top line in the playfield (0-152);
+                            ;        BASIC sets it on the title screen and
+                            ;        before CALL 60000; in play the code moves it
+gaptop: defb 40             ; 60010  first line of the next pipe's gap
+gapbot: defb 88             ; 60011  first line below that gap
+newpipe: defb 0             ; 60012  POKE 1: start that pipe at the right edge
+mode:   defb 1              ; 60013  1 = play; 0 = title (no gravity, no
+                            ;        pipes: only the ground scrolls)
+sig:    defm &quot;HB&quot;           ; 60014  signature: BASIC checks it to see
+                            ;        whether the code is already loaded
+grav:   defb 2              ; 60016  gravity, quarter pixels per step per step
+flapv:  defb 18             ; 60017  a flap's upward speed, quarter px / step
+vmax:   defb 20             ; 60018  fastest fall, quarter pixels per step
+pacev:  defb 2              ; 60019  frames per step at least (1 or more)
+
+; ---- internal state -------------------------------------------------------
+y16:    defw 288            ; bat height in quarter pixels (0 - 4*YMAX)
+v16:    defw 0              ; its speed, quarter pixels per step (+ = down)
+pkey:   defb 0              ; 1 if SPACE was down at the last step
+oldy:   defb 0              ; where the bat was drawn last
+oldspr: defw spr_up         ; and with which wing frame
+drawn:  defb 0              ; 1 while the bat is on the screen
+tick:   defb 0              ; step counter, for the wing beat
+phase:  defb 0              ; ground pattern phase, 0-3
+lastf:  defb 0              ; FRAMES at the last step, for pacing
+crash:  defb 0              ; set during a step: hit the top or the ground
+scored: defb 0              ; set during a step: a pipe got past the bat
+ptab:   defs NPIPE*4,FREE   ; pipes: x (nibble of the left edge), gap top,
+                            ;        gap bottom, spare
+pg1:    defb 0              ; the pipe being drawn: its gap top
+pg2:    defb 0              ;   and gap bottom
+scol:   defb 0              ;   first byte column written on each line
+slen:   defw 0              ;   bytes written on each line (high byte 0)
+sbody:  defw 0              ;   where in its body pattern to start
+scap:   defw 0              ;   and in its cap pattern
+sptr:   defw 0              ; pattern for the lines seg is drawing
+
+; -----------------------------------------------------------------------------
+; init: clear the screen below the score line, colour the sky, ground and
+; help row, draw the ground, and reset everything: no pipes, no bat on the
+; screen, play mode, the bat at height baty and not moving.
+; -----------------------------------------------------------------------------
+init:   ld c,PF_TOP         ; C = screen line
+in_clr: ld a,c
+        call ln_addr        ; HL = start of line C
+        ld b,32
+        xor a
+in_cb:  ld (hl),a           ; clear its 32 bytes
+        inc l
+        djnz in_cb
+        inc c
+        ld a,c
+        cp 192
+        jr nz,in_clr
+        ld hl,ATTRS+2*32    ; rows 2-21: sky
+        ld bc,20*32
+        ld a,A_SKY
+        call fill
+        ld hl,ATTRS+22*32   ; row 22: ground
+        ld bc,32
+        ld a,A_GROUND
+        call fill
+        ld hl,ATTRS+23*32   ; row 23: help text
+        ld bc,32
+        ld a,A_BASE
+        call fill
+        ld de,ginit         ; draw the ground: two bytes, 16 times a line
+        ld c,GR_TOP
+in_gr:  ld a,c
+        call ln_addr
+        ld b,16
+in_g2:  ld a,(de)
+        ld (hl),a
+        inc l
+        inc de
+        ld a,(de)
+        ld (hl),a
+        inc l
+        dec de
+        djnz in_g2
+        inc de              ; next ground line's pair
+        inc de
+        inc c
+        ld a,c
+        cp SC_END
+        jr nz,in_gr
+        ld hl,ptab          ; every pipe slot free
+        ld bc,NPIPE*4
+        ld a,FREE
+        call fill
+        xor a
+        ld (drawn),a        ; no bat on the screen
+        ld (tick),a
+        ld (phase),a        ; 64 nibbles drawn: the next one is phase 0
+        ld (newpipe),a
+        ld h,a
+        ld l,a
+        ld (v16),hl         ; not moving
+        inc a
+        ld (mode),a         ; play mode
+        ld (pkey),a         ; a SPACE still held from before is not a flap
+        ld a,(baty)         ; height in quarter pixels = baty * 4
+        ld l,a
+        add hl,hl
+        add hl,hl
+        ld (y16),hl
+        ld a,(FRAMES)
+        ld (lastf),a
+        ret
+
+; -----------------------------------------------------------------------------
+; step: one step of the game, called with h% = USR 60003.
+;  1. wait until pacev frames have passed since the last step, so the game
+;     runs at the same speed however much is on the screen;
+;  2. take the bat off the screen;
+;  3. in play: read SPACE and move the bat (phys), then start, move and draw
+;     the pipes (pipes);
+;  4. scroll the ground; put the bat back, testing its pixels as it goes.
+; Returns BC = 1 if the bat crashed (pipe, ground or top), else 2 if a pipe
+; has just got past the bat (a point), else 0.
+; -----------------------------------------------------------------------------
+step:   call pace
+        call bat_off
+        xor a
+        ld (crash),a
+        ld (scored),a
+        ld a,(mode)
+        or a
+        jr z,st_t           ; title: no gravity, no pipes
+        call phys
+        call pipes
+st_t:   call ground
+        ld hl,tick
+        inc (hl)
+        call bat_on         ; C &lt;&gt; 0: the bat touched a pipe
+        ld a,c
+        or a
+        jr z,st_1
+        ld (crash),a
+st_1:   ld bc,1
+        ld a,(crash)
+        or a
+        ret nz              ; 1: crashed
+        inc c
+        ld a,(scored)
+        or a
+        ret nz              ; 2: scored
+        ld c,0
+        ret                 ; 0: flying on
+
+; -----------------------------------------------------------------------------
+; pace: HALT until at least pacev frames have passed since the last call.
+; -----------------------------------------------------------------------------
+pace:   ld hl,lastf
+pa_lp:  ld a,(FRAMES)
+        sub (hl)            ; frames since the last step
+        ld b,a
+        ld a,(pacev)
+        dec a
+        cp b                ; carry if B &gt;= pacev
+        jr c,pa_ok
+        halt                ; wait for the next frame
+        jr pa_lp
+pa_ok:  ld a,(FRAMES)
+        ld (hl),a
+        ret
+
+; -----------------------------------------------------------------------------
+; phys: the bat's flight.  A new press of SPACE (it was up at the last step)
+; sets the speed to -flapv and chirps; then gravity adds grav to the speed, up
+; to vmax downwards, and the speed is added to the height.  Going above the
+; top or below YMAX stops the bat there and sets crash.  baty = height / 4.
+; -----------------------------------------------------------------------------
+phys:   ld a,$7F            ; keyboard half-row SPACE, SYMBOL, M, N, B
+        in a,($FE)
+        cpl
+        and 1               ; A = 1 while SPACE is held
+        ld hl,pkey
+        ld b,(hl)
+        ld (hl),a
+        jr z,ph_g           ; not held
+        dec b
+        jr z,ph_g           ; held, but it was held last step too
+        ld a,(flapv)        ; a flap: speed = -flapv
+        neg
+        ld l,a
+        ld h,$FF
+        ld (v16),hl
+        call chirp
+ph_g:   ld hl,(v16)         ; gravity
+        ld a,(grav)
+        ld e,a
+        ld d,0
+        add hl,de
+        bit 7,h
+        jr nz,ph_v          ; still going up: no limit
+        ld a,(vmax)
+        ld e,a
+        ld a,h
+        or a
+        jr nz,ph_cl
+        ld a,l
+        cp e
+        jr c,ph_v
+ph_cl:  ex de,hl            ; falling too fast: speed = vmax
+ph_v:   ld (v16),hl
+        ld de,(y16)
+        add hl,de           ; new height
+        bit 7,h
+        jr z,ph_lo
+        ld hl,0             ; above the top of the playfield
+        jr ph_cr
+ph_lo:  push hl
+        ld de,YMAX*4+1
+        or a
+        sbc hl,de
+        pop hl
+        jr c,ph_ok
+        ld hl,YMAX*4        ; on the ground
+ph_cr:  ld a,1
+        ld (crash),a
+ph_ok:  ld (y16),hl
+        srl h               ; baty = height / 4
+        rr l
+        srl h
+        rr l
+        ld a,l
+        ld (baty),a
+        ret
+
+; -----------------------------------------------------------------------------
+; chirp: a short rising click on the speaker for a flap (about 1 ms).
+; Bit 4 of port 254 drives the speaker; bits 0-2 keep the border black.
+; -----------------------------------------------------------------------------
+chirp:  ld b,24
+ch_lp:  ld a,b
+        and 1
+        rlca
+        rlca
+        rlca
+        rlca
+        out ($FE),a
+        ld a,b
+        add a,8
+ch_d:   dec a
+        jr nz,ch_d
+        djnz ch_lp
+        ret
+
+; -----------------------------------------------------------------------------
+; pipes: if BASIC asked for one (newpipe), put a new pipe in a free slot at
+; x = 64, just off the right edge, with the gap from gaptop/gapbot.  Then
+; move and redraw every pipe in use (pipe1).
+; -----------------------------------------------------------------------------
+pipes:  ld a,(newpipe)
+        or a
+        jr z,pp_mv
+        xor a
+        ld (newpipe),a
+        ld hl,ptab
+        ld de,4
+        ld b,NPIPE
+pp_f:   ld a,(hl)
+        cp FREE
+        jr z,pp_new
+        add hl,de
+        djnz pp_f
+        jr pp_mv            ; no free slot (cannot happen 24 steps apart)
+pp_new: ld (hl),64
+        inc hl
+        ld a,(gaptop)
+        ld (hl),a
+        inc hl
+        ld a,(gapbot)
+        ld (hl),a
+pp_mv:  ld hl,ptab
+        ld b,NPIPE
+pp_lp:  push bc
+        push hl
+        call pipe1
+        pop hl
+        ld de,4
+        add hl,de
+        pop bc
+        djnz pp_lp
+        ret
+
+; -----------------------------------------------------------------------------
+; pipe1: move the pipe in slot HL one nibble left and draw it.  A pipe is 8
+; nibbles wide: x .. x+7.  Its right edge passing the bat (x = 8, so x+7 = 15
+; is just left of nibble 16) sets scored.  A pipe gone off the left (x &lt; -8)
+; frees its slot.  Each line gets 5 bytes from a pattern (body or cap, for
+; even or odd x), clipped to the screen; the 5th byte rubs out the pixels
+; the pipe has just left on its right.  The gap's lines are not touched.
+; -----------------------------------------------------------------------------
+pipe1:  ld a,(hl)
+        cp FREE
+        ret z
+        dec a               ; one nibble left
+        ld (hl),a
+        cp BAT_NIB-8
+        jr nz,p1_a
+        ld a,1
+        ld (scored),a       ; its right edge is past the bat
+        ld a,(hl)
+p1_a:   add a,8             ; x from -8 to 64 is on (or next to) the screen
+        cp 73
+        jr c,p1_on
+        ld (hl),FREE        ; gone: free the slot
+        ret
+p1_on:  inc hl
+        ld a,(hl)
+        ld (pg1),a          ; gap top
+        inc hl
+        ld a,(hl)
+        ld (pg2),a          ; gap bottom
+        dec hl
+        dec hl
+        ld a,(hl)           ; A = x
+        ld de,body_e        ; patterns for even x
+        ld bc,cap_e
+        bit 0,a
+        jr z,p1_ev
+        ld de,body_o        ; or odd x
+        ld bc,cap_o
+p1_ev:  ld (sbody),de
+        ld (scap),bc
+        sra a               ; A = first byte column = x / 2, rounded down
+        ld c,5              ; C = bytes a line
+        bit 7,a
+        jr z,p1_r
+        neg                 ; partly off the left: A = bytes cut off
+        ld b,a
+        ld a,c
+        sub b
+        ld c,a
+        ld e,b              ; start that far into the patterns
+        ld d,0
+        ld hl,(sbody)
+        add hl,de
+        ld (sbody),hl
+        ld hl,(scap)
+        add hl,de
+        ld (scap),hl
+        xor a               ; and at column 0
+p1_r:   ld (scol),a
+        add a,c             ; partly off the right?
+        sub 32
+        jr c,p1_w
+        ld b,a              ; B = bytes beyond column 31
+        ld a,c
+        sub b
+        ret z               ; nothing on the screen yet
+        ret c
+        ld c,a
+p1_w:   ld a,c
+        ld (slen),a
+        ld hl,(sbody)       ; body from the top down to the top cap
+        ld (sptr),hl
+        ld a,(pg1)
+        sub 4
+        ld b,a
+        xor a
+        call seg
+        ld hl,(scap)        ; the cap above the gap
+        ld (sptr),hl
+        ld a,(pg1)
+        sub 4
+        ld b,4
+        call seg
+        ld a,(pg2)          ; the cap below it
+        ld b,4
+        call seg
+        ld hl,(sbody)       ; body from below that cap to the ground
+        ld (sptr),hl
+        ld a,(pg2)
+        add a,4
+        ld c,a
+        ld a,PF_H
+        sub c
+        ld b,a
+        ld a,c
+        jp seg
+
+; -----------------------------------------------------------------------------
+; seg: draw B lines (B &gt; 0) of a pipe, from playfield line A down: on each
+; line copy slen bytes of the pattern at sptr to byte column scol.
+; -----------------------------------------------------------------------------
+seg:    add a,PF_TOP
+        call ln_addr
+        ld a,(scol)
+        or l
+        ld l,a              ; HL = first byte to write
+sg_lp:  push bc
+        push hl
+        ex de,hl            ; DE = screen
+        ld hl,(sptr)
+        ld bc,(slen)
+        ldir
+        pop hl
+        call nxt_line
+        pop bc
+        djnz sg_lp
+        ret
+
+; -----------------------------------------------------------------------------
+; ground: scroll the 8 ground lines 4 pixels left, feeding in each line's
+; next pattern nibble at the right, then advance the pattern phase.
+; -----------------------------------------------------------------------------
+ground: ld a,(phase)
+        ld e,a
+        ld d,0
+        ld hl,gpat
+        add hl,de
+        ex de,hl            ; DE -&gt; this phase's nibble for ground line 0
+        ld c,GR_TOP
+gd_lp:  ld a,c
+        call ln_addr
+        ld a,l
+        or 31               ; the line's last byte
+        ld l,a
+        ld a,(de)           ; nibble to feed in
+        call rot_line
+        inc de              ; same phase, next line: 4 bytes on
+        inc de
+        inc de
+        inc de
+        inc c
+        ld a,c
+        cp SC_END
+        jr nz,gd_lp
+        ld a,(phase)
+        inc a
+        and 3
+        ld (phase),a
+        ret
+
+; -----------------------------------------------------------------------------
+; rot_line: scroll one screen line 4 pixels left.  HL = its last byte (x 31),
+; A's low nibble = the 4 pixels to bring in at the right.  RLD moves the
+; byte's low nibble up, A's nibble into the low half, and the byte's old high
+; nibble into A, which carries on into the byte to its left.  Unrolled:
+; 32 x (RLD, DEC L), about 700 T-states a line.
+; -----------------------------------------------------------------------------
+rot_line:
+        rept 31
+        rld
+        dec l
+        endm
+        rld
+        ret
+
+; -----------------------------------------------------------------------------
+; bat_on: draw the bat at baty with this step's wing frame (the wings beat
+; every two steps) and colour its cells yellow.  Returns C &lt;&gt; 0 if any of its
+; pixels landed on something already on the screen (a pipe).
+; -----------------------------------------------------------------------------
+bat_on: ld a,(tick)
+        and 2
+        ld hl,spr_up
+        jr z,bo_1
+        ld hl,spr_dn
+bo_1:   ld (oldspr),hl
+        ex de,hl            ; DE = sprite
+        ld a,(baty)
+        ld (oldy),a
+        call bat_xor        ; C = sprite AND screen, before drawing
+        push bc
+        ld a,(oldy)
+        ld e,A_BAT
+        call bat_attr
+        ld a,1
+        ld (drawn),a
+        pop bc
+        ret
+
+; -----------------------------------------------------------------------------
+; bat_off: if the bat is on the screen, XOR it away (which restores exactly
+; what was under it) and give its cells back the sky colour.
+; -----------------------------------------------------------------------------
+bat_off: ld a,(drawn)
+        or a
+        ret z
+        xor a
+        ld (drawn),a
+        ld de,(oldspr)
+        ld a,(oldy)
+        call bat_xor
+        ld a,(oldy)
+        ld e,A_SKY
+        jp bat_attr
+
+; -----------------------------------------------------------------------------
+; dead: colour the bat red where it was last drawn (game over).
+; -----------------------------------------------------------------------------
+dead:   ld a,(oldy)
+        ld e,A_DEAD
+        jp bat_attr
+
+; -----------------------------------------------------------------------------
+; bat_xor: XOR the 16 x 8 sprite at DE onto the screen at byte column BAT_COL,
+; playfield line A.  Returns C = the OR of (sprite AND screen) taken before
+; each byte is changed: non-zero means the bat overlapped something.
+; -----------------------------------------------------------------------------
+bat_xor: add a,PF_TOP       ; playfield line -&gt; screen line
+        ld b,8
+        ld c,0
+bx_lp:  push af
+        call ln_addr
+        ld a,l
+        or BAT_COL
+        ld l,a
+        ld a,(de)           ; left byte
+        and (hl)
+        or c
+        ld c,a
+        ld a,(de)
+        xor (hl)
+        ld (hl),a
+        inc de
+        inc l
+        ld a,(de)           ; right byte
+        and (hl)
+        or c
+        ld c,a
+        ld a,(de)
+        xor (hl)
+        ld (hl),a
+        inc de
+        pop af
+        inc a
+        djnz bx_lp
+        ret
+
+; -----------------------------------------------------------------------------
+; bat_attr: set the attribute E in the cells the bat covers when its top is at
+; playfield line A: two columns, in the character row of its top line and of
+; its bottom line (the same row when it is aligned).
+; -----------------------------------------------------------------------------
+bat_attr:
+        add a,PF_TOP
+        push af
+        call ba_row         ; row of the top line
+        pop af
+        add a,7             ; row of the bottom line
+ba_row: and $F8             ; A = screen line: row * 8
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl           ; row * 32
+        ld a,h
+        add a,ATTRS/256
+        ld h,a
+        ld a,l
+        or BAT_COL
+        ld l,a
+        ld (hl),e
+        inc l
+        ld (hl),e
+        ret
+
+; -----------------------------------------------------------------------------
+; ln_addr: A = screen line 0-191 -&gt; HL = address of its first byte.
+; The Spectrum interleaves its screen: the address bits are
+;   0 1 0 y7 y6 y2 y1 y0 | y5 y4 y3 x4 x3 x2 x1 x0
+; Uses A and HL only, so BC and DE survive.
+; -----------------------------------------------------------------------------
+ln_addr:
+        ld l,a
+        and 7               ; y2-y0
+        or $40
+        ld h,a
+        ld a,l
+        rra
+        rra
+        rra
+        and $18             ; y7 y6 -&gt; bits 4, 3
+        or h
+        ld h,a
+        ld a,l
+        rla
+        rla
+        and $E0             ; y5-y3 -&gt; bits 7-5
+        ld l,a
+        ret
+
+; -----------------------------------------------------------------------------
+; nxt_line: HL = a screen address -&gt; the same column one line down.  Within
+; a character row that is the next 256 bytes; at a row boundary, 32 bytes on
+; and back 8 x 256 (unless that crosses into the next third of the screen).
+; -----------------------------------------------------------------------------
+nxt_line:
+        inc h
+        ld a,h
+        and 7
+        ret nz
+        ld a,l
+        add a,32
+        ld l,a
+        ret c
+        ld a,h
+        sub 8
+        ld h,a
+        ret
+
+; -----------------------------------------------------------------------------
+; fill: store A in BC bytes from HL (BC &gt; 0), using LDIR.
+; -----------------------------------------------------------------------------
+fill:   ld (hl),a
+        dec bc
+        ld a,b
+        or c
+        ret z
+        ld d,h
+        ld e,l
+        inc de
+        ldir
+        ret
+
+; ---- data -------------------------------------------------------------------
+; Sprites, ground and pipe patterns (generated by tools/gen_tables.py; the
+; comments show the pixels).
+spr_up:                         ; wings up: 16 x 8 pixels, 2 bytes a line
+        defb $04,$20          ;      #    #     
+        defb $87,$E1          ; #    ######    #
+        defb $C5,$A3          ; ##   # ## #   ##
+        defb $EF,$F7          ; ### ######## ###
+        defb $7D,$BE          ;  ##### ## ##### 
+        defb $3E,$7C          ;   #####  #####  
+        defb $0F,$F0          ;     ########    
+        defb $02,$40          ;       #  #      
+spr_dn:                         ; wings down
+        defb $04,$20          ;      #    #     
+        defb $07,$E0          ;      ######     
+        defb $05,$A0          ;      # ## #     
+        defb $7F,$FE          ;  ############## 
+        defb $FF,$FF          ; ################
+        defb $ED,$B7          ; ### ## ## ## ###
+        defb $CE,$73          ; ##  ###  ###  ##
+        defb $83,$C1          ; #     ####     #
+gpat:                           ; ground: 8 lines x 4 nibbles (one 16-pixel repeat)
+        defb $F,$F,$F,$F      ; ################
+        defb $8,$3,$8,$3      ; #     ###     ##
+        defb $0,$E,$0,$E      ;     ###     ### 
+        defb $3,$8,$3,$8      ;   ###     ###   
+        defb $E,$0,$E,$0      ; ###     ###     
+        defb $8,$3,$8,$3      ; #     ###     ##
+        defb $0,$E,$0,$E      ;     ###     ### 
+        defb $8,$8,$8,$8      ; #   #   #   #   
+ginit:                          ; the same pattern as whole bytes, for the first fill
+        defb $FF,$FF
+        defb $83,$83
+        defb $0E,$0E
+        defb $38,$38
+        defb $E0,$E0
+        defb $83,$83
+        defb $0E,$0E
+        defb $88,$88
+body_e:  defb $0F,$BF,$FF,$E0,$00   ; |    ##### #################             |  x even
+body_o:  defb $00,$FB,$FF,$FE,$00   ; |        ##### #################         |  x odd
+cap_e:  defb $7F,$BF,$FF,$FE,$00   ; | ######## #####################         |  x even
+cap_o:  defb $07,$FB,$FF,$FF,$E0   ; |     ######## #####################     |  x odd
+
+code_end:
+</code></pre>
+</div>
 </body></html>

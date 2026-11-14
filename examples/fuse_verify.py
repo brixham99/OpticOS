@@ -26,14 +26,35 @@ def settle(f, t_min=8, t_max=240):
         still = 0 if moved else still + 1; last = d
         if still >= 3 and time.time() - t0 > t_min: break
     return time.time() - t0
+def title_up(f, t_max=240):
+    """Happy Bat: wait for its title screen (blue playfield, the yellow
+    "Press SPACE to start" on row 18); the screen never settles, it is animated"""
+    t0 = time.time()
+    while time.time() - t0 < t_max:
+        time.sleep(1); f.shot('/tmp/_ex_poll.png')
+        im = Image.open('/tmp/_ex_poll.png').convert('RGB').resize((320, 240), Image.NEAREST); w = im.load()
+        if w[42, 124] == (0, 0, 255) and any(w[32 + x, 24 + y] == (255, 254, 0) for x in range(80, 200) for y in range(144, 152)):
+            return time.time() - t0
+    return None
 RUNS = {'times': 3, 'guess': 3, 'fact': 3, 'sort': 4, 'errors': 3, 'ball': 4, 'tree': 32, 'colour': 6, 'flag': 22}
 only = sys.argv[1:]
-for name in ['examples'] + list(RUNS) + ['hilo']:
+for name in ['examples'] + list(RUNS) + ['hilo', 'happybat']:
     if only and name not in only: continue
     subprocess.run(['pkill', '-f', 'fuse-sdl'])
     f = Fuse(ROM, TAPE, traps=TRAPS); time.sleep(3)
     type_line(f, 'LOAD ""' if name == 'examples' else 'LOAD "%s"' % name)
     if not TRAPS: f.key('F8')
+    if name == 'happybat':
+        # saved with AUTO start: it runs as soon as it has loaded, sets CLEAR
+        # 59999 and loads its "hbcode" CODE block, the next one on the tape
+        t = title_up(f); assert t is not None, 'happybat: no title screen'
+        f.shot(os.path.join(OUT, 'happybat_loaded.png'))
+        f.key('space', hold=0.1); t0 = time.time(); k = 0    # start
+        while time.time() - t0 < 4.6:          # flap every 0.7 s: about level flight
+            if time.time() - t0 > k * 0.7: f.key('space', hold=0.1); k += 1
+            time.sleep(0.05)
+        f.shot(os.path.join(OUT, 'happybat.png')); f.close()
+        print(name, 'title after %.0f s' % t, flush=True); continue
     t = settle(f)
     f.shot(os.path.join(OUT, '%s_loaded.png' % name))
     if name in RUNS:
