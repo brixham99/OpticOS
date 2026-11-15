@@ -221,7 +221,6 @@ class PicoCalc(Spectrum):
     def sd(self, path):
         """Keep SAVE / LOAD / CAT files in host directory path (the SD card's /OpticOS)."""
         os.makedirs(path, exist_ok=True); self.lib.z_storage_dir(os.fsencode(path))
-    def border(self): return 0
     def bitmap(self):
         """320 rows x 320 bools (ink pixels, before attributes)."""
         b = self.lib.pc_bits()
@@ -240,8 +239,24 @@ class PicoCalc(Spectrum):
                 s += glyphs.get(g, '\x7f' if all(v == 255 for v in g) else '\ufffd')
             out.append(s.rstrip())
         return out
+    def mode(self): return self.lib.pc_mode()
+    def border(self): return self.lib.pc_border()
+    def kempston(self, bits): self.lib.z_kempston(bits)
     def image(self, scale=2, border=False):
+        """The panel as the firmware shows it: OpticOS's display, or in
+        Spectrum mode (mode() 1) the Spectrum screen at (32, 64) inside the
+        border colour."""
         from PIL import Image
+        if self.mode():
+            m = self.mem
+            im = Image.new('RGB', (320, 320), PAL[self.border()]); px = im.load()
+            for y in range(192):
+                row = 0x4000 | (y & 0xC0) << 5 | (y & 7) << 8 | (y & 0x38) << 2
+                for x in range(256):
+                    at = m[0x5800 + (y >> 3) * 32 + (x >> 3)]
+                    p = BPAL if at & 0x40 else PAL
+                    px[x + 32, y + 64] = p[at & 7] if m[row + (x >> 3)] >> (7 - (x & 7)) & 1 else p[(at >> 3) & 7]
+            return im.resize((320 * scale, 320 * scale), Image.NEAREST)
         bm = self.bitmap(); a = self.lib.pc_attrs()
         im = Image.new('RGB', (320, 320)); px = im.load()
         for y in range(320):

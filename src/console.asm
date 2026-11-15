@@ -12,6 +12,10 @@ console:
         ld (CURCHL),hl
         ei
 con_new:
+        if PICOCALC
+        xor a                   ; every prompt: OpticOS's own display again
+        call dev_mode
+        endif
         ld hl,(ATTR_P)          ; temporary colours end with the statement
         ld (ATTR_T),hl
         ld a,(S_POSN)

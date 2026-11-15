@@ -24,6 +24,8 @@ DV_Y     equ 12         ; 12, 13: pixel y (low, high), 0 = bottom
 DV_PLOT  equ 14         ; plot X, Y
 DV_LINE  equ 15         ; line from the last point to X, Y (not its first pixel)
 DV_MOVE  equ 16         ; set the last point to X, Y
+DV_MODE  equ 27         ; A = 1: show the Spectrum screen ($4000-$5AFF, the border);
+                        ; 0: OpticOS's own display (lg_prog sets 1, each prompt 0)
 ; 17-26: byte access for machine code (emu/picocalc.c); the ROM doesn't use it:
 ; 17 byte column, 18/19 line, 20 put, 21 XOR (hit latch), 22 IN hit latch,
 ; 23 next line, 24 scroll the line 4 pixels left, 25 add to the row pattern,

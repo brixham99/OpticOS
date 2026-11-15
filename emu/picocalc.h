@@ -6,6 +6,9 @@ uint8_t *z_mem(void);                        /* the 64K address space */
 int z_frame(void);                           /* run one 50 Hz frame */
 void z_key(int row, int bit, int down);      /* Spectrum matrix: row 0-7 ($FE..$7F), bit 0-4 */
 int z_beeps(void);                           /* beeper edges since the last call */
+int pc_mode(void);                           /* 1: show the Spectrum screen (DV_MODE), 0: this display */
+int pc_border(void);                         /* the border colour, port $FE bits 0-2 */
+void z_kempston(int bits);                   /* port $1F: bit 0 right, 1 left, 2 down, 3 up, 4 fire */
 /* sound: the beeper's edges since the last call (at most max): T-state of
  * each (since reset, mod 2^32) and the level after it */
 int pc_edges(uint32_t *t, uint8_t *v, int max);

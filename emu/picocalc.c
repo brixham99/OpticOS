@@ -3,7 +3,7 @@
  * (16K write-protected ROM), and these devices:
  *
  *   port $FE  in: Spectrum key matrix (A8-A15 select rows), out: bit 4 beeper
- *   port $1F  in: 0 (no joystick)
+ *   port $1F  in: the Kempston joystick (z_kempston)
  *   port $D1  the display, register B (DV_* in src/sysvars.inc; byte access
  *             for machine code below); in: the hit latch
  *   port $D3  the storage device, register B (ST_*): SAVE, LOAD and VERIFY
@@ -45,10 +45,15 @@ enum { DV_COL, DV_ROW, DV_ATTR, DV_MASK, DV_FLAG, DV_GLYPH, DV_CELL, DV_SCRL, DV
        DV_RLD,      /* scroll the line 4 pixels left, A's low nibble coming in at
                      * the right; then the next line */
        DV_PAT,      /* add A to the row pattern (up to 8 bytes; DV_BCOL empties it) */
-       DV_FILL };   /* store the row pattern at the column on A lines (0 = 256)
+       DV_FILL,     /* store the row pattern at the column on A lines (0 = 256)
                      * from the line; then the line after them */
+       DV_MODE };   /* A = 1: show the Spectrum screen ($4000-$5AFF in its own
+                     * layout, inside the border colour), for Spectrum software;
+                     * 0: this display.  The ROM sets 1 when it runs a Sinclair
+                     * program and 0 at its prompt. */
 
 static u8 bits[PC_H][PC_W / 8];        /* bit 7 = leftmost pixel */
+static u8 mode, border, kempston;      /* DV_MODE; port $FE bits 0-2; port $1F (Kempston) */
 static u8 attrs[PC_ROWS][PC_COLS];
 static u8 keyrows[8];
 static int beepstate, beeps;
@@ -160,6 +165,7 @@ static void display(u8 reg, u8 v){
     dv.bline++;
     break;
   case DV_PAT: if (dv.npat < 8) dv.pat[dv.npat++] = v; break;
+  case DV_MODE: mode = v & 1; break;
   case DV_FILL:
     for (int n = v ? v : 256; n--; dv.bline++)
       for (int i = 0; i < dv.npat; i++)
@@ -362,7 +368,7 @@ static u8 storage_in(u8 reg){
 }
 
 static u8 port_in(u16 port){
-  if ((port & 0xFF) == 0x1F) return 0;
+  if ((port & 0xFF) == 0x1F) return kempston;
   if ((port & 0xFF) == 0xD3) return storage_in(port >> 8);
   if ((port & 0xFF) == 0xD1) return display_in(port >> 8);
   if ((port & 0xFF) == 0xFE) {
@@ -374,6 +380,7 @@ static u8 port_in(u16 port){
 }
 static void port_out(u16 port, u8 v){
   if ((port & 0xFF) == 0xFE) {
+    border = v & 7;
     int b = (v >> 4) & 1;
     if (b != beepstate) {
       beeps++; beepstate = b;
@@ -390,9 +397,13 @@ void z_init(void){
   memset(bits, 0, sizeof bits); memset(attrs, 0, sizeof attrs); memset(&dv, 0, sizeof dv);
   beepstate = beeps = nedge = 0;
   tape_close(); status = 0; listing[0] = 0; lpos = 0;
+  mode = border = kempston = 0;
 }
 void z_key(int row, int bit, int down){ if (down) keyrows[row] &= ~(1 << bit); else keyrows[row] |= (1 << bit); }
 int z_beeps(void){ int b = beeps; beeps = 0; return b; }
+int pc_mode(void){ return mode; }             /* 1: show the Spectrum screen */
+int pc_border(void){ return border; }
+void z_kempston(int bits){ kempston = bits; } /* bit 0 right, 1 left, 2 down, 3 up, 4 fire */
 /* the beeper edges since the last call (at most max): their times and the
  * level after each; the rest wait for the next call */
 int pc_edges(u32 *t, u8 *v, int max){

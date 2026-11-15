@@ -24,20 +24,41 @@ was built, phase by phase, is in [PLAN.md](PLAN.md).
 | Storage | tape (SAVE, LOAD, VERIFY) | **SD card**: the same commands, plus **CAT** |
 | Sound | the beeper (BEEP, the chime) | the same, on the PicoCalc's speakers |
 | Boot | colour bar, banner, `]` | the same, with the banner on two lines |
+| Spectrum games | `LOAD ""` from tape | `LOAD` from the card; shown on the Spectrum screen (below) |
 
 The rest of OpticBASIC is the same: the keywords, procedures and functions,
 the line editor, `KEY(k$)` and the error messages. Programs are tokenised
 the same way, so a program saved on one machine loads on the other
 unchanged.
 
-Not on the PicoCalc:
+## Spectrum games
 
-* **Spectrum screen memory.** `$4000–$5AFF` is plain RAM. Machine code that
-  writes to the Spectrum's screen there shows nothing; use the display
-  device instead (below). So Spectrum games and other software that draws
-  that way will not display, even if they load.
-* **BORDER** does nothing: the screen has no border. **`IN 31`** (Kempston)
-  returns 0.
+OpticOS's legacy loader runs Spectrum software on the PicoCalc as it does on
+a Spectrum. When it starts a Sinclair BASIC program (a game's loader), the
+PicoCalc shows the **Spectrum screen**: `$4000–$5AFF` in the Spectrum's own
+layout, 256 × 192 pixels in the middle of the panel, inside the border colour
+that `BORDER` or `OUT 254` sets. OpticOS's own display comes back at its next
+`]` prompt. A program can switch itself with `OUT 27*256+209, 1` (and `0`).
+
+Put a game's `.tap` file in the `OpticOS` folder and `LOAD` it (by its file
+name or its program's name), or `LOAD ""`. What works:
+
+* games whose `.tap` has an ordinary BASIC loader that loads its blocks
+  through the ROM (`LOAD "" CODE`, `LOAD "" SCREEN$`), as most do: the same
+  games that load with OpticOS on a Spectrum;
+* the keyboard (the Spectrum's keys, as above), the beeper, and a **Kempston
+  joystick**: the arrow keys, with **Ctrl** or **Alt** as fire (`IN 31`).
+
+What doesn't:
+
+* turbo and protected loaders (common in `.tzx` files), which time the tape
+  signal themselves: there is no tape signal; and snapshots (`.z80`, `.sna`);
+* text a loader PRINTs (it goes to OpticOS's display, which is hidden while
+  the Spectrum screen shows), and software that needs the Spectrum ROM's own
+  routines beyond the entry points OpticOS keeps.
+
+A dedicated PicoCalc Spectrum emulator will run more games; this is for
+loading them from inside OpticOS.
 
 ## Getting it onto the PicoCalc
 
@@ -85,9 +106,10 @@ PicoCalc's keys; you never need the Spectrum's shift combinations.
 | ↑ ↓ | move the current-line marker (and relist around it) |
 | **F1** | **EDIT**: copy the current line into the input line |
 | **Esc**, Break | **BREAK**: stops a running program, or LIST at `cont?` |
+| Ctrl, Alt | fire on the Kempston joystick (with the arrows), for games |
 
 `[ ] { } \ | ~` are typed for you through the Spectrum's E mode, so they
-don't auto-repeat. Ctrl, Alt, Tab, Caps Lock and F2–F10 do nothing yet.
+don't auto-repeat. Tab, Caps Lock and F2–F10 do nothing yet.
 
 ## Files on the SD card
 
@@ -127,9 +149,9 @@ it. Copy it into the `OpticOS` folder and type `LOAD "picocalc_examples"`.
 ## Machine code: the PicoCalc's devices
 
 The Z80 sees the Spectrum's 64K map: the ROM at `$0000–$3FFF` and RAM above it.
-`$4000–$59FF` is free RAM (6.5K) on the PicoCalc; the ROM keeps its graphics
-position at `$5A00–$5A03`, and the system variables from `$5B00` are where the
-Spectrum has them. FRAMES, the keyboard on port `$FE`, the speaker (bit 4 of
+`$4000–$59FF` is free RAM (6.5K) on the PicoCalc, unless you show it as the
+Spectrum screen; the ROM keeps its graphics position at `$5A00–$5A03`, and
+the system variables from `$5B00` are where the Spectrum has them. FRAMES, the keyboard on port `$FE`, the speaker (bit 4 of
 port `$FE`), IM 1 and the published ROM entry points work as on the Spectrum.
 `SA-BYTES` (`$04C2`) and `LD-BYTES` (`$0556`) take the usual registers and
 read and write the card.
@@ -157,10 +179,12 @@ read and write the card.
 | 24 | RLD | scroll the line 4 pixels left, A's low nibble coming in at the right; then the next line |
 | 25 | PAT | add byte A to the row pattern (up to 8 bytes) |
 | 26 | FILL | store the row pattern on A lines (0 = 256) down from the line |
+| 27 | MODE | A = 1: show the Spectrum screen (`$4000–$5AFF`, the border); 0: this display |
 
 Registers 0–16 are what the ROM uses for PRINT, CLS, scrolling, the cursor,
 PLOT and DRAW. Registers 17–26 are the PicoCalc's answer to the Spectrum's
-screen memory, for machine code. This puts 8 lit pixels at byte column 5 of
+screen memory, for machine code written for the PicoCalc; register 27 shows
+the real Spectrum screen instead, for software written for the Spectrum. This puts 8 lit pixels at byte column 5 of
 line 100:
 
 ```
@@ -199,6 +223,7 @@ ROM, and these are PicoCalc only:
 | `test_pc_sound.py` | the chime and BEEP pitches and lengths, and the firmware's samples |
 | `test_pc_examples.py` | the examples tape: the menu and every example |
 | `test_pc_happybat.py` | Happy Bat, played by an autopilot |
+| `test_pc_spectrum.py` | a Sinclair game tape: the Spectrum screen and border, back to OpticOS at the prompt; the Kempston joystick |
 
 ```
 docker run --rm -v "$PWD":/src opticos-build sh -c 'make all rig && python3 tools/rig/test_pc_screen.py'
@@ -216,7 +241,8 @@ from RAM:
   Disk accesses happen here too, inside the Z80's `OUT`
   (`storage_sd.c`: FatFs from carlk3's no-OS-FatFS library, on SPI0).
 * **core 1** polls the keyboard controller over I2C (`kbd.c`) and copies the
-  text rows that changed to the ST7796SP screen over SPI1 (`lcd.c`).
+  rows that changed to the ST7796SP screen over SPI1 (`lcd.c`): OpticOS's
+  40 × 40 display, or in Spectrum mode the Spectrum screen and its border.
 
 Notes for anyone changing it:
 

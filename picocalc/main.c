@@ -67,6 +67,51 @@ static void draw_row(int r, int flash_on){
   lcd_lines(r * 8, 8, line_buf);
 }
 
+/* ---- the Spectrum screen (DV_MODE 1): $4000-$5AFF in the Spectrum's own
+ * layout, 256 x 192 at (32, 64) on the panel, inside the border colour.
+ * Character rows whose pixels or attributes changed are redrawn, with the
+ * border either side of them; the border above and below when it changes. */
+static uint8_t spec_shadow[6912], spec_flash[24], spec_border;
+
+static void spectrum_pass(int flash_on, int flash_changed, int all){
+  const uint8_t *m = z_mem();
+  uint8_t bd = pc_border();
+  uint16_t bc = PAL[bd];
+  int bchanged = all || bd != spec_border;
+  spec_border = bd;
+  if (bchanged) {                                  /* the border above and below the screen */
+    uint8_t *o = line_buf;
+    for (int i = 0; i < 8 * W; i++) { *o++ = bc >> 8; *o++ = bc; }
+    for (int y = 0; y < 64; y += 8) { lcd_lines(y, 8, line_buf); lcd_lines(256 + y, 8, line_buf); }
+  }
+  for (int r = 0; r < 24; r++) {
+    kbd_poll();
+    int changed = bchanged || (flash_changed && spec_flash[r]);
+    for (int k = 0; k < 8; k++) {                  /* the row's 8 pixel lines, 32 bytes each */
+      int a = (r & 0x18) << 8 | k << 8 | (r & 7) << 5;
+      if (memcmp(m + 0x4000 + a, spec_shadow + a, 32)) { memcpy(spec_shadow + a, m + 0x4000 + a, 32); changed = 1; }
+    }
+    int at = 0x1800 + r * 32;
+    if (memcmp(m + 0x4000 + at, spec_shadow + at, 32)) { memcpy(spec_shadow + at, m + 0x4000 + at, 32); changed = 1; }
+    if (!changed) continue;
+    uint8_t *o = line_buf;
+    int fl = 0;
+    for (int k = 0; k < 8; k++) {
+      const uint8_t *px = spec_shadow + ((r & 0x18) << 8 | k << 8 | (r & 7) << 5);
+      for (int i = 0; i < 32; i++) { *o++ = bc >> 8; *o++ = bc; }
+      for (int c = 0; c < 32; c++) {
+        uint8_t a = spec_shadow[at + c], br = (a & 0x40) >> 3;
+        uint16_t ink = PAL[(a & 7) | br], paper = PAL[((a >> 3) & 7) | br];
+        if (a & 0x80) { fl = 1; if (flash_on) { uint16_t t = ink; ink = paper; paper = t; } }
+        for (int bit = 0x80; bit; bit >>= 1) { uint16_t p = (px[c] & bit) ? ink : paper; *o++ = p >> 8; *o++ = p; }
+      }
+      for (int i = 0; i < 32; i++) { *o++ = bc >> 8; *o++ = bc; }
+    }
+    spec_flash[r] = fl;
+    lcd_lines(64 + r * 8, 8, line_buf);
+  }
+}
+
 static void test_pattern(void){
   for (int r = 0; r < ROWS; r++) {
     uint8_t *o = line_buf;
@@ -103,15 +148,18 @@ static void core1_main(void){
   sleep_ms(2000);
 #endif
   const uint8_t *bits = pc_bits(), *attrs = pc_attrs();
-  int flash_was = -1;
+  int flash_was = -1, mode_was = -1;
   for (;;) {
     int flash_on = (time_us_64() / 320000) & 1;    /* FLASH: 16 frames each way */
     int flash_changed = flash_on != flash_was;
-    for (int r = 0; r < ROWS; r++) {
+    int mode = pc_mode(), all = mode != mode_was;  /* a switch redraws everything */
+    mode_was = mode;
+    if (mode) spectrum_pass(flash_on, flash_changed, all);
+    else for (int r = 0; r < ROWS; r++) {
       kbd_poll();
       const uint8_t *lb = &bits[r * 8 * (W / 8)], *la = &attrs[r * COLS];
       uint8_t *sb = &shadow_bits[r * 8 * (W / 8)], *sa = &shadow_attrs[r * COLS];
-      if (flash_was < 0 || memcmp(lb, sb, 8 * W / 8) || memcmp(la, sa, COLS)
+      if (all || memcmp(lb, sb, 8 * W / 8) || memcmp(la, sa, COLS)
           || (flash_changed && row_flash[r])) {
         memcpy(sb, lb, 8 * W / 8); memcpy(sa, la, COLS);
         draw_row(r, flash_on);

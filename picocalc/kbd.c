@@ -6,7 +6,8 @@
  * Each character is held on the matrix as the Spectrum keys that type it:
  * 'A' as CAPS SHIFT + A, '(' as SYMBOL SHIFT + 8, the arrows as CAPS SHIFT +
  * 5-8, F1 as CAPS SHIFT + 1 (EDIT), so the ROM's own scan, auto-repeat, KEY()
- * and BREAK work unchanged.
+ * and BREAK work unchanged.  The arrows and Ctrl / Alt (fire) also drive the
+ * Kempston joystick, for Spectrum games.
  * Characters that need the Spectrum's E mode ([ ] { } \ | ~) are typed as a
  * timed sequence instead, without auto-repeat. */
 #include <ctype.h>
@@ -78,8 +79,28 @@ static int map(uint8_t c, chord *o){
   return 0;
 }
 
+/* the Kempston joystick (port $1F): the arrow keys (which also stay the
+ * cursor keys) and fire on Ctrl or Alt */
+static uint8_t kempston;
+static int kempston_bit(uint8_t code){
+  switch (code) {
+  case 0xB7: return 1;                  /* right */
+  case 0xB4: return 2;                  /* left */
+  case 0xB6: return 4;                  /* down */
+  case 0xB5: return 8;                  /* up */
+  case 0xA5: case 0xA1: return 16;      /* Ctrl, Alt: fire */
+  }
+  return 0;
+}
+
 static void event(int st, uint8_t code){
   uint64_t now = time_us_64();
+  int kb = kempston_bit(code);
+  if (kb && st != 2) {                  /* (2: held, which changes nothing) */
+    if (st == ST_PRESSED) kempston |= kb; else kempston &= ~kb;
+    z_kempston(kempston);
+    if (kb == 16) return;               /* fire is only the joystick */
+  }
   if (st == ST_PRESSED) {
     const char *e = code < 127 ? pair_of(EMODE, code) : 0;
     if (e) {

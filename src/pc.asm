@@ -6,6 +6,11 @@ m_pc_s:
 dev:    ld c,DEV
         out (c),a
         ret
+; dev_mode: A = 1 shows the Spectrum screen ($4000-$5AFF and the border),
+; 0 OpticOS's own display.  B, C changed.
+dev_mode: ld bc,DV_MODE*256+DEV
+        out (c),a
+        ret
 ; dev_pos: L = column, H = row -> COL, ROW.  A, B, C changed.
 dev_pos:
         ld a,l

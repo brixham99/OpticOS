@@ -83,6 +83,6 @@ Graphics become **320×320**, origin bottom left.
 2. **CAT.** It was dropped for the Spectrum (spec §12), but with an SD card,
    files you can't list are awkward. Proposal: bring `CAT` back in the PicoCalc
    build only, listing `/OpticOS/*.tap`.
-3. **Game tapes.** The plan drops `LOAD ""` for Spectrum games on the PicoCalc,
-   because games need the Spectrum screen. Existing PicoCalc Spectrum emulators
-   cover that.
+3. **Game tapes.** First dropped, because games need the Spectrum screen;
+   later added back as a Spectrum screen mode (display register 27), which the
+   legacy loader turns on (see README.md, "Spectrum games").
