@@ -5,7 +5,8 @@
  * The controller reports characters with shift already applied ('A', '(').
  * Each character is held on the matrix as the Spectrum keys that type it:
  * 'A' as CAPS SHIFT + A, '(' as SYMBOL SHIFT + 8, the arrows as CAPS SHIFT +
- * 5-8, so the ROM's own scan, auto-repeat, KEY() and BREAK work unchanged.
+ * 5-8, F1 as CAPS SHIFT + 1 (EDIT), so the ROM's own scan, auto-repeat, KEY()
+ * and BREAK work unchanged.
  * Characters that need the Spectrum's E mode ([ ] { } \ | ~) are typed as a
  * timed sequence instead, without auto-repeat. */
 #include <ctype.h>
@@ -69,6 +70,7 @@ static int map(uint8_t c, chord *o){
   case 0xB5: o->k[0] = '^'; o->k[1] = '7'; return 1;               /* up */
   case 0xB7: o->k[0] = '^'; o->k[1] = '8'; return 1;               /* right */
   case 0xB1: case 0xD0: o->k[0] = '^'; o->k[1] = ' '; return 1;    /* Esc, Break: BREAK */
+  case 0x81: o->k[0] = '^'; o->k[1] = '1'; return 1;               /* F1: EDIT */
   }
   if (c == ' ' || isdigit(c) || islower(c)) { o->k[0] = c; return 1; }
   if (isupper(c)) { o->k[0] = '^'; o->k[1] = tolower(c); return 1; }

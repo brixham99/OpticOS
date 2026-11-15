@@ -1,6 +1,6 @@
 # OpticOS on the ClockworkPi PicoCalc: plan
 
-Target: PicoCalc with a **Raspberry Pi Pico 2 (RP2350)**. Status: P1, P2 and P3 done; P4 firmware runs on a Pico 2 W (display, keyboard, SD card, sound).
+Target: PicoCalc with a **Raspberry Pi Pico 2 (RP2350)**. Status: P1–P3 and P5 done; P4 firmware runs on a Pico 2 W (display, keyboard, SD card, sound).
 
 ## Approach
 
@@ -72,7 +72,7 @@ Graphics become **320×320**, origin bottom left.
 | P2 | colours, FLASH, cursor, scroll, PLOT/DRAW 320×320, boot screen | `tools/rig/test_pc_screen.py` (incl. DRAW pixel-identical to the Spectrum ROM); rig screenshots in `build/picocalc/` |
 | P3 | SAVE/LOAD/VERIFY to files through the storage device; CAT | `tools/rig/test_pc_files.py` (host directory as the card; a Spectrum ROM SAVE loads unchanged) |
 | P4 | RP2350 firmware: LCD, keyboard, audio, SD; UF2 | boots on your PicoCalc |
-| P5 | manual/README addendum for the PicoCalc build | — |
+| P5 | the PicoCalc guide | [README.md](README.md); the main README points to it |
 
 ## Decisions needed
 
