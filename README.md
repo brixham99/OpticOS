@@ -124,6 +124,14 @@ On The Spectrum from Retro Games, use the `.tzx` tapes: its instant `.tap` loadi
 
 [OpticOS/RAM](https://github.com/tuklusan/OpticOS/releases), by Supratim Sanyal, is a fork that turns OpticOS into a program that loads into RAM, so no ROM swap is needed. Its release page describes it as a RAM-resident edition for a standard 48K Spectrum: boot with the normal Sinclair ROM, type `LOAD ""` and play its `.tzx`, whose BASIC loader loads and starts it. It does not load ordinary Sinclair BASIC or game tapes, and you reset the machine to return to Sinclair BASIC. See its page for details and its own testing status.
 
+### ClockworkPi PicoCalc
+
+James Andrews has OpticOS running natively on a [ClockworkPi](https://www.clockworkpi.com/) PicoCalc, the handheld with a keyboard. He forked OpticOS and built native firmware for it. It boots to the OpticBASIC prompt. The firmware isn't public yet.
+
+### goSpectrum
+
+[goSpectrum](https://github.com/andrewsjg/goSpectrum), also by James Andrews, is a ZX Spectrum emulator written in Go. It runs custom 16K ROMs on its 48K hardware: pick the **Other** machine card and choose `opticos.rom`, or pass `--rom opticos.rom` on the command line. The file dialog is macOS only.
+
 ### Community
 
 Questions, reports and ideas are welcome in the [Spectrum Computing forum thread](https://spectrumcomputing.co.uk/forums/viewtopic.php?f=3&t=16427).
