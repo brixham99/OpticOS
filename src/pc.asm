@@ -1,6 +1,6 @@
 ; pc.asm - PicoCalc machine routines (PICOCALC builds only): the display
-; device interface, the boot colour bar, and the console's 40-column line
-; arithmetic.  The display device is described in sysvars.inc (DV_*).
+; device interface, the boot colour bar, the console's 40-column line
+; arithmetic, and CAT.  The display device is described in sysvars.inc (DV_*).
 m_pc_s:
 ; dev: A -> PicoCalc display register B.  Only C is changed.
 dev:    ld c,DEV
@@ -79,4 +79,17 @@ pos_lin: ld hl,(S_POSN)
         ld d,0
         add hl,de
         ret
+; st_xtra: A = token-$80 of a statement after the shared ones: CAT
+st_xtra: cp T_CAT-$80
+        jp nz,err_syn
+        rst $20
+; CAT: the files on the SD card, one name a line (the storage device lists them)
+st_cat: ld bc,ST_DIR*256+STOR
+        out (c),a
+sc_l:   ld bc,ST_DIR*256+STOR
+        in a,(c)
+        or a
+        ret z
+        rst 16
+        jr sc_l
 m_pc_e:

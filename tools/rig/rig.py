@@ -10,16 +10,17 @@ decoder for the 4x8 font.
 
 PicoCalc(rom) runs build/opticos_pc.rom on the PicoCalc machine
 (libpicocalc.so, emu/picocalc.c): the same keyboard matrix and timing, with
-the 320x320 display (80x40 text) in place of the Spectrum screen and tape.
+the 320x320 display (40x40 text) in place of the Spectrum screen, and files
+in a host directory (sd()) in place of tape.
 """
 import ctypes, os, subprocess
 HERE = os.path.dirname(os.path.abspath(__file__))
 EMU = os.path.join(HERE, '..', '..', 'emu')
 
-def build(so, src):
-    deps = [src, os.path.join(EMU, 'z80core.h')]
+def build(so, *srcs):
+    deps = list(srcs) + [os.path.join(EMU, h) for h in ('z80core.h', 'storage.h', 'font8x8.h')]
     if not os.path.exists(so) or os.path.getmtime(so) < max(map(os.path.getmtime, deps)):
-        subprocess.check_call(['gcc', '-O2', '-shared', '-fPIC', '-o', so, src])
+        subprocess.check_call(['gcc', '-O2', '-shared', '-fPIC', '-o', so] + list(srcs))
     l = ctypes.CDLL(so)
     l.z_mem.restype = ctypes.POINTER(ctypes.c_uint8)
     l.z_tstates.restype = ctypes.c_longlong
@@ -30,7 +31,8 @@ lib = build(os.path.join(HERE, 'libz80.so'), os.path.join(HERE, 'z80.c'))
 lib.z_mic_buf.restype = ctypes.POINTER(ctypes.c_uint32)
 lib.z_mic_count.restype = ctypes.c_long
 lib.z_ear_pos.restype = ctypes.c_long
-pclib = build(os.path.join(HERE, 'libpicocalc.so'), os.path.join(EMU, 'picocalc.c'))
+pclib = build(os.path.join(HERE, 'libpicocalc.so'), os.path.join(EMU, 'picocalc.c'), os.path.join(EMU, 'storage_posix.c'))
+pclib.z_storage_dir.argtypes = [ctypes.c_char_p]
 pclib.pc_bits.restype = ctypes.POINTER(ctypes.c_uint8)
 pclib.pc_attrs.restype = ctypes.POINTER(ctypes.c_uint8)
 pclib.pc_font.restype = ctypes.POINTER(ctypes.c_uint8)
@@ -199,6 +201,9 @@ class PicoCalc(Spectrum):
     lib = pclib
     W = H = 320
     def tape(self, *a, **k): raise NotImplementedError('the PicoCalc has no tape')
+    def sd(self, path):
+        """Keep SAVE / LOAD / CAT files in host directory path (the SD card's /OpticOS)."""
+        os.makedirs(path, exist_ok=True); self.lib.z_storage_dir(os.fsencode(path))
     def border(self): return 0
     def bitmap(self):
         """320 rows x 320 bools (ink pixels, before attributes)."""

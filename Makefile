@@ -27,7 +27,7 @@ picocalc: build/opticos_pc.rom
 
 rig:
 	gcc -O2 -shared -fPIC -o tools/rig/libz80.so tools/rig/z80.c
-	gcc -O2 -shared -fPIC -o tools/rig/libpicocalc.so emu/picocalc.c
+	gcc -O2 -shared -fPIC -o tools/rig/libpicocalc.so emu/picocalc.c emu/storage_posix.c
 
 zex: rig
 	python3 tools/rig/zex.py zexdoc

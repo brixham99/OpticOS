@@ -9,6 +9,10 @@ LB_BIT0   equ 180               ; bit 0 cycle about +14, bit 1 about +43
 LB_BITTH  equ 208
 m_ld_s:
 LD_BYTES:                       ; (trap layout: see save.asm)
+        if PICOCALC
+        ld b,ST_LOAD            ; PicoCalc: the storage device (save.asm)
+        jp st_blk
+        endif
         di
         ex af,af'               ; A' = flag, F' carry = load / verify
         ld hl,tape_ret          ; exit handler ($053F) on the stack

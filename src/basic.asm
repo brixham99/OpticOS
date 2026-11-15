@@ -67,7 +67,11 @@ stmt:   rst $18
         sub $80
         jp c,err_syn
         cp T_NSTMT
+        if PICOCALC
+        jp nc,st_xtra           ; CAT (pc.asm)
+        else
         jp nc,err_syn
+        endif
         push af
         rst $20
         pop af

@@ -24,6 +24,10 @@ DV_Y     equ 12         ; 12, 13: pixel y (low, high), 0 = bottom
 DV_PLOT  equ 14         ; plot X, Y
 DV_LINE  equ 15         ; line from the last point to X, Y (not its first pixel)
 DV_MOVE  equ 16         ; set the last point to X, Y
+STOR     equ $D3        ; the storage device: OUT/IN (C) with C = STOR, B = register
+ST_SAVE  equ 0          ; OUT A = flag: SA-BYTES (IX, DE); IN: status
+ST_LOAD  equ 1          ; OUT A = flag: LD-BYTES (IX, DE, carry); IN: status
+ST_DIR   equ 2          ; OUT: start the CAT listing; IN: its next character, 0 at the end
 GFX_W    equ 320        ; PLOT/DRAW range
 GFX_H    equ 320
 GX       equ $5A00      ; last graphics point, x (2)

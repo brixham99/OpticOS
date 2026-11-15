@@ -113,6 +113,7 @@ T_USR        equ $EE
 T_DPEEK      equ $EF
 T_KEY        equ $F0
 T_FREE       equ $F1
+T_CAT        equ $F2
 T_NSTMT    equ 60
 T_LE       equ $08
 T_GE       equ $09
@@ -234,4 +235,7 @@ kw_tab:
         defb 'D','P','E','E','K'+$80
         defb 'K','E','Y'+$80
         defb 'F','R','E','E'+$80
+        if PICOCALC
+        defb 'C','A','T'+$80
+        endif
         defb 0

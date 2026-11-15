@@ -95,9 +95,11 @@ ss_go:  ld (HDRBUF),a           ; A = type, DE = start, HL = length, BC = param 
         ld de,17
         xor a
         call SA_BYTES
+        if !PICOCALC
         ld b,50                 ; a second's gap before the data
 ss_w:   halt
         djnz ss_w
+        endif
         pop de
         pop ix
         ld a,$FF

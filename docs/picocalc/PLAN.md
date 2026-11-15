@@ -1,6 +1,6 @@
 # OpticOS on the ClockworkPi PicoCalc: plan
 
-Target: PicoCalc with a **Raspberry Pi Pico 2 (RP2350)**. Status: P1 and P2 done; P4 minimal firmware boots on a Pico 2 W (display, keyboard; no sound or SD yet).
+Target: PicoCalc with a **Raspberry Pi Pico 2 (RP2350)**. Status: P1, P2 and P3 done; P4 firmware boots on a Pico 2 W (display, keyboard, SD card; no sound yet).
 
 ## Approach
 
@@ -26,7 +26,7 @@ files, so the two builds share the interpreter, maths, tokeniser and editor.
 | Display | ports: glyph at (col,row) with attribute and OVER/INVERSE, plot, line, scroll, CLS, cursor | 320×320 1-bpp bitmap + one attribute per 8×8 cell (40×40), text in the display's own 8×8 font (`emu/font8x8.h`, public domain), Spectrum palette and FLASH; changed rows pushed to the ST7796SP panel (RGB565) over SPI from core 1 |
 | Keyboard | unchanged: the Spectrum key matrix on port `$FE` (scan, `KEY(k$)`, BREAK, INKEY$) | I2C keyboard controller polled each frame; each PicoCalc key held down is shown as its Spectrum keys (e.g. `(` as SYMBOL SHIFT + 8, ← as CAPS SHIFT + 5) |
 | Sound | unchanged: port `$FE` bit 4 (BEEP, chime) | beeper edges timestamped in T-states, played on the PWM audio pins |
-| Storage | unchanged: `SA-BYTES` / `LD-BYTES` | trapped at those addresses: header+data go to `/OpticOS/<name>.tap` on the SD card; the wanted name is read from `LG_NAME` |
+| Storage | `SA-BYTES` / `LD-BYTES` hand each block to a storage device (port `$D3`); `CAT` (PicoCalc only, token `$F2` after all the shared ones) | blocks go to `/OpticOS/<name>.tap` (TAP format) on the SD card through FatFs; a file reads on like a tape, and `LOAD ""` carries on into the next file in name order; the wanted name is read from `LG_NAME` |
 
 Text becomes **40 columns × 40 rows**: 320×320 pixels in an 8×8 font that the
 display device draws (an earlier 80×40 layout in the ROM's 4×8 font was too
@@ -70,7 +70,7 @@ Graphics become **320×320**, origin bottom left.
 |---|---|---|
 | P1 | core split; `PICOCALC` flag; geometry equates; rig PicoCalc mode with text display and keyboard | Spectrum ROM byte-identical and its tests pass; PicoCalc ROM boots in the rig, and PRINT/LIST/editor tests pass at 40×40 |
 | P2 | colours, FLASH, cursor, scroll, PLOT/DRAW 320×320, boot screen | `tools/rig/test_pc_screen.py` (incl. DRAW pixel-identical to the Spectrum ROM); rig screenshots in `build/picocalc/` |
-| P3 | SAVE/LOAD/VERIFY to files via traps | round-trip tests in the rig (host directory) |
+| P3 | SAVE/LOAD/VERIFY to files through the storage device; CAT | `tools/rig/test_pc_files.py` (host directory as the card; a Spectrum ROM SAVE loads unchanged) |
 | P4 | RP2350 firmware: LCD, keyboard, audio, SD; UF2 | boots on your PicoCalc |
 | P5 | manual/README addendum for the PicoCalc build | — |
 

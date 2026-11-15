@@ -7,6 +7,19 @@ SA_B0   equ 60
 SA_B1   equ 126
 m_sav_s:
 SA_BYTES:
+        if PICOCALC
+; PicoCalc: the storage device writes the block to the file (emu/picocalc.c)
+        ld b,ST_SAVE
+st_blk: ld c,STOR
+        out (c),a               ; A = flag, IX = start, DE = length, carry = LOAD
+        in a,(c)                ; 0 done, 1 not this block, 2 none / no card
+        sub 1
+        ret c                   ; done: carry set
+        ret z                   ; not this block: carry clear (try the next)
+        rst 8
+        defb ERR_TAPE
+        include "clear.asm"     ; (moved here from section J2, which is full)
+        else
         ld hl,tape_ret
         push hl
         ld hl,3223              ; data block pilot (half-pulses)
@@ -82,6 +95,7 @@ sa_half:                        ; wait 13*B, then flip MIC and border
 ; Either RET pops the handler pushed on entry, tape_ret at $053F, which
 ; other trapping interfaces (e.g. Spectranet) also return into.  tape_ret
 ; can run twice without harm.  check_layout.py checks these bytes.
+        endif
 m_sav_g:                        ; (zero-filled gap up to $053E)
         org $053E
 trap_ret:

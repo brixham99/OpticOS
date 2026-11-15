@@ -13,4 +13,7 @@ RUN git clone --depth 1 --branch 2.1.1 https://github.com/raspberrypi/picotool.g
     && cmake --build /tmp/picotool/build -j4 && cmake --install /tmp/picotool/build \
     && rm -rf /tmp/picotool
 ENV picotool_DIR=/opt/picotool/picotool
+# SD card and FatFs for the PicoCalc firmware (carlk3, Apache-2.0; FatFs by ChaN)
+RUN git clone --depth 1 --branch v3.6.2 https://github.com/carlk3/no-OS-FatFS-SD-SDIO-SPI-RPi-Pico.git /opt/no-OS-FatFS
+ENV FATFS_SD_PATH=/opt/no-OS-FatFS
 WORKDIR /src

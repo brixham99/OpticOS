@@ -5,6 +5,8 @@
  *   port $FE  in: Spectrum key matrix (A8-A15 select rows), out: bit 4 beeper
  *   port $1F  in: 0 (no joystick)
  *   port $D1  out: the display, register B (DV_* in src/sysvars.inc)
+ *   port $D3  the storage device, register B (ST_*): SAVE, LOAD and VERIFY
+ *             blocks as files of TAP blocks, and CAT
  *
  * The display is a 320x320 1-bit bitmap with one Spectrum attribute byte per
  * 8x8 character cell (40x40).  Glyphs come from the display's own 8x8 font
@@ -19,6 +21,9 @@
 #define CONTEND(a)
 #include "z80core.h"
 #include "font8x8.h"
+#include "storage.h"
+#include <stdlib.h>
+#include <strings.h>
 
 #define PC_W 320
 #define PC_H 320
@@ -116,8 +121,198 @@ static void display(u8 reg, u8 v){
   }
 }
 
+/* ---- storage: each file is a "tape" of TAP blocks (2-byte length, flag,
+ * data, XOR parity), named <name>.tap after the header SAVE writes.  As on a
+ * real tape, LOAD reads on through the open file, so a loader followed by
+ * LOAD "" CODE finds its next block, and the files in name order make one
+ * long tape: at the end of a file LOAD reads on into the next, and goes
+ * round from the first file once before giving up.  LOAD "name" looks for
+ * the block called name along that tape; if name is a file's name instead
+ * (or its first 10 characters), it loads that file's first block of the
+ * wanted type, so LOAD "OpticOS_examples" loads "examples" from it.  The ROM's SA-BYTES / LD-BYTES hand a
+ * block over with OUT (B = ST_SAVE / ST_LOAD; A = flag, IX = start,
+ * DE = length, carry = LOAD rather than VERIFY) and read the status back. */
+enum { ST_SAVE, ST_LOAD, ST_DIR };
+enum { ST_OK, ST_NOMATCH, ST_NONE };          /* status: done; not this block; no block / no card */
+#define LG_WANT 0x5B40                        /* src/sysvars.inc: the wanted type, */
+#define LG_NAME 0x5B41                        /* and name ($FF = any) */
+#define ST_MAXF 64
+static st_file *tf;                           /* the open "tape" */
+static char tname[ST_NAME];
+static int twrite, tidx;                      /* tidx: the open file's place in name order */
+static int twrapped;                          /* LOAD has gone round to the first file */
+static u8 status;
+static char listing[ST_MAXF * (ST_NAME + 1) + 16];
+static int lpos;
+
+/* the 10-character Spectrum name at mem[a] -> "name.tap" (trailing spaces
+ * dropped, characters a FAT card can't hold made '_') */
+static void file_name(u16 a, char *out){
+  int n = 10;
+  while (n && mem[(u16)(a + n - 1)] == ' ') n--;
+  for (int i = 0; i < n; i++) {
+    u8 c = mem[(u16)(a + i)];
+    out[i] = (c < 33 || c > 126 || strchr("\\/:*?\"<>|", c)) ? '_' : c;
+  }
+  strcpy(out + n, n ? ".tap" : "_.tap");
+}
+static int is_tap(const char *n){
+  size_t l = strlen(n);
+  return l > 4 && n[l - 4] == '.' && (n[l - 3] | 32) == 't' && (n[l - 2] | 32) == 'a' && (n[l - 1] | 32) == 'p';
+}
+static int cmp_name(const void *a, const void *b){ return strcmp(a, b); }
+/* the .tap files, sorted, in names (static: the firmware's core 0 stack is
+ * small); -1 if there is no card */
+static char names[ST_MAXF][ST_NAME];
+static int tap_files(void){
+  int n = st_list(names, ST_MAXF), k = 0;
+  if (n < 0) return -1;
+  for (int i = 0; i < n; i++) if (is_tap(names[i])) memmove(names[k++], names[i], ST_NAME);
+  qsort(names, k, ST_NAME, cmp_name);
+  return k;
+}
+static void tape_close(void){ if (tf) st_close(tf); tf = NULL; twrite = 0; }
+static int tape_open(const char *name, int write){
+  tape_close();
+  if (!(tf = st_open(name, write))) return 0;
+  strcpy(tname, name); twrite = write;
+  return 1;
+}
+
+/* open the i-th .tap file in name order */
+static int open_file(int i){
+  int n = tap_files();
+  if (i < 0 || i >= n || !tape_open(names[i], 0)) { tape_close(); return 0; }
+  tidx = i;
+  return 1;
+}
+/* the file whose name (without .tap) is want, or starts with it when want
+ * has all 10 characters a name can have; -1 if none */
+static int match_file(const char *want){
+  int n = tap_files(), w = strlen(want);
+  for (int i = 0; i < n; i++) {
+    int k = strlen(names[i]) - 4;
+    if ((k == w || (w == 10 && k > 10)) && !strncasecmp(names[i], want, w)) return i;
+  }
+  return -1;
+}
+
+static u8 save_block(u8 flag){
+  u16 ix = rIX.w, len = rDE.w;
+  if (flag == 0) {                            /* a header: start the file it names */
+    char name[ST_NAME];
+    file_name(ix + 1, name);
+    if (!tape_open(name, 1)) return ST_NONE;
+  } else if (!tf || !twrite) return ST_NONE;  /* data with no header before it */
+  u8 h[3] = { (u8)(len + 2), (u8)((len + 2) >> 8), flag }, x = flag, buf[256];
+  int ok = st_write(tf, h, 3) == 3;
+  for (u32 i = 0; i < len && ok; ) {
+    int n = len - i < sizeof buf ? (int)(len - i) : (int)sizeof buf;
+    for (int j = 0; j < n; j++) x ^= buf[j] = mem[(u16)(ix + i + j)];
+    ok = st_write(tf, buf, n) == n; i += n;
+  }
+  ok = ok && st_write(tf, &x, 1) == 1;
+  if (flag != 0 || !ok) tape_close();         /* the data block ends the file */
+  return ok ? ST_OK : ST_NONE;
+}
+
+/* skip n bytes of the open file */
+static void skip(u32 n){ u8 b[256]; while (n) { int k = n < sizeof b ? n : sizeof b; if (st_read(tf, b, k) != k) return; n -= k; } }
+
+/* LG_NAME := the name of the open file's first header of the given type,
+ * if it has one; then back to the start of the file */
+static void first_name(u8 type){
+  u8 h[3], b[18];
+  while (st_read(tf, h, 3) == 3) {
+    u32 n = h[0] | h[1] << 8;
+    if (n < 2) break;
+    if (h[2] == 0 && n == 19) {
+      if (st_read(tf, b, 18) != 18) break;    /* the header and its parity */
+      if (b[0] == type) { memcpy(&mem[LG_NAME], b + 1, 10); break; }
+    } else skip(n - 1);
+  }
+  st_rewind(tf);
+}
+
+static u8 load_block(u8 flag, int load){
+  u16 ix = rIX.w, len = rDE.w;
+  if (twrite) tape_close();
+  if (flag == 0 && mem[LG_NAME] != 0xFF) {    /* LOAD "name": is name a file's? */
+    char want[ST_NAME];
+    file_name(LG_NAME, want);
+    want[strlen(want) - 4] = 0;
+    int i = match_file(want);
+    if (i >= 0 && (!tf || strcmp(names[i], tname))) {
+      if (!open_file(i)) return ST_NONE;
+      twrapped = 0;
+      first_name(mem[LG_WANT]);
+    }
+  }
+  if (!tf) {                                  /* start at the first file */
+    if (flag != 0 || !open_file(0)) return ST_NONE;
+    twrapped = 0;
+  }
+  u8 h[3];
+  while (st_read(tf, h, 3) != 3) {            /* the end of a file: on into the next */
+    if (flag != 0) { tape_close(); return ST_NONE; }
+    if (open_file(tidx + 1)) continue;
+    if (!twrapped && open_file(0)) { twrapped = 1; continue; }
+    tape_close(); return ST_NONE;
+  }
+  u32 blen = h[0] | h[1] << 8;
+  if (blen < 2) { tape_close(); return ST_NONE; }
+  if (h[2] != flag || blen != (u32)len + 2) {
+    skip(blen - 1);
+    if (flag != 0) tape_close();              /* (as a failed data block below) */
+    return ST_NOMATCH;
+  }
+  u8 x = flag, buf[256], same = 1;
+  for (u32 i = 0; i < len; ) {
+    int n = len - i < sizeof buf ? (int)(len - i) : (int)sizeof buf;
+    if (st_read(tf, buf, n) != n) { tape_close(); return ST_NONE; }
+    for (int j = 0; j < n; j++) {
+      u16 a = ix + i + j;
+      x ^= buf[j];
+      if (!load) same &= mem[a] == buf[j];
+      else if (a >= 0x4000) mem[a] = buf[j];
+    }
+    i += n;
+  }
+  u8 p;
+  if (st_read(tf, &p, 1) != 1) { tape_close(); return ST_NONE; }
+  if (p != x || !same) {
+    if (flag != 0) tape_close();              /* a failed LOAD / VERIFY: start afresh next time */
+    return ST_NOMATCH;
+  }
+  if (flag != 0) twrapped = 0;
+  return ST_OK;
+}
+
+/* CAT: the .tap files' names, one a line, as a string the ROM reads back */
+static void list_files(void){
+  int n = tap_files();
+  char *o = listing;
+  if (n < 0) o += sprintf(o, "No SD card\r");
+  else if (n == 0) o += sprintf(o, "No files\r");
+  for (int i = 0; i < n; i++) { names[i][strlen(names[i]) - 4] = 0; o += sprintf(o, "%s\r", names[i]); }
+  *o = 0; lpos = 0;
+}
+
+static void storage(u8 reg, u8 v){
+  switch (reg) {
+  case ST_SAVE: status = save_block(v); break;
+  case ST_LOAD: status = load_block(v, rAF.b.l & 1); break;
+  case ST_DIR: list_files(); break;
+  }
+}
+static u8 storage_in(u8 reg){
+  if (reg == ST_DIR) return listing[lpos] ? (u8)listing[lpos++] : 0;
+  return status;
+}
+
 static u8 port_in(u16 port){
   if ((port & 0xFF) == 0x1F) return 0;
+  if ((port & 0xFF) == 0xD3) return storage_in(port >> 8);
   if ((port & 0xFF) == 0xFE) {
     u8 r = 0x1F, hi = port >> 8;
     for (int i = 0; i < 8; i++) if (!(hi & (1 << i))) r &= keyrows[i];
@@ -129,6 +324,7 @@ static void port_out(u16 port, u8 v){
   if ((port & 0xFF) == 0xFE) {
     int b = (v >> 4) & 1; if (b != beepstate) { beeps++; beepstate = b; }
   } else if ((port & 0xFF) == 0xD1) display(port >> 8, v);
+  else if ((port & 0xFF) == 0xD3) storage(port >> 8, v);
 }
 static void frame_end(void){}
 
@@ -137,6 +333,7 @@ void z_init(void){
   memset(keyrows, 0x1F, sizeof keyrows);
   memset(bits, 0, sizeof bits); memset(attrs, 0, sizeof attrs); memset(&dv, 0, sizeof dv);
   beepstate = beeps = 0;
+  tape_close(); status = 0; listing[0] = 0; lpos = 0;
 }
 void z_key(int row, int bit, int down){ if (down) keyrows[row] &= ~(1 << bit); else keyrows[row] |= (1 << bit); }
 int z_beeps(void){ int b = beeps; beeps = 0; return b; }

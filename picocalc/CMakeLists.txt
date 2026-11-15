@@ -24,10 +24,17 @@ add_custom_command(
           -P ${CMAKE_CURRENT_SOURCE_DIR}/embed.cmake
   DEPENDS ${OPTICOS_ROM} ${CMAKE_CURRENT_SOURCE_DIR}/embed.cmake)
 
-add_executable(opticos main.c lcd.c kbd.c ../emu/picocalc.c ${CMAKE_CURRENT_BINARY_DIR}/rom.c)
+# SD card and FatFs: carlk3's no-OS-FatFS-SD-SDIO-SPI-RPi-Pico v3.6.2 (in the
+# Docker image at $FATFS_SD_PATH)
+if(NOT FATFS_SD_PATH)
+  set(FATFS_SD_PATH $ENV{FATFS_SD_PATH})
+endif()
+add_subdirectory(${FATFS_SD_PATH}/src fatfs)
+
+add_executable(opticos main.c lcd.c kbd.c storage_sd.c hw_config.c ../emu/picocalc.c ${CMAKE_CURRENT_BINARY_DIR}/rom.c)
 target_include_directories(opticos PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ../emu)
 target_compile_options(opticos PRIVATE -O2 -Wall -Wno-unused-function)
-target_link_libraries(opticos pico_stdlib pico_multicore hardware_spi hardware_i2c)
+target_link_libraries(opticos pico_stdlib pico_multicore hardware_spi hardware_i2c no-OS-FatFS-SD-SDIO-SPI-RPi-Pico)
 # run from RAM: the Z80 core's big dispatch loop is too slow from XIP flash
 pico_set_binary_type(opticos copy_to_ram)
 # serial output: in the PicoCalc only the USB-C port (wired to UART0, GP0/GP1,
