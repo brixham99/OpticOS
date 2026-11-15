@@ -1,6 +1,6 @@
 # OpticOS on the ClockworkPi PicoCalc: plan
 
-Target: PicoCalc with a **Raspberry Pi Pico 2 (RP2350)**. Status: P1 done; P4 (minimal bootable firmware) in progress.
+Target: PicoCalc with a **Raspberry Pi Pico 2 (RP2350)**. Status: P1 done; P4 minimal firmware boots on a Pico 2 W (display, keyboard; no sound or SD yet).
 
 ## Approach
 
@@ -23,7 +23,7 @@ files, so the two builds share the interpreter, maths, tokeniser and editor.
 |---|---|---|
 | CPU | Z80 at 3.5 MHz, 50 Hz IM 1 interrupt, `FRAMES` as today | the rig's core (`z80.c`), no ULA contention; core 0 |
 | RAM | 64K map as today: ROM `$0000-$3FFF`, RAM above | `$4000-$5AFF` becomes plain RAM (no display file) |
-| Display | ports: glyph at (col,row) with attribute and OVER/INVERSE, plot, line, scroll, CLS, cursor | 320×320 1-bpp bitmap + one attribute per 4×8 cell (80×40), Spectrum palette and FLASH; dirty rows pushed to the ILI9488 over SPI from core 1 |
+| Display | ports: glyph at (col,row) with attribute and OVER/INVERSE, plot, line, scroll, CLS, cursor | 320×320 1-bpp bitmap + one attribute per 4×8 cell (80×40), Spectrum palette and FLASH; changed rows pushed to the ST7796SP panel (RGB565) over SPI from core 1 |
 | Keyboard | unchanged: the Spectrum key matrix on port `$FE` (scan, `KEY(k$)`, BREAK, INKEY$) | I2C keyboard controller polled each frame; each PicoCalc key held down is shown as its Spectrum keys (e.g. `(` as SYMBOL SHIFT + 8, ← as CAPS SHIFT + 5) |
 | Sound | unchanged: port `$FE` bit 4 (BEEP, chime) | beeper edges timestamped in T-states, played on the PWM audio pins |
 | Storage | unchanged: `SA-BYTES` / `LD-BYTES` | trapped at those addresses: header+data go to `/OpticOS/<name>.tap` on the SD card; the wanted name is read from `LG_NAME` |
@@ -58,7 +58,7 @@ Graphics become **320×320**, origin bottom left.
   drivers). The Python tests then run headless on the Mac and read the
   80×40 text buffer directly. This is the main proof before any hardware.
 - **Firmware:** `picocalc/` holds a pico-sdk CMake project for RP2350. It has
-  ILI9488 SPI, keyboard I2C, PWM audio, and FatFs on SD, and builds `opticos.uf2`
+  ST7796SP SPI, keyboard I2C, PWM audio, and FatFs on SD, and builds `opticos.uf2`
   with the ROM embedded.
 
 ## Phases

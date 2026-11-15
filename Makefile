@@ -18,6 +18,13 @@ build/opticos_pc.rom: $(SRC)
 	cd src && $(PASMO) --equ PICOCALC=1 --bin opticos.asm ../build/opticos_pc.rom ../build/opticos_pc.sym
 	python3 tools/check_layout.py build/opticos_pc.sym build/opticos_pc.rom --md build/bytes_pc.md
 
+# PicoCalc firmware (Pico 2): build/fw/opticos.uf2.  Needs the pico-sdk and
+# arm-none-eabi-gcc, as in the Docker image (tools/docker).
+picocalc: build/opticos_pc.rom
+	cmake -S picocalc -B build/fw -DOPTICOS_ROM=$(CURDIR)/build/opticos_pc.rom
+	$(MAKE) -C build/fw -j4
+	@ls -l build/fw/opticos.uf2
+
 rig:
 	gcc -O2 -shared -fPIC -o tools/rig/libz80.so tools/rig/z80.c
 	gcc -O2 -shared -fPIC -o tools/rig/libpicocalc.so emu/picocalc.c
@@ -44,4 +51,4 @@ fuse: build/opticos.rom
 clean:
 	rm -rf build tools/rig/libz80.so tools/rig/libpicocalc.so
 
-.PHONY: all rig zex check fuse clean coef
+.PHONY: all picocalc rig zex check fuse clean coef
