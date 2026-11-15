@@ -1,18 +1,26 @@
-# p3lib.py - drive the OpticBASIC console in the rig by injecting lines
+# p3lib.py - drive the OpticBASIC console in the rig by injecting lines.
+# OPTICOS_MACHINE=picocalc runs the same tests on the PicoCalc ROM and machine.
 import os, re, sys
 sys.path.insert(0, os.path.dirname(__file__))
-from rig import Spectrum
+from rig import Spectrum, PicoCalc
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-ROM = os.path.join(ROOT, 'build/opticos.rom')
+PICO = os.environ.get('OPTICOS_MACHINE') == 'picocalc'
+MACHINE, NAME = (PicoCalc, 'opticos_pc') if PICO else (Spectrum, 'opticos')
+COLS, ROWS = (80, 40) if PICO else (64, 24)
+ROM = os.path.join(ROOT, 'build/%s.rom' % NAME)
 FONT = open(os.path.join(ROOT, 'font/font4x8.bin'), 'rb').read()
 SYM = {}
-for l in open(os.path.join(ROOT, 'build/opticos.sym')):
+for l in open(os.path.join(ROOT, 'build/%s.sym' % NAME)):
     m = re.match(r'(\S+)\s+EQU\s+0?([0-9A-F]+)H', l)
     if m: SYM[m.group(1)] = int(m.group(2), 16)
 LINEBUF, CON_LEN = SYM['EBUF'], SYM['CON_LEN']
+def shot(s, rel):
+    """Save a screenshot at docs/<rel>; PicoCalc runs go to build/picocalc/."""
+    path = os.path.join(ROOT, 'build/picocalc', os.path.basename(rel)) if PICO else os.path.join(ROOT, rel)
+    os.makedirs(os.path.dirname(path), exist_ok=True); s.image().save(path)
 class Basic:
     def __init__(self):
-        self.s = Spectrum(ROM); self.s.frame(200)
+        self.s = MACHINE(ROM); self.s.frame(200)
     def line(self, text, limit=400_000_000):
         s = self.s; assert len(text) <= 126, text
         if not s.run_until(SYM['cg_lp'], 20_000_000): raise TimeoutError('not at prompt')

@@ -334,7 +334,7 @@ pbs_n:  djnz pbs_l
 ; since the screenful began, ask "cont?" on the bottom row.  Y continues
 ; (lp_y); any other key stops (lp_st).  BREAK at the prompt reports "Break".
 lt_pg:  ld a,(iy+NLCT-ERR_NR)
-        cp 23
+        cp ROWS-1
         jp c,lt_1
         ld hl,lp_m
         call pr_msg

@@ -5,13 +5,22 @@
 PASMO ?= pasmo
 SRC := $(wildcard src/*.asm src/*.inc) font/font4x8.bin
 
+all: build/opticos.rom build/opticos_pc.rom
+
 build/opticos.rom: $(SRC)
 	@mkdir -p build
-	cd src && $(PASMO) --bin opticos.asm ../build/opticos.rom ../build/opticos.sym
+	cd src && $(PASMO) --equ PICOCALC=0 --bin opticos.asm ../build/opticos.rom ../build/opticos.sym
 	python3 tools/check_layout.py build/opticos.sym build/opticos.rom --md build/bytes.md
+
+# The PicoCalc ROM: the same source with the PicoCalc display (docs/picocalc)
+build/opticos_pc.rom: $(SRC)
+	@mkdir -p build
+	cd src && $(PASMO) --equ PICOCALC=1 --bin opticos.asm ../build/opticos_pc.rom ../build/opticos_pc.sym
+	python3 tools/check_layout.py build/opticos_pc.sym build/opticos_pc.rom --md build/bytes_pc.md
 
 rig:
 	gcc -O2 -shared -fPIC -o tools/rig/libz80.so tools/rig/z80.c
+	gcc -O2 -shared -fPIC -o tools/rig/libpicocalc.so emu/picocalc.c
 
 zex: rig
 	python3 tools/rig/zex.py zexdoc
@@ -33,6 +42,6 @@ fuse: build/opticos.rom
 	python3 tools/fuse_phase1.py build/opticos.rom build/fuse /workspace/spectrum-ball/bounceball.tap
 
 clean:
-	rm -rf build tools/rig/libz80.so
+	rm -rf build tools/rig/libz80.so tools/rig/libpicocalc.so
 
-.PHONY: rig zex check fuse clean coef
+.PHONY: all rig zex check fuse clean coef

@@ -16,13 +16,15 @@ pr_out: ld c,a
 po_glyph:
         push af
         ld a,(S_POSN)
-        cp 64
+        cp COLS
         call nc,pr_nl           ; wrap a full line before printing
         pop af
         call draw_glyph
+        if !PICOCALC            ; (the PicoCalc's glyph carries its colours)
         ld hl,(S_POSN)
         call attr_addr
         call attr_set
+        endif
         ld hl,S_POSN
         inc (hl)
         ret
@@ -66,18 +68,24 @@ po_two2:
         cp 23
         ld a,(PR_P1)
         jr z,po_tab
-        cp 24
+        cp ROWS
         jr nc,po_oos
         ld h,a
         ld a,c
-        cp 64
+        cp COLS
         jr nc,po_oos
         ld l,a
         ld (S_POSN),hl
         ret
 po_oos: rst 8
         defb ERR_SCREEN
+        if PICOCALC
+po_tab: sub COLS                ; column = n MOD COLS
+        jr nc,po_tab
+        add a,COLS
+        else
 po_tab: and 63
+        endif
         ld hl,S_POSN
         cp (hl)
         push af
@@ -96,7 +104,7 @@ po_bs2: ld a,h
         or a
         ret z
         dec h
-        ld l,63
+        ld l,COLS-1
 po_sto: ld (S_POSN),hl
         ret
 
@@ -104,7 +112,7 @@ po_comma:
         ld a,(S_POSN)
         add a,16
         and $F0
-        cp 64
+        cp COLS
         jr nc,pr_nl
         ld (S_POSN),a
         ret
@@ -114,7 +122,7 @@ pr_nl:  inc (iy+NLCT-ERR_NR)     ; newlines, for LIST's pause
         ld l,0
         inc h
         ld a,h
-        cp 24
+        cp ROWS
         jr c,pn_ok
         dec h
         push hl
@@ -123,6 +131,22 @@ pr_nl:  inc (iy+NLCT-ERR_NR)     ; newlines, for LIST's pause
 pn_ok:  ld (S_POSN),hl
         ret
 
+        if PICOCALC
+; draw_glyph: A = 32..127 at S_POSN, in ATTR_T / MASK_T with P_FLAG
+draw_glyph:
+        push af
+        ld hl,(S_POSN)
+        call dev_pos
+        call dev_attr
+        pop af
+        ld b,DV_GLYPH
+        jp dev
+; scroll: text rows 1 to ROWS-1 up one row, the last cleared to ATTR_P
+scroll: ld a,(ATTR_P)
+        ld b,DV_SCRL
+        jp dev
+
+        else
 ; draw_glyph: A = 32..127 at S_POSN.  The glyph is staged in GLYPHBUF
 ; (nibble-swapped when its side differs from the column's, inverted for
 ; INVERSE), then merged into the screen through mask C (OVER: XOR).
@@ -281,6 +305,7 @@ sc_c2:  ld (hl),0
         jr nz,sc_c
         ret
 
+        endif
 ; set_colour: C = control code 16-21, A = value, HL = ATTR_P or ATTR_T
 ; (its mask follows at HL+1).  8 (and 9) mean transparent.
 set_colour:
@@ -344,6 +369,7 @@ sf_off: cpl
         ret
 sc_tab: defb $07,0,$38,3,$80,7,$40,6
 
+        if !PICOCALC
 ; attr_set: store ATTR_T in the attribute cell at HL, keeping the bits that
 ; MASK_T marks transparent (INK 8, PAPER 8, FLASH 8, BRIGHT 8) as they are on
 ; the screen.  Used by PRINT and by PLOT / DRAW.  BC, DE preserved.
@@ -357,6 +383,8 @@ attr_set:
         ld (hl),a
         pop bc
         ret
+
+        endif
 
 ; print_a: RST 16 - send A to the current channel; BC, DE, HL preserved
 print_a:
