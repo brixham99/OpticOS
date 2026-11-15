@@ -31,10 +31,10 @@ if(NOT FATFS_SD_PATH)
 endif()
 add_subdirectory(${FATFS_SD_PATH}/src fatfs)
 
-add_executable(opticos main.c lcd.c kbd.c storage_sd.c hw_config.c ../emu/picocalc.c ${CMAKE_CURRENT_BINARY_DIR}/rom.c)
+add_executable(opticos main.c lcd.c kbd.c audio.c storage_sd.c hw_config.c ../emu/picocalc.c ${CMAKE_CURRENT_BINARY_DIR}/rom.c)
 target_include_directories(opticos PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ../emu)
 target_compile_options(opticos PRIVATE -O2 -Wall -Wno-unused-function)
-target_link_libraries(opticos pico_stdlib pico_multicore hardware_spi hardware_i2c no-OS-FatFS-SD-SDIO-SPI-RPi-Pico)
+target_link_libraries(opticos pico_stdlib pico_multicore hardware_spi hardware_i2c hardware_pwm no-OS-FatFS-SD-SDIO-SPI-RPi-Pico)
 # run from RAM: the Z80 core's big dispatch loop is too slow from XIP flash
 pico_set_binary_type(opticos copy_to_ram)
 # serial output: in the PicoCalc only the USB-C port (wired to UART0, GP0/GP1,
@@ -53,3 +53,12 @@ pico_enable_stdio_usb(lcdtest 0)
 pico_enable_stdio_uart(lcdtest 1)
 pico_add_extra_outputs(lcdtest)
 
+
+# soundtest.uf2: speaker bring-up (a PWM tone, then audio.c's sample path)
+add_executable(soundtest soundtest.c audio.c)
+target_include_directories(soundtest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_options(soundtest PRIVATE -O2 -Wall)
+target_link_libraries(soundtest pico_stdlib hardware_pwm)
+pico_enable_stdio_usb(soundtest 0)
+pico_enable_stdio_uart(soundtest 1)
+pico_add_extra_outputs(soundtest)

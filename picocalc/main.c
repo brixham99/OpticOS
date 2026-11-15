@@ -1,10 +1,10 @@
 /* main.c - OpticOS on the PicoCalc.
  *
  * Core 0 runs the PicoCalc machine (emu/picocalc.c: the Z80 with the
- * OpticOS ROM and its display/keyboard devices), one 50 Hz frame every
- * 20 ms.  Core 1 owns the hardware: it polls the keyboard into the key
- * matrix and copies changed character rows of the machine's display to the
- * LCD.  The two share only the bitmap, attributes and key matrix, where a
+ * OpticOS ROM and its display, keyboard and storage devices), one 50 Hz
+ * frame every 20 ms, and plays the beeper (audio.c).  Core 1 owns the rest
+ * of the hardware: it polls the keyboard into the key matrix and copies
+ * changed character rows of the machine's display to the LCD.  The two share only the bitmap, attributes and key matrix, where a
  * torn read costs at most one stale row until the next pass.
  *
  * On the serial console (the PicoCalc's USB-C port: UART0, 115200 baud),
@@ -17,6 +17,7 @@
 #include "picocalc.h"
 #include "lcd.h"
 #include "kbd.h"
+#include "audio.h"
 #include "font8x8.h"
 
 extern const unsigned char opticos_rom[16384];
@@ -129,12 +130,32 @@ static void core1_main(void){
 }
 
 /* ---- core 0: the machine */
+/* the beeper's edges in the frame just run -> its 625 samples (pc_render:
+ * the level averaged over each), queued to play */
+#define AMP 128                                  /* a high level, of 255 */
+static uint32_t edge_t[4096];
+static uint8_t edge_v[4096], samples[AUDIO_FRAME];
+static void beeper(void){
+  static uint32_t prev;                          /* T-states at the end of the last frame */
+  static int level;
+  uint32_t now = pc_tstates();
+  int n = pc_edges(edge_t, edge_v, 4096);
+  pc_render(prev, now - prev, AUDIO_FRAME, edge_t, edge_v, n, &level, samples, AMP);
+  prev = now;
+  audio_push(samples, AUDIO_FRAME);
+}
+
 int main(void){
+  /* Interrupts on: we can be started (by a boot loader before us) with them
+   * masked (PRIMASK = 1), which the SDK's start-up code doesn't undo, and
+   * then no interrupt is ever taken: no sound, no USB. */
+  __asm volatile ("cpsie i" ::: "memory");
   set_sys_clock_khz(133000, true);             /* as lcdtest and ClockworkPi's reference */
   stdio_init_all();
   printf("opticos: core 0 up\n");
   z_init();
   memcpy(z_mem(), opticos_rom, sizeof opticos_rom);
+  audio_init();                                /* before the first frame: the chime */
   multicore_launch_core1_with_stack(core1_main, core1_stack, sizeof core1_stack);
 
   uint64_t next = time_us_64(), busy = 0, worst = 0;
@@ -142,7 +163,7 @@ int main(void){
   for (;;) {
     uint64_t t0 = time_us_64();
     z_frame();
-    z_beeps();                                   /* sound: not yet */
+    beeper();                                    /* this frame's sound, 20 ms behind */
     uint64_t t = time_us_64() - t0;
     busy += t; if (t > worst) worst = t;
     frames_run++; frame_us = t;

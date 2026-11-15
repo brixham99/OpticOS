@@ -33,6 +33,11 @@ lib.z_mic_count.restype = ctypes.c_long
 lib.z_ear_pos.restype = ctypes.c_long
 pclib = build(os.path.join(HERE, 'libpicocalc.so'), os.path.join(EMU, 'picocalc.c'), os.path.join(EMU, 'storage_posix.c'))
 pclib.z_storage_dir.argtypes = [ctypes.c_char_p]
+pclib.pc_edges.argtypes = [ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint8), ctypes.c_int]
+pclib.pc_tstates.restype = ctypes.c_uint32
+pclib.pc_render.argtypes = [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_int, ctypes.POINTER(ctypes.c_uint32),
+                            ctypes.POINTER(ctypes.c_uint8), ctypes.c_int, ctypes.POINTER(ctypes.c_int),
+                            ctypes.POINTER(ctypes.c_uint8), ctypes.c_int]
 pclib.pc_bits.restype = ctypes.POINTER(ctypes.c_uint8)
 pclib.pc_attrs.restype = ctypes.POINTER(ctypes.c_uint8)
 pclib.pc_font.restype = ctypes.POINTER(ctypes.c_uint8)
@@ -201,6 +206,18 @@ class PicoCalc(Spectrum):
     lib = pclib
     W = H = 320
     def tape(self, *a, **k): raise NotImplementedError('the PicoCalc has no tape')
+    def edges(self):
+        """The beeper's edges since the last call: [(T-state, level after)]."""
+        t = (ctypes.c_uint32 * 4096)(); v = (ctypes.c_uint8 * 4096)()
+        n = self.lib.pc_edges(t, v, 4096)
+        return [(t[i], v[i]) for i in range(n)]
+    def render(self, t0, length, n, edges, level=0, amp=255):
+        """pc_render: n samples of the beeper over length T-states from t0."""
+        k = len(edges)
+        t = (ctypes.c_uint32 * max(k, 1))(*[e[0] for e in edges]); v = (ctypes.c_uint8 * max(k, 1))(*[e[1] for e in edges])
+        lv = ctypes.c_int(level); out = (ctypes.c_uint8 * n)()
+        self.lib.pc_render(t0, length, n, t, v, k, ctypes.byref(lv), out, amp)
+        return bytes(out), lv.value
     def sd(self, path):
         """Keep SAVE / LOAD / CAT files in host directory path (the SD card's /OpticOS)."""
         os.makedirs(path, exist_ok=True); self.lib.z_storage_dir(os.fsencode(path))

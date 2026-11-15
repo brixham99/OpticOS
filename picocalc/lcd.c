@@ -14,7 +14,7 @@
 #define PIN_DC  14
 #define PIN_RST 15
 #define LCD_INIT_BAUD 10000000      /* commands: well inside the ST7796's write timing */
-#define LCD_BAUD 20000000           /* pixels: 18.75 MHz from 150 MHz (lcdtest's 22 MHz works) */
+#define LCD_BAUD 34000000           /* pixels: 33.25 MHz from 133 MHz (PicoMite drives this panel at 50) */
 
 /* CS and DC changes with set-up and hold time either side: running from RAM
  * at 150 MHz, CS can otherwise rise a few ns after the last clock edge, and

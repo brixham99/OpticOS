@@ -4,7 +4,8 @@
  *
  *   port $FE  in: Spectrum key matrix (A8-A15 select rows), out: bit 4 beeper
  *   port $1F  in: 0 (no joystick)
- *   port $D1  out: the display, register B (DV_* in src/sysvars.inc)
+ *   port $D1  the display, register B (DV_* in src/sysvars.inc; byte access
+ *             for machine code below); in: the hit latch
  *   port $D3  the storage device, register B (ST_*): SAVE, LOAD and VERIFY
  *             blocks as files of TAP blocks, and CAT
  *
@@ -31,13 +32,33 @@
 #define PC_ROWS 40
 
 enum { DV_COL, DV_ROW, DV_ATTR, DV_MASK, DV_FLAG, DV_GLYPH, DV_CELL, DV_SCRL, DV_CLS,
-       DV_CUR, DV_XL, DV_XH, DV_YL, DV_YH, DV_PLOT, DV_LINE, DV_MOVE };
+       DV_CUR, DV_XL, DV_XH, DV_YL, DV_YH, DV_PLOT, DV_LINE, DV_MOVE,
+       /* byte access, for machine code (the ROM doesn't use it): the PicoCalc's
+        * answer to the Spectrum's screen memory.  A byte is 8 pixels of a line,
+        * bit 7 leftmost; column 0-39, line 0-319 from the top. */
+       DV_BCOL,     /* A = byte column, for this line and the lines after (DV_NEXT) */
+       DV_BLL, DV_BLH,  /* the line, low and high byte */
+       DV_BPUT,     /* store A at the column, then the next column */
+       DV_BXOR,     /* XOR A in, then the next column; the hit latch ORs in A AND the old byte */
+       DV_HIT,      /* IN: the hit latch, which is then cleared (OUT clears it too) */
+       DV_NEXT,     /* the next line, back at the column DV_BCOL set */
+       DV_RLD,      /* scroll the line 4 pixels left, A's low nibble coming in at
+                     * the right; then the next line */
+       DV_PAT,      /* add A to the row pattern (up to 8 bytes; DV_BCOL empties it) */
+       DV_FILL };   /* store the row pattern at the column on A lines (0 = 256)
+                     * from the line; then the line after them */
 
 static u8 bits[PC_H][PC_W / 8];        /* bit 7 = leftmost pixel */
 static u8 attrs[PC_ROWS][PC_COLS];
 static u8 keyrows[8];
 static int beepstate, beeps;
-static struct { u8 col, row, attr, mask, flag; int x, y, px, py; } dv;
+/* the beeper's edges, for sound: when (T-states since reset, mod 2^32) and
+ * the level after it; the firmware drains them each frame (pc_edges) */
+#define NEDGE 4096
+static u32 edge_t[NEDGE];
+static u8 edge_v[NEDGE];
+static int nedge;
+static struct { u8 col, row, attr, mask, flag; int x, y, px, py; u8 bcol, bcol0, hit, pat[8], npat; u16 bline; } dv;
 
 u8 *pc_bits(void){ return &bits[0][0]; }
 u8 *pc_attrs(void){ return &attrs[0][0]; }
@@ -118,7 +139,37 @@ static void display(u8 reg, u8 v){
   case DV_PLOT: plot(dv.x, dv.y); dv.px = dv.x; dv.py = dv.y; break;
   case DV_LINE: line(dv.x, dv.y); break;
   case DV_MOVE: dv.px = dv.x; dv.py = dv.y; break;
+  case DV_BCOL: dv.bcol = dv.bcol0 = v; dv.npat = 0; break;
+  case DV_BLL: dv.bline = (dv.bline & 0xFF00) | v; break;
+  case DV_BLH: dv.bline = (dv.bline & 0xFF) | v << 8; break;
+  case DV_BPUT: case DV_BXOR:
+    if (dv.bcol < PC_W / 8 && dv.bline < PC_H) {
+      u8 *b = &bits[dv.bline][dv.bcol];
+      if (reg == DV_BPUT) *b = v; else { dv.hit |= *b & v; *b ^= v; }
+    }
+    dv.bcol++;
+    break;
+  case DV_HIT: dv.hit = 0; break;
+  case DV_NEXT: dv.bline++; dv.bcol = dv.bcol0; break;
+  case DV_RLD:
+    if (dv.bline < PC_H) {
+      u8 *b = bits[dv.bline];
+      for (int i = 0; i < PC_W / 8 - 1; i++) b[i] = b[i] << 4 | b[i + 1] >> 4;
+      b[PC_W / 8 - 1] = b[PC_W / 8 - 1] << 4 | (v & 15);
+    }
+    dv.bline++;
+    break;
+  case DV_PAT: if (dv.npat < 8) dv.pat[dv.npat++] = v; break;
+  case DV_FILL:
+    for (int n = v ? v : 256; n--; dv.bline++)
+      for (int i = 0; i < dv.npat; i++)
+        if (dv.bcol0 + i < PC_W / 8 && dv.bline < PC_H) bits[dv.bline][dv.bcol0 + i] = dv.pat[i];
+    break;
   }
+}
+static u8 display_in(u8 reg){
+  if (reg == DV_HIT) { u8 h = dv.hit; dv.hit = 0; return h; }
+  return 0xFF;
 }
 
 /* ---- storage: each file is a "tape" of TAP blocks (2-byte length, flag,
@@ -313,6 +364,7 @@ static u8 storage_in(u8 reg){
 static u8 port_in(u16 port){
   if ((port & 0xFF) == 0x1F) return 0;
   if ((port & 0xFF) == 0xD3) return storage_in(port >> 8);
+  if ((port & 0xFF) == 0xD1) return display_in(port >> 8);
   if ((port & 0xFF) == 0xFE) {
     u8 r = 0x1F, hi = port >> 8;
     for (int i = 0; i < 8; i++) if (!(hi & (1 << i))) r &= keyrows[i];
@@ -322,7 +374,11 @@ static u8 port_in(u16 port){
 }
 static void port_out(u16 port, u8 v){
   if ((port & 0xFF) == 0xFE) {
-    int b = (v >> 4) & 1; if (b != beepstate) { beeps++; beepstate = b; }
+    int b = (v >> 4) & 1;
+    if (b != beepstate) {
+      beeps++; beepstate = b;
+      if (nedge < NEDGE) { edge_t[nedge] = (u32)(TT + T); edge_v[nedge++] = b; }
+    }
   } else if ((port & 0xFF) == 0xD1) display(port >> 8, v);
   else if ((port & 0xFF) == 0xD3) storage(port >> 8, v);
 }
@@ -332,8 +388,39 @@ void z_init(void){
   core_reset();
   memset(keyrows, 0x1F, sizeof keyrows);
   memset(bits, 0, sizeof bits); memset(attrs, 0, sizeof attrs); memset(&dv, 0, sizeof dv);
-  beepstate = beeps = 0;
+  beepstate = beeps = nedge = 0;
   tape_close(); status = 0; listing[0] = 0; lpos = 0;
 }
 void z_key(int row, int bit, int down){ if (down) keyrows[row] &= ~(1 << bit); else keyrows[row] |= (1 << bit); }
 int z_beeps(void){ int b = beeps; beeps = 0; return b; }
+/* the beeper edges since the last call (at most max): their times and the
+ * level after each; the rest wait for the next call */
+int pc_edges(u32 *t, u8 *v, int max){
+  int n = nedge < max ? nedge : max;
+  memcpy(t, edge_t, n * sizeof *t); memcpy(v, edge_v, n);
+  memmove(edge_t, edge_t + n, (nedge - n) * sizeof *edge_t); memmove(edge_v, edge_v + n, nedge - n);
+  nedge -= n;
+  return n;
+}
+int pc_level(void){ return beepstate; }
+/* sound samples: the beeper level averaged over each of n equal parts of the
+ * len T-states from t0, scaled to 0-amp.  The edges (time, level after) are
+ * in order; any at or after the end are applied at the end.  *level is the
+ * level at t0, and becomes the level at the end. */
+void pc_render(u32 t0, u32 len, int n, const u32 *et, const u8 *ev, int ne, int *level, u8 *out, int amp){
+  int e = 0, lv = *level;
+  for (int i = 0; i < n; i++) {
+    u32 a = (u32)((uint64_t)len * i / n), b = (u32)((uint64_t)len * (i + 1) / n), t = a, hi = 0;
+    for (; e < ne && et[e] - t0 < b; e++) {
+      u32 x = et[e] - t0;
+      if (x < t || x > len) x = t;                /* (from before t0) */
+      if (lv) hi += x - t;
+      t = x; lv = ev[e];
+    }
+    if (lv) hi += b - t;
+    out[i] = b > a ? (u8)((uint64_t)hi * amp / (b - a)) : (u8)(lv ? amp : 0);
+  }
+  for (; e < ne; e++) lv = ev[e];
+  *level = lv;
+}
+uint32_t pc_tstates(void){ return (u32)(TT + T); }

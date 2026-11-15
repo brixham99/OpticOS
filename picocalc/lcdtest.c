@@ -18,6 +18,10 @@ static void reg_write(uint8_t reg, uint8_t v){
 }
 
 int main(void){
+  /* Interrupts on: we can be started (by a boot loader before us) with them
+   * masked (PRIMASK = 1), which the SDK's start-up code doesn't undo, and
+   * then no interrupt is ever taken: no sound, no USB. */
+  __asm volatile ("cpsie i" ::: "memory");
   set_sys_clock_khz(133000, true);
   stdio_init_all();
   i2c_init(i2c1, 10000);
