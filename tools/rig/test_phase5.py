@@ -4,7 +4,7 @@
 # and EAR signals, with no traps.
 import os, sys, json
 sys.path.insert(0, os.path.dirname(__file__))
-from p3lib import Basic, SYM, ROOT, ROM
+from p3lib import Basic, SYM, ROOT, ROM, shot
 from rig import decode_pulses, block_pulses, NOTOGGLE
 res = {}
 def check(name, got, want):
@@ -63,7 +63,7 @@ ctape = [NOTOGGLE | 35000] + sum((block_pulses(x) for x in cb), []) + [NOTOGGLE 
 load('LOAD "" CODE 40000', ctape)
 check('LOAD "" CODE start', s.block(40000, 300) == open(ROM, 'rb').read()[:300], True)
 r = load('VERIFY "rom" CODE 40000', ctape); check('VERIFY CODE', r[-1], 'Bytes: rom')
-s.image().save(os.path.join(ROOT, 'docs/phase5/rig_tape.png'))
+shot(s, 'docs/phase5/rig_tape.png')
 # ---- phase 5b: graphics, colours, BEEP, functions, SWAP, machine
 def px(x, y):
     yy = 191 - y

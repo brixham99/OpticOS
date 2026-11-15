@@ -30,6 +30,10 @@ lg_prog:
         bit 7,h
         jp nz,con_ok
         call lg_goto
+        if PICOCALC
+        ld a,1                  ; a Sinclair program: show the Spectrum screen
+        call dev_mode
+        endif
         jp lg_stmt
 
 m_leg_e1:

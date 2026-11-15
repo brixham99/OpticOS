@@ -1,0 +1,181 @@
+/* main.c - OpticOS on the PicoCalc.
+ *
+ * Core 0 runs the PicoCalc machine (emu/picocalc.c: the Z80 with the
+ * OpticOS ROM and its display, keyboard and storage devices), one 50 Hz
+ * frame every 20 ms, and plays the beeper (audio.c).  Core 1 owns the rest
+ * of the hardware: it polls the keyboard into the key matrix and copies
+ * the rows that changed to the LCD (OpticOS's display, or the Spectrum
+ * screen).  The two share only the machine's display and key matrix, where
+ * a torn read costs at most one stale row until the next pass.
+ *
+ * On the serial console (the PicoCalc's USB-C port: UART0, 115200 baud),
+ * core 0 reports how long a frame takes to emulate. */
+#include <stdio.h>
+#include <string.h>
+#include "pico/stdlib.h"
+#include "pico/multicore.h"
+#include "hardware/clocks.h"
+#include "picocalc.h"
+#include "lcd.h"
+#include "kbd.h"
+#include "audio.h"
+
+extern const unsigned char opticos_rom[16384];
+#define W 320
+#define COLS 40
+#define ROWS 40
+#define FRAME_US 20000
+
+/* ---- core 1: keyboard and screen */
+static uint8_t shadow_bits[W * W / 8], shadow_attrs[ROWS * COLS];
+static uint8_t line_buf[8 * W * 2];
+static uint8_t row_flash[ROWS];
+static uint32_t core1_stack[16384 / 4];        /* (more than the 2K default) */
+
+static uint16_t PAL[16];
+static const uint8_t PAL_RGB[16][3] = {
+  {0,0,0}, {0,0,215}, {215,0,0}, {215,0,215}, {0,215,0}, {0,215,215}, {215,215,0}, {215,215,215},
+  {0,0,0}, {0,0,255}, {255,0,0}, {255,0,255}, {0,255,0}, {0,255,255}, {255,255,0}, {255,255,255},
+};
+
+static void draw_row(int r, int flash_on){
+  const uint8_t *a = &shadow_attrs[r * COLS];
+  uint8_t *o = line_buf;
+  int fl = 0;
+  for (int y = 0; y < 8; y++) {
+    const uint8_t *b = &shadow_bits[(r * 8 + y) * (W / 8)];
+    for (int c = 0; c < COLS; c++) {
+      uint8_t at = a[c], br = (at & 0x40) >> 3;
+      uint16_t ink = PAL[(at & 7) | br], paper = PAL[((at >> 3) & 7) | br];
+      if (at & 0x80) { fl = 1; if (flash_on) { uint16_t t = ink; ink = paper; paper = t; } }
+      uint8_t px = b[c];
+      for (int m = 0x80; m; m >>= 1) {
+        uint16_t p = (px & m) ? ink : paper;
+        *o++ = p >> 8; *o++ = p;
+      }
+    }
+  }
+  row_flash[r] = fl;
+  lcd_lines(r * 8, 8, line_buf);
+}
+
+/* ---- the Spectrum screen (DV_MODE 1): $4000-$5AFF in the Spectrum's own
+ * layout, 256 x 192 at (32, 64) on the panel, inside the border colour.
+ * Character rows whose pixels or attributes changed are redrawn, with the
+ * border either side of them; the border above and below when it changes. */
+static uint8_t spec_shadow[6912], spec_flash[24], spec_border;
+
+static void spectrum_pass(int flash_on, int flash_changed, int all){
+  const uint8_t *m = z_mem();
+  uint8_t bd = pc_border();
+  uint16_t bc = PAL[bd];
+  int bchanged = all || bd != spec_border;
+  spec_border = bd;
+  if (bchanged) {                                  /* the border above and below the screen */
+    uint8_t *o = line_buf;
+    for (int i = 0; i < 8 * W; i++) { *o++ = bc >> 8; *o++ = bc; }
+    for (int y = 0; y < 64; y += 8) { lcd_lines(y, 8, line_buf); lcd_lines(256 + y, 8, line_buf); }
+  }
+  for (int r = 0; r < 24; r++) {
+    kbd_poll();
+    int changed = bchanged || (flash_changed && spec_flash[r]);
+    for (int k = 0; k < 8; k++) {                  /* the row's 8 pixel lines, 32 bytes each */
+      int a = (r & 0x18) << 8 | k << 8 | (r & 7) << 5;
+      if (memcmp(m + 0x4000 + a, spec_shadow + a, 32)) { memcpy(spec_shadow + a, m + 0x4000 + a, 32); changed = 1; }
+    }
+    int at = 0x1800 + r * 32;
+    if (memcmp(m + 0x4000 + at, spec_shadow + at, 32)) { memcpy(spec_shadow + at, m + 0x4000 + at, 32); changed = 1; }
+    if (!changed) continue;
+    uint8_t *o = line_buf;
+    int fl = 0;
+    for (int k = 0; k < 8; k++) {
+      const uint8_t *px = spec_shadow + ((r & 0x18) << 8 | k << 8 | (r & 7) << 5);
+      for (int i = 0; i < 32; i++) { *o++ = bc >> 8; *o++ = bc; }
+      for (int c = 0; c < 32; c++) {
+        uint8_t a = spec_shadow[at + c], br = (a & 0x40) >> 3;
+        uint16_t ink = PAL[(a & 7) | br], paper = PAL[((a >> 3) & 7) | br];
+        if (a & 0x80) { fl = 1; if (flash_on) { uint16_t t = ink; ink = paper; paper = t; } }
+        for (int bit = 0x80; bit; bit >>= 1) { uint16_t p = (px[c] & bit) ? ink : paper; *o++ = p >> 8; *o++ = p; }
+      }
+      for (int i = 0; i < 32; i++) { *o++ = bc >> 8; *o++ = bc; }
+    }
+    spec_flash[r] = fl;
+    lcd_lines(64 + r * 8, 8, line_buf);
+  }
+}
+
+static void core1_main(void){
+  for (int i = 0; i < 16; i++) PAL[i] = lcd_rgb(PAL_RGB[i][0], PAL_RGB[i][1], PAL_RGB[i][2]);
+  kbd_init();                                    /* (also the LCD's backlight) */
+  lcd_init();
+  printf("opticos: core 1 up: keyboard, LCD\n");
+  const uint8_t *bits = pc_bits(), *attrs = pc_attrs();
+  int flash_was = -1, mode_was = -1;
+  for (;;) {
+    int flash_on = (time_us_64() / 320000) & 1;    /* FLASH: 16 frames each way */
+    int flash_changed = flash_on != flash_was;
+    int mode = pc_mode(), all = mode != mode_was;  /* a switch redraws everything */
+    mode_was = mode;
+    if (mode) spectrum_pass(flash_on, flash_changed, all);
+    else for (int r = 0; r < ROWS; r++) {
+      kbd_poll();
+      const uint8_t *lb = &bits[r * 8 * (W / 8)], *la = &attrs[r * COLS];
+      uint8_t *sb = &shadow_bits[r * 8 * (W / 8)], *sa = &shadow_attrs[r * COLS];
+      if (all || memcmp(lb, sb, 8 * W / 8) || memcmp(la, sa, COLS)
+          || (flash_changed && row_flash[r])) {
+        memcpy(sb, lb, 8 * W / 8); memcpy(sa, la, COLS);
+        draw_row(r, flash_on);
+      }
+    }
+    flash_was = flash_on;
+  }
+}
+
+/* ---- core 0: the machine */
+/* the beeper's edges in the frame just run -> its 625 samples (pc_render:
+ * the level averaged over each), queued to play */
+#define AMP 128                                  /* a high level, of 255 */
+static uint32_t edge_t[4096];
+static uint8_t edge_v[4096], samples[AUDIO_FRAME];
+static void beeper(void){
+  static uint32_t prev;                          /* T-states at the end of the last frame */
+  static int level;
+  uint32_t now = pc_tstates();
+  int n = pc_edges(edge_t, edge_v, 4096);
+  pc_render(prev, now - prev, AUDIO_FRAME, edge_t, edge_v, n, &level, samples, AMP);
+  prev = now;
+  audio_push(samples, AUDIO_FRAME);
+}
+
+int main(void){
+  /* Interrupts on: we can be started (by a boot loader before us) with them
+   * masked (PRIMASK = 1), which the SDK's start-up code doesn't undo, and
+   * then no interrupt is ever taken: no sound, no USB. */
+  __asm volatile ("cpsie i" ::: "memory");
+  set_sys_clock_khz(133000, true);             /* as lcdtest and ClockworkPi's reference */
+  stdio_init_all();
+  printf("opticos: core 0 up\n");
+  z_init();
+  memcpy(z_mem(), opticos_rom, sizeof opticos_rom);
+  audio_init();                                /* before the first frame: the chime */
+  multicore_launch_core1_with_stack(core1_main, core1_stack, sizeof core1_stack);
+
+  uint64_t next = time_us_64(), busy = 0, worst = 0;
+  int frames = 0, late = 0;
+  for (;;) {
+    uint64_t t0 = time_us_64();
+    z_frame();
+    beeper();                                    /* this frame's sound, 20 ms behind */
+    uint64_t t = time_us_64() - t0;
+    busy += t; if (t > worst) worst = t;
+    next += FRAME_US;
+    uint64_t now = time_us_64();
+    if (now < next) sleep_until(from_us_since_boot(next));
+    else if (now > next + 5 * FRAME_US) { next = now; late++; }   /* fell behind: resync */
+    if (++frames == 250) {
+      printf("opticos: frame %llu us avg, %llu us worst (budget %d), %d resyncs\n",
+             busy / frames, worst, FRAME_US, late);
+      frames = 0; busy = worst = 0; late = 0;
+    }
+  }
+}

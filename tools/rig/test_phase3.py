@@ -4,7 +4,7 @@
 # program line.  Writes build/test_phase3.json and a screenshot.
 import os, sys, json
 sys.path.insert(0, os.path.dirname(__file__))
-from p3lib import Basic, SYM, ROOT
+from p3lib import Basic, SYM, ROOT, shot
 T = []
 def case(name, prog, cmd, want): T.append((name, prog, cmd, want))
 case('ELSEIF chain', ['x=2', 'IF x=1', 'PRINT "one"', 'ELSEIF x=2', 'PRINT "two"', 'ELSE', 'PRINT "other"', 'ENDIF'], 'RUN', ['two'])
@@ -84,7 +84,7 @@ b.line('NEW'); b.enter(['FOR i=1 TO 1000: a=a+i: NEXT', 'PRINT a'])
 t0 = s.regs() and __import__('rig').lib.z_tstates(); b.line('RUN'); t1 = __import__('rig').lib.z_tstates()
 res['FOR loop T-states per iteration'] = (t1 - t0) // 1000
 print('FOR 1000 iterations: %d T-states each' % ((t1 - t0) // 1000))
-b.run(PROG, 'RUN'); b.s.image().save(os.path.join(ROOT, 'docs/phase3/rig_demo.png'))
+b.run(PROG, 'RUN'); shot(b.s, 'docs/phase3/rig_demo.png')
 json.dump(dict(cases=res, failures=fails), open(os.path.join(ROOT, 'build/test_phase3.json'), 'w'), indent=1)
 print('\n%d/%d passed' % (len(T) + 1 - len(fails), len(T) + 1))
 sys.exit(1 if fails else 0)

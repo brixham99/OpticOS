@@ -59,11 +59,14 @@ bt_st:  ld a,(hl)
         ld a,$07                ; white ink on black paper, black border
         ld (ATTR_P),a
         ld (BORDCR),a
-        ld a,64
+        ld a,COLS
         ld (OMODE),a
         im 1
         ei
         call CLS
+        if PICOCALC
+        call dev_bar
+        else
         ld hl,$5800             ; row 0: colour bar, 16 swatches of two
         ld b,0                  ; attribute cells (paper = ink, no pixels)
 bt_bar: ld a,b
@@ -83,6 +86,7 @@ bt_nb:  ld (hl),a
         inc b
         bit 4,b
         jr z,bt_bar
+        endif
         ld a,2                  ; row 1 blank, banner and version on
         ld (S_POSN+1),a         ; rows 2-3, row 4 blank, prompt on row 5
         ld hl,banner
@@ -101,8 +105,15 @@ bt_nb:  ld (hl),a
         call chime              ; (also drops keys typed before the prompt)
         jp console
 
+        if PICOCALC             ; 40 columns: the banner on two lines
+banner: defm "OpticOS (c) 2026"
+        defb 13
+        defm "Optica Technology Desig"
+        defb 'n'+$80
+        else
 banner: defm "OpticOS (c) 2026 Optica Technology Desig"
         defb 'n'+$80
+        endif
 banner2: defm "OpticBASIC v1.0."
         defb '3'+$80
 

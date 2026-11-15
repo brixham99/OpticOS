@@ -43,7 +43,9 @@ m_tkt_s:
         include "gen/tokens.inc"
 m_tkt_e:
         include "case.asm"
+        if !PICOCALC            ; (the PicoCalc build has it in save.asm's room)
         include "clear.asm"
+        endif
 secJ2_end:
 
         org $22AA

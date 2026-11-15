@@ -4,7 +4,7 @@
 # left/right insert, delete and insert lines, long lines.
 import os, sys, json
 sys.path.insert(0, os.path.dirname(__file__))
-from p3lib import Basic, SYM, ROOT
+from p3lib import Basic, SYM, ROOT, COLS, shot
 b = Basic(); s = b.s; res = {}
 UP, DOWN, LEFT, RIGHT, EDIT, DEL = '7', '6', '5', '8', '1', '0'
 def caps(k, n=1):
@@ -43,11 +43,12 @@ b.line('CLS'); key_line('PRINT 1234'); caps(LEFT, 2); caps(DEL); caps(RIGHT); ke
 r = rows(); check('left, DELETE, right, insert', r[-2], '1394')   # PRINT 1234 -> PRINT 1394
 b.line('CLS'); long = 'PRINT "' + 'abcdefghij' * 11 + '"'
 key_line(long); enter(); r = rows()
-check('126-char line, two rows', (len(long), r[-2]), (len(long), ('abcdefghij' * 11)[-46:]))
+out = 'abcdefghij' * 11                    # the output wraps; its last row:
+check('126-char line, output wraps', (len(long), r[-2]), (len(long), out[(len(out) - 1) // COLS * COLS:]))
 b.run(['PRINT 1', 'PRINT 1/0', 'PRINT 3'], 'RUN')
 check('error line becomes current', prog_list(), ['PRINT 1', '>PRINT 1/0', 'PRINT 3'])
 check('RUN still works after edits', b.run(['PRINT 6*7'], 'RUN')[1:], ['42'])
-s.image().save(os.path.join(ROOT, 'docs/phase4/rig_editor.png'))
+shot(s, 'docs/phase4/rig_editor.png')
 fails = [k for k, v in res.items() if not v]
 json.dump(dict(cases=res, failures=fails), open(os.path.join(ROOT, 'build/test_phase4.json'), 'w'), indent=1)
 print('\n%d/%d passed' % (len(res) - len(fails), len(res)))

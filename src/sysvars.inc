@@ -2,6 +2,47 @@
 ; Addresses and meanings at the Sinclair-compatible slots are a published
 ; interface (spec section 9). Slots marked "reused" hold OpticOS internals.
 
+; ---- machine.  PICOCALC is set on the pasmo command line (--equ): 0 builds
+; the Spectrum ROM, 1 the PicoCalc ROM (docs/picocalc/PLAN.md).
+        if PICOCALC
+COLS     equ 40         ; text columns (the display's 8x8 font on 320 pixels)
+ROWS     equ 40         ; text rows
+; The PicoCalc display: OUT (C),A with C = DEV, B = register (dev_*, print.asm)
+DEV      equ $D1
+DV_COL   equ 0          ; cursor column
+DV_ROW   equ 1          ; cursor row
+DV_ATTR  equ 2          ; attribute (ATTR_T)
+DV_MASK  equ 3          ; transparent attribute bits (MASK_T)
+DV_FLAG  equ 4          ; P_FLAG: bit 0 OVER, bit 2 INVERSE
+DV_GLYPH equ 5          ; A = character 32-127: draw at COL, ROW
+DV_CELL  equ 6          ; A = attribute: set the cell at COL, ROW
+DV_SCRL  equ 7          ; scroll up one row; A = attribute for the new row
+DV_CLS   equ 8          ; clear the screen to attribute A
+DV_CUR   equ 9          ; invert the cell at COL, ROW (the cursor)
+DV_X     equ 10         ; 10, 11: pixel x (low, high)
+DV_Y     equ 12         ; 12, 13: pixel y (low, high), 0 = bottom
+DV_PLOT  equ 14         ; plot X, Y
+DV_LINE  equ 15         ; line from the last point to X, Y (not its first pixel)
+DV_MOVE  equ 16         ; set the last point to X, Y
+DV_MODE  equ 27         ; A = 1: show the Spectrum screen ($4000-$5AFF, the border);
+                        ; 0: OpticOS's own display (lg_prog sets 1, each prompt 0)
+; 17-26: byte access for machine code (emu/picocalc.c); the ROM doesn't use it:
+; 17 byte column, 18/19 line, 20 put, 21 XOR (hit latch), 22 IN hit latch,
+; 23 next line, 24 scroll the line 4 pixels left, 25 add to the row pattern,
+; 26 fill the row pattern down A lines
+STOR     equ $D3        ; the storage device: OUT/IN (C) with C = STOR, B = register
+ST_SAVE  equ 0          ; OUT A = flag: SA-BYTES (IX, DE); IN: status
+ST_LOAD  equ 1          ; OUT A = flag: LD-BYTES (IX, DE, carry); IN: status
+ST_DIR   equ 2          ; OUT: start the CAT listing; IN: its next character, 0 at the end
+GFX_W    equ 320        ; PLOT/DRAW range
+GFX_H    equ 320
+GX       equ $5A00      ; last graphics point, x (2)
+GY       equ $5A02      ; and y (2); $4000-$5AFF is plain RAM on the PicoCalc
+        else
+COLS     equ 64
+ROWS     equ 24
+        endif
+
 KS_LAST  equ $5C00      ; reused (KSTATE): index of the key last seen, $FF none
 KS_CNT   equ $5C01      ; reused: auto-repeat countdown
 KS_MODE  equ $5C02      ; reused: bit 0 caps lock, bit 1 E mode pending
@@ -29,14 +70,14 @@ SEED     equ $5C76
 FRAMES   equ $5C78      ; 3 bytes
 UDG      equ $5C7B
 COORDS   equ $5C7D
-S_POSN   equ $5C88      ; column (0-63), +1 row (0-23)
+S_POSN   equ $5C88      ; column (0 to COLS-1), +1 row (0 to ROWS-1)
 ATTR_P   equ $5C8D
 MASK_P   equ $5C8E
 ATTR_T   equ $5C8F
 MASK_T   equ $5C90
 P_FLAG   equ $5C91      ; bit 0 OVER, bit 2 INVERSE
 ; MEMBOT ($5C92-$5CAF) is reused for OpticOS internals
-OMODE    equ $5C92      ; text mode: 64
+OMODE    equ $5C92      ; text mode: COLS
 GLYPHBUF equ $5C98      ; 8 bytes, must not cross a page
 NMIADD   equ $5CB0
 RAMTOP   equ $5CB2

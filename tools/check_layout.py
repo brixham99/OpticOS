@@ -21,12 +21,15 @@ for k, v in FIXED.items():
     if sym.get(k) != v: fail('%s at %s, expected %04X' % (k, hex(sym.get(k, -1)), v))
 if (sym['PR_OUT'] >> 8) != 0x09: fail('PR_OUT must be in page $09 (POKE 23739,111)')
 if rom[0x096F] != 0xC9: fail('no RET at $096F')
-# tape-trap layout (see src/save.asm): Fuse-style traps and their return points
-for a, b, what in ((0x04D0, 0x08, "EX AF,AF' (save trap)"), (0x053E, 0xC9, 'RET (save trap return)'),
-                   (0x056B, 0xC0, 'RET NZ (load trap)'), (0x05E2, 0xC9, 'RET (load trap return)')):
-    if rom[a] != b: fail('no %s at %04X' % (what, a))
+# tape-trap layout (see src/save.asm): Fuse-style traps and their return points.
+# Not for the PicoCalc build (it has st_blk): there SA-BYTES and LD-BYTES call
+# its storage device, and no emulator traps them.
+if 'st_blk' not in sym:
+    for a, b, what in ((0x04D0, 0x08, "EX AF,AF' (save trap)"), (0x053E, 0xC9, 'RET (save trap return)'),
+                       (0x056B, 0xC0, 'RET NZ (load trap)'), (0x05E2, 0xC9, 'RET (load trap return)')):
+        if rom[a] != b: fail('no %s at %04X' % (what, a))
+    if sym.get('lb_wait') != 0x0568: fail('LD-BYTES prefix moved: $056B is no longer the RET NZ')
 if sym.get('tape_ret') != 0x053F: fail('tape_ret not at $053F')
-if sym.get('lb_wait') != 0x0568: fail('LD-BYTES prefix moved: $056B is no longer the RET NZ')
 # Fuse also traps EX AF,AF' at $0076 and RET NZ at $0111 (Timex) on any 48K ROM
 if not (sym['err_tab'] <= 0x0767 and sym['m_err_e'] > 0x0808): fail('error table no longer covers $0767-$0808')
 if sym.get('ob_sig') != 0x0605: fail('ob_sig not at $0605')

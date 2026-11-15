@@ -1,29 +1,46 @@
 #!/usr/bin/env python3
-"""rig.py - OpticOS headless rig on top of libz80.so (z80.c).
+"""rig.py - OpticOS headless rig on the shared Z80 core (emu/z80core.h).
 
-Spectrum(rom) boots a 16K ROM from $0000 with write protection.  It offers
-frame stepping with the 50 Hz interrupt, the keyboard matrix (type text,
-hold keys), an EAR input feed built from TAP files with the standard ROM
-timings, a MIC recorder that decodes saved pulses back to TAP blocks,
-screenshots, and a 64-column screen-to-text decoder for the 4x8 font.
+Spectrum(rom) boots a 16K ROM from $0000 with write protection on the 48K
+Spectrum shell (libz80.so, z80.c).  It offers frame stepping with the 50 Hz
+interrupt, the keyboard matrix (type text, hold keys), an EAR input feed
+built from TAP files with the standard ROM timings, a MIC recorder that
+decodes saved pulses back to TAP blocks, screenshots, and a screen-to-text
+decoder for the 4x8 font.
+
+PicoCalc(rom) runs build/opticos_pc.rom on the PicoCalc machine
+(libpicocalc.so, emu/picocalc.c): the same keyboard matrix and timing, with
+the 320x320 display (40x40 text) in place of the Spectrum screen, and files
+in a host directory (sd()) in place of tape.
 """
 import ctypes, os, subprocess
 HERE = os.path.dirname(os.path.abspath(__file__))
-SO = os.path.join(HERE, 'libz80.so')
+EMU = os.path.join(HERE, '..', '..', 'emu')
 
-def build():
-    src = os.path.join(HERE, 'z80.c')
-    if not os.path.exists(SO) or os.path.getmtime(SO) < os.path.getmtime(src):
-        subprocess.check_call(['gcc', '-O2', '-shared', '-fPIC', '-o', SO, src])
-build()
-lib = ctypes.CDLL(SO)
-lib.z_mem.restype = ctypes.POINTER(ctypes.c_uint8)
+def build(so, *srcs):
+    deps = list(srcs) + [os.path.join(EMU, h) for h in ('z80core.h', 'storage.h', 'font8x8.h')]
+    if not os.path.exists(so) or os.path.getmtime(so) < max(map(os.path.getmtime, deps)):
+        subprocess.check_call(['gcc', '-O2', '-shared', '-fPIC', '-o', so] + list(srcs))
+    l = ctypes.CDLL(so)
+    l.z_mem.restype = ctypes.POINTER(ctypes.c_uint8)
+    l.z_tstates.restype = ctypes.c_longlong
+    l.z_run_until.argtypes = [ctypes.c_int, ctypes.c_longlong]
+    l.z_run_until2.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_longlong]
+    return l
+lib = build(os.path.join(HERE, 'libz80.so'), os.path.join(HERE, 'z80.c'))
 lib.z_mic_buf.restype = ctypes.POINTER(ctypes.c_uint32)
 lib.z_mic_count.restype = ctypes.c_long
 lib.z_ear_pos.restype = ctypes.c_long
-lib.z_tstates.restype = ctypes.c_longlong
-lib.z_run_until.argtypes = [ctypes.c_int, ctypes.c_longlong]
-lib.z_run_until2.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_longlong]
+pclib = build(os.path.join(HERE, 'libpicocalc.so'), os.path.join(EMU, 'picocalc.c'), os.path.join(EMU, 'storage_posix.c'))
+pclib.z_storage_dir.argtypes = [ctypes.c_char_p]
+pclib.pc_edges.argtypes = [ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint8), ctypes.c_int]
+pclib.pc_tstates.restype = ctypes.c_uint32
+pclib.pc_render.argtypes = [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_int, ctypes.POINTER(ctypes.c_uint32),
+                            ctypes.POINTER(ctypes.c_uint8), ctypes.c_int, ctypes.POINTER(ctypes.c_int),
+                            ctypes.POINTER(ctypes.c_uint8), ctypes.c_int]
+pclib.pc_bits.restype = ctypes.POINTER(ctypes.c_uint8)
+pclib.pc_attrs.restype = ctypes.POINTER(ctypes.c_uint8)
+pclib.pc_font.restype = ctypes.POINTER(ctypes.c_uint8)
 
 # --- keyboard: (row, bit); rows $FE..$7F
 ROWS = ['^zxcv', 'asdfg', 'qwert', '12345', '09876', 'poiuy', '\nlkjh', ' #mnb']  # ^ caps, # sym
@@ -79,15 +96,16 @@ def decode_pulses(lens):
     return blocks
 
 class Spectrum:
+    lib = lib
     def __init__(self, rom, ram48=True):
-        lib.z_init()
-        self.mem = lib.z_mem()
+        self.lib.z_init()
+        self.mem = self.lib.z_mem()
         data = open(rom, 'rb').read() if isinstance(rom, str) else rom
         assert len(data) == 16384
         ctypes.memmove(self.mem, data, 16384)
         if not ram48:
             raise NotImplementedError
-        lib.z_setpc(0)
+        self.lib.z_setpc(0)
         self.frames = 0
     # ---- memory
     def peek(self, a): return self.mem[a]
@@ -96,17 +114,17 @@ class Spectrum:
     def block(self, a, n): return bytes(self.mem[a:a + n])
     def load(self, a, data): ctypes.memmove(ctypes.addressof(self.mem.contents) + a, bytes(data), len(data))
     def regs(self):
-        r = (ctypes.c_int * 17)(); lib.z_getregs(r)
+        r = (ctypes.c_int * 17)(); self.lib.z_getregs(r)
         return dict(zip('AF BC DE HL IX IY SP PC AF_ BC_ DE_ HL_ I R IFF1 IFF2 IM'.split(), list(r)))
     def setregs(self, **kw):
         d = self.regs(); d.update(kw)
         r = (ctypes.c_int * 17)(*[d[k] for k in 'AF BC DE HL IX IY SP PC AF_ BC_ DE_ HL_ I R IFF1 IFF2 IM'.split()])
-        lib.z_setregs(r)
+        self.lib.z_setregs(r)
     # ---- time
     def frame(self, n=1):
-        for _ in range(n): lib.z_frame(); self.frames += 1
-    def run_until(self, pc, tstates): return lib.z_run_until(pc, tstates)
-    def run_until2(self, pc1, pc2, tstates): return lib.z_run_until2(pc1, pc2, tstates)
+        for _ in range(n): self.lib.z_frame(); self.frames += 1
+    def run_until(self, pc, tstates): return self.lib.z_run_until(pc, tstates)
+    def run_until2(self, pc1, pc2, tstates): return self.lib.z_run_until2(pc1, pc2, tstates)
     def call(self, addr, ret=0x5FF0, limit=50_000_000, **regs):
         """Call a ROM routine with registers; returns regs on return."""
         self.load(ret, b'\x18\xfe')           # JR $ sentinel
@@ -117,7 +135,7 @@ class Spectrum:
         return self.regs()
     # ---- keyboard
     def key(self, k, down=True):
-        r, b = KEYPOS[k]; lib.z_key(r, b, 1 if down else 0)
+        r, b = KEYPOS[k]; self.lib.z_key(r, b, 1 if down else 0)
     def press(self, keys, hold=3, gap=3):
         for k in keys: self.key(k)
         self.frame(hold)
@@ -135,15 +153,15 @@ class Spectrum:
     def tape(self, path_or_pulses, play=True, scale=1.0):
         p = tap_pulses(path_or_pulses, scale=scale) if isinstance(path_or_pulses, str) else path_or_pulses
         arr = (ctypes.c_uint32 * len(p))(*p)
-        lib.z_ear_load(arr, len(p)); lib.z_ear_play(1 if play else 0)
+        self.lib.z_ear_load(arr, len(p)); self.lib.z_ear_play(1 if play else 0)
         self.tape_len = len(p)
-    def tape_pos(self): return lib.z_ear_pos()
-    def mic_start(self, bit=3): lib.z_mic_bit(bit); lib.z_mic_record(1)
+    def tape_pos(self): return self.lib.z_ear_pos()
+    def mic_start(self, bit=3): self.lib.z_mic_bit(bit); self.lib.z_mic_record(1)
     def mic_pulses(self):
-        n = lib.z_mic_count(); b = lib.z_mic_buf()
+        n = self.lib.z_mic_count(); b = self.lib.z_mic_buf()
         return [b[i] for i in range(n)]
     # ---- screen
-    def border(self): return lib.z_border()
+    def border(self): return self.lib.z_border()
     def bitmap(self):
         """192 rows x 256 bools (ink pixels, before attributes)."""
         m = self.mem; rows = []
@@ -153,30 +171,97 @@ class Spectrum:
         return rows
     def image(self, scale=2, border=True):
         from PIL import Image
-        pal = [(0, 0, 0), (0, 0, 215), (215, 0, 0), (215, 0, 215), (0, 215, 0), (0, 215, 215), (215, 215, 0), (215, 215, 215)]
-        bpal = [(0, 0, 0), (0, 0, 255), (255, 0, 0), (255, 0, 255), (0, 255, 0), (0, 255, 255), (255, 255, 0), (255, 255, 255)]
         bm = self.bitmap(); m = self.mem
         bw = 32 if border else 0
-        im = Image.new('RGB', (256 + 2 * bw, 192 + 2 * bw), pal[self.border()])
+        im = Image.new('RGB', (256 + 2 * bw, 192 + 2 * bw), PAL[self.border()])
         px = im.load()
         for y in range(192):
             for x in range(256):
                 at = m[0x5800 + (y >> 3) * 32 + (x >> 3)]
-                p = bpal if at & 0x40 else pal
+                p = BPAL if at & 0x40 else PAL
                 px[x + bw, y + bw] = p[at & 7] if bm[y][x] else p[(at >> 3) & 7]
         return im.resize((im.width * scale, im.height * scale), Image.NEAREST)
     def text_rows(self, font):
-        """Decode the screen as 24 rows x 64 columns using the 4x8 font."""
+        """Decode the screen as rows of 4x8 characters (24x64 on the Spectrum)."""
         glyphs = {}
         for ch in range(32, 128):
             k = (ch - 32) >> 1
             g = tuple((font[8 * k + r] >> 4) if ch % 2 == 0 else (font[8 * k + r] & 15) for r in range(8))
             glyphs.setdefault(g, chr(ch))
         bm = self.bitmap(); out = []
-        for row in range(24):
+        for row in range(len(bm) // 8):
             s = ''
-            for col in range(64):
+            for col in range(len(bm[0]) // 4):
                 g = tuple(int(''.join(str(bm[row * 8 + r][col * 4 + c]) for c in range(4)), 2) for r in range(8))
                 s += glyphs.get(g, '\x7f' if all(v == 15 for v in g) else '\ufffd')
             out.append(s.rstrip())
         return out
+
+PAL = [(0, 0, 0), (0, 0, 215), (215, 0, 0), (215, 0, 215), (0, 215, 0), (0, 215, 215), (215, 215, 0), (215, 215, 215)]
+BPAL = [(0, 0, 0), (0, 0, 255), (255, 0, 0), (255, 0, 255), (0, 255, 0), (0, 255, 255), (255, 255, 0), (255, 255, 255)]
+
+class PicoCalc(Spectrum):
+    """The PicoCalc machine: 320x320 display, 40x40 text in its own 8x8 font,
+    attributes per 8x8 cell."""
+    lib = pclib
+    W = H = 320
+    def tape(self, *a, **k): raise NotImplementedError('the PicoCalc has no tape')
+    def edges(self):
+        """The beeper's edges since the last call: [(T-state, level after)]."""
+        t = (ctypes.c_uint32 * 4096)(); v = (ctypes.c_uint8 * 4096)()
+        n = self.lib.pc_edges(t, v, 4096)
+        return [(t[i], v[i]) for i in range(n)]
+    def render(self, t0, length, n, edges, level=0, amp=255):
+        """pc_render: n samples of the beeper over length T-states from t0."""
+        k = len(edges)
+        t = (ctypes.c_uint32 * max(k, 1))(*[e[0] for e in edges]); v = (ctypes.c_uint8 * max(k, 1))(*[e[1] for e in edges])
+        lv = ctypes.c_int(level); out = (ctypes.c_uint8 * n)()
+        self.lib.pc_render(t0, length, n, t, v, k, ctypes.byref(lv), out, amp)
+        return bytes(out), lv.value
+    def sd(self, path):
+        """Keep SAVE / LOAD / CAT files in host directory path (the SD card's /OpticOS)."""
+        os.makedirs(path, exist_ok=True); self.lib.z_storage_dir(os.fsencode(path))
+    def bitmap(self):
+        """320 rows x 320 bools (ink pixels, before attributes)."""
+        b = self.lib.pc_bits()
+        return [[(b[y * 40 + (x >> 3)] >> (7 - (x & 7))) & 1 for x in range(320)] for y in range(320)]
+    def attr(self, col, row): return self.lib.pc_attrs()[row * 40 + col]
+    def text_rows(self, font=None):
+        """Decode the screen as 40 rows of 40 characters in the display's
+        8x8 font (the ROM font argument is the Spectrum's, and unused)."""
+        f = self.lib.pc_font()
+        glyphs = {tuple(f[8 * (ch - 32) + r] for r in range(8)): chr(ch) for ch in range(32, 127)}
+        b = self.lib.pc_bits(); out = []
+        for row in range(40):
+            s = ''
+            for col in range(40):
+                g = tuple(b[(row * 8 + r) * 40 + col] for r in range(8))
+                s += glyphs.get(g, '\x7f' if all(v == 255 for v in g) else '\ufffd')
+            out.append(s.rstrip())
+        return out
+    def mode(self): return self.lib.pc_mode()
+    def border(self): return self.lib.pc_border()
+    def kempston(self, bits): self.lib.z_kempston(bits)
+    def image(self, scale=2, border=False):
+        """The panel as the firmware shows it: OpticOS's display, or in
+        Spectrum mode (mode() 1) the Spectrum screen at (32, 64) inside the
+        border colour."""
+        from PIL import Image
+        if self.mode():
+            m = self.mem
+            im = Image.new('RGB', (320, 320), PAL[self.border()]); px = im.load()
+            for y in range(192):
+                row = 0x4000 | (y & 0xC0) << 5 | (y & 7) << 8 | (y & 0x38) << 2
+                for x in range(256):
+                    at = m[0x5800 + (y >> 3) * 32 + (x >> 3)]
+                    p = BPAL if at & 0x40 else PAL
+                    px[x + 32, y + 64] = p[at & 7] if m[row + (x >> 3)] >> (7 - (x & 7)) & 1 else p[(at >> 3) & 7]
+            return im.resize((320 * scale, 320 * scale), Image.NEAREST)
+        bm = self.bitmap(); a = self.lib.pc_attrs()
+        im = Image.new('RGB', (320, 320)); px = im.load()
+        for y in range(320):
+            for x in range(320):
+                at = a[(y >> 3) * 40 + (x >> 3)]
+                p = BPAL if at & 0x40 else PAL
+                px[x, y] = p[at & 7] if bm[y][x] else p[(at >> 3) & 7]
+        return im.resize((320 * scale, 320 * scale), Image.NEAREST)

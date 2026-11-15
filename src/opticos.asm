@@ -104,6 +104,9 @@ POKE_RET:
         include "print.asm"
         include "edit.asm"
         include "input.asm"
+        if PICOCALC
+        include "pc.asm"
+        endif
 secG_end:
 
 ; ---------------------------------------------------------------- $0D6B

@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""LIST pauses at each screenful (v1.0.3): "cont?" on the bottom row after 23
-newlines.  Y (either case) lists the next screenful; any other key stops with
-the marker on the first line of the screenful just shown; BREAK at the prompt
-reports "Break".  The prompt is rubbed out, so the ] prompt and the edit line
-come back clean."""
+"""LIST pauses at each screenful (v1.0.3): "cont?" on the bottom row after
+ROWS-1 newlines (23 on the Spectrum).  Y (either case) lists the next
+screenful; any other key stops with the marker on the first line of the
+screenful just shown; BREAK at the prompt reports "Break".  The prompt is
+rubbed out, so the ] prompt and the edit line come back clean."""
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from p3lib import Basic, SYM
+from p3lib import Basic, SYM, ROWS
+B = ROWS - 1                        # listing rows per screenful
 fails = 0
 def check(name, ok, info=''):
     global fails
     print('%-62s %s %s' % (name, 'PASS' if ok else 'FAIL', '' if ok else info)); fails += not ok
-PROG = ['DEF PROC p%d' % i if i % 10 == 0 else ('PRINT "line %d"' % i) for i in range(100)]
+PROG = ['DEF PROC p%d' % i if i % 10 == 0 else ('PRINT "line %d"' % i) for i in range(4 * B + 8)]
 PROG[13] = 'PRINT "' + 'a long line that wraps onto a second row of the screen, ' * 2 + '"'
 def start(prog=PROG):
     b = Basic(); b.enter(prog); b.cls(); s = b.s
@@ -31,18 +32,18 @@ def line_at(b, p): # program line text at address p, as LIST shows it (first wor
 b, s = start()
 ok = at_prompt(s); r = rows(b)
 check('LIST stops at a prompt', ok)
-check('"cont?" on the bottom row, nothing else there', r[23] == 'cont?', repr(r[23]))
+check('"cont?" on the bottom row, nothing else there', r[B] == 'cont?', repr(r[B]))
 check('the first program line is on the top row', r[0].lstrip('> ').startswith('DEF PROC p0'), repr(r[0]))
-check('23 rows of listing above the prompt', all(x for x in r[:23]), r[:23])
+check('%d rows of listing above the prompt' % B, all(x for x in r[:B]), r[:B])
 top2 = None
 tap(s, 'y'); ok = at_prompt(s); r2 = rows(b)
-check('Y lists the next screenful and asks again', ok and r2[23] == 'cont?', repr(r2[23]))
-check('the line after the last one shown is now on the top row', r2[0] not in r[:23] and r2[0] != '', (r[22], r2[0]))
+check('Y lists the next screenful and asks again', ok and r2[B] == 'cont?', repr(r2[B]))
+check('the line after the last one shown is now on the top row', r2[0] not in r[:B] and r2[0] != '', (r[B - 1], r2[0]))
 tap(s, 'y', shift=True); ok = at_prompt(s); r3 = rows(b)
 check('CAPS+Y (upper case) also continues', ok and r3 != r2)
 top3 = r3[0].strip()
 tap(s, 'n'); fin = s.run_until(SYM['cg_lp'], 50_000_000); r4 = rows(b)
-check('any other key stops at the ] prompt', bool(fin) and r4[-1] == ']' or r4[23] == ']', r4[-3:])
+check('any other key stops at the ] prompt', bool(fin) and r4[-1] == ']' or r4[B] == ']', r4[-3:])
 check('the prompt is rubbed out (no "cont?" left)', not any('cont' in x for x in r4), r4[-3:])
 curl = s.dpeek(SYM['CURL'])
 # LIST again: the line with the ">" marker is the one that was on the top row when we stopped
@@ -52,7 +53,7 @@ s.load(SYM['EBUF'], b'LIST'); s.poke(SYM['CON_LEN'], 4); s.setregs(PC=SYM['con_e
 seen = []
 for _ in range(6):
     if not at_prompt(s): break
-    seen += [x for x in rows(b)[:23]]
+    seen += [x for x in rows(b)[:B]]
     if any(x.startswith('>') for x in seen): break
     tap(s, 'y')
 mk = [x for x in seen if x.startswith('>')]

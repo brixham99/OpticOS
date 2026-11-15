@@ -1,5 +1,10 @@
 ; cls.asm - CLS at $0D6B: clear the screen to ATTR_P and home the cursor.
 m_cls_s:
+        if PICOCALC
+CLS:    ld a,(ATTR_P)
+        ld b,DV_CLS
+        call dev
+        else
 CLS:    ld hl,$4000
         ld de,$4001
         ld bc,6143
@@ -11,6 +16,7 @@ CLS:    ld hl,$4000
         ld (hl),a
         ld bc,767
         ldir
+        endif
         ld hl,(ATTR_P)          ; ATTR_P, MASK_P -> ATTR_T, MASK_T
         ld (ATTR_T),hl
         ld hl,0

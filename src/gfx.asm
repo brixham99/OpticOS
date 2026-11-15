@@ -1,6 +1,87 @@
 ; gfx.asm - phase 5: PLOT, DRAW [TO].
-; Graphics: 256 x 192 pixels, origin bottom left; COORDS = last point.
+; Spectrum: 256 x 192 pixels, origin bottom left; COORDS = last point.
 m_gfx_s:
+        if PICOCALC
+; PicoCalc: 320 x 320 pixels, origin bottom left; GX, GY = last point.
+; The display draws the pixels (dev_*, print.asm).
+; PLOT x, y
+st_plot: call gf_xy
+        call gf_set
+        call dev_attr
+        ld b,DV_PLOT
+        jp dev
+; DRAW dx, dy (relative) / DRAW TO x, y
+st_draw: rst $18
+        cp T_TO
+        jr z,dr_to
+        call gf_xy              ; HL = dx, DE = dy
+        push de
+        ld de,(GX)
+        add hl,de
+        pop de
+        push hl
+        ld hl,(GY)
+        add hl,de
+        ex de,hl
+        pop hl
+        jr dr_go
+dr_to:  rst $20
+        call gf_xy
+dr_go:  call gf_chk
+        push hl
+        push de
+        ld hl,(GX)
+        ld de,(GY)
+        call gf_pt
+        ld b,DV_MOVE
+        call dev
+        pop de
+        pop hl
+        call gf_set
+        call dev_attr
+        ld b,DV_LINE
+        jp dev
+; gf_xy: two integer expressions -> HL, DE
+gf_xy:  rst $30
+        push de
+        ld a,','
+        call expect
+        rst $30
+        pop hl
+        ret
+; gf_set: HL = x, DE = y (checked) -> GX, GY and the display's X, Y
+gf_set: call gf_chk
+        ld (GX),hl
+        ld (GY),de
+; gf_pt: HL = x, DE = y -> the display's X, Y.  A, B, C changed.
+gf_pt:  ld a,l
+        ld b,DV_X
+        call dev
+        ld a,h
+        inc b
+        call dev
+        ld a,e
+        inc b
+        call dev
+        ld a,d
+        inc b
+        jp dev
+; gf_chk: "Out of range" unless HL < GFX_W and DE < GFX_H (unsigned)
+gf_chk: push hl
+        ld bc,-GFX_W
+        add hl,bc
+        pop hl
+        jr c,err_rng
+        push hl
+        ld h,d                  ; (DE kept)
+        ld l,e
+        ld bc,-GFX_H
+        add hl,bc
+        pop hl
+        ret nc
+err_rng: rst 8
+        defb ERR_RANGE
+        else
 ; PLOT x, y
 st_plot: call ev_u8
         push de
@@ -153,5 +234,6 @@ c_add:  ld bc,(COORDS)
         ld (COORDS),bc
         pop af
         ret
+        endif
 
 m_gfx_e:

@@ -12,6 +12,10 @@ console:
         ld (CURCHL),hl
         ei
 con_new:
+        if PICOCALC
+        xor a                   ; every prompt: OpticOS's own display again
+        call dev_mode
+        endif
         ld hl,(ATTR_P)          ; temporary colours end with the statement
         ld (ATTR_T),hl
         ld a,(S_POSN)
@@ -167,6 +171,9 @@ rd_n:   djnz rd_l
         ld a,(EIDX)
         ld e,a
         add hl,de
+        if PICOCALC             ; (its lin_pos and pos_lin are in pc.asm)
+        jp lin_pos
+        else
 ; lin_pos: HL = row*64 + column -> S_POSN
 lin_pos: ld a,l
         and 63
@@ -189,6 +196,7 @@ pos_lin: ld hl,(S_POSN)
         or l
         ld l,a
         ret
+        endif
 
 con_ok: ld a,ERR_OK
         ld (ERR_NR),a
@@ -220,8 +228,13 @@ cur_set:                        ; A = new state; XOR the block at S_POSN
         ld (CUR_VIS),a
         ld hl,(S_POSN)
         ld a,l
-        cp 64
+        cp COLS
         ret nc
+        if PICOCALC
+        call dev_pos
+        ld b,DV_CUR
+        jp dev
+        else
         ld c,$F0
         rra
         jr nc,cs_1
@@ -234,5 +247,6 @@ cs_2:   ld a,(hl)
         inc h
         djnz cs_2
         ret
+        endif
 
 m_con_e:
