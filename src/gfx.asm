@@ -73,10 +73,10 @@ gf_chk: push hl
         pop hl
         jr c,err_rng
         push hl
-        ex de,hl
+        ld h,d                  ; (DE kept)
+        ld l,e
         ld bc,-GFX_H
         add hl,bc
-        ex de,hl
         pop hl
         ret nc
 err_rng: rst 8
