@@ -93,10 +93,6 @@ There is no full-screen editor. Editing follows the ZX BASIC pattern: the progra
 
 When a program stops with an error, the failing line becomes the current line, so EDIT brings it straight up.
 
-## OpticOS on the ClockworkPi PicoCalc
-
-The same OpticOS also runs on the [ClockworkPi PicoCalc](https://www.clockworkpi.com/picocalc) with a Raspberry Pi Pico 2 or Pico 2 W: firmware runs the ROM on an emulated Z80, with **40 × 40 text and 320 × 320 graphics** on its colour screen (a colour per character, so no clash), its keyboard, its speakers, and **SAVE, LOAD and CAT on the SD card** in ordinary `.tap` files. One source tree builds both ROMs, and the Spectrum ROM is unchanged. See **[docs/picocalc](docs/picocalc/README.md)** for building, flashing and using it, and [examples/picocalc](examples/picocalc) for the examples redone for its screen, with Happy Bat ported.
-
 ## Building and running
 
 ```
@@ -130,7 +126,7 @@ On The Spectrum from Retro Games, use the `.tzx` tapes: its instant `.tap` loadi
 
 ### ClockworkPi PicoCalc
 
-James Andrews has OpticOS running natively on a [ClockworkPi](https://www.clockworkpi.com/) PicoCalc, the handheld with a keyboard. He forked OpticOS and built native firmware for it. It boots to the OpticBASIC prompt. The firmware isn't public yet.
+James Andrews has OpticOS running natively on a [ClockworkPi](https://www.clockworkpi.com/) PicoCalc, the handheld with a keyboard, with a Raspberry Pi Pico 2 or Pico 2 W. Its firmware runs the ROM on an emulated Z80, with **40 × 40 text and 320 × 320 graphics** on the colour screen (a colour per character, so no clash), the PicoCalc's keyboard and speakers, and **SAVE, LOAD and CAT on the SD card** in ordinary `.tap` files. Spectrum games with ordinary loaders run on the Spectrum's own screen, shown in the middle of the PicoCalc's. One source tree builds both ROMs, and the Spectrum ROM is unchanged. See **[docs/picocalc](docs/picocalc/README.md)** for building, flashing and using it, and [examples/picocalc](examples/picocalc) for the examples redone for its screen, with Happy Bat ported.
 
 ### goSpectrum
 
