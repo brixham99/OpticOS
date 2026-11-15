@@ -5,7 +5,7 @@
 ; ---- machine.  PICOCALC is set on the pasmo command line (--equ): 0 builds
 ; the Spectrum ROM, 1 the PicoCalc ROM (docs/picocalc/PLAN.md).
         if PICOCALC
-COLS     equ 80         ; text columns (4-pixel font on 320 pixels)
+COLS     equ 40         ; text columns (the display's 8x8 font on 320 pixels)
 ROWS     equ 40         ; text rows
 ; The PicoCalc display: OUT (C),A with C = DEV, B = register (dev_*, print.asm)
 DEV      equ $D1

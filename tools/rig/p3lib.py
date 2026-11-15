@@ -6,7 +6,7 @@ from rig import Spectrum, PicoCalc
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 PICO = os.environ.get('OPTICOS_MACHINE') == 'picocalc'
 MACHINE, NAME = (PicoCalc, 'opticos_pc') if PICO else (Spectrum, 'opticos')
-COLS, ROWS = (80, 40) if PICO else (64, 24)
+COLS, ROWS = (40, 40) if PICO else (64, 24)
 ROM = os.path.join(ROOT, 'build/%s.rom' % NAME)
 FONT = open(os.path.join(ROOT, 'font/font4x8.bin'), 'rb').read()
 SYM = {}

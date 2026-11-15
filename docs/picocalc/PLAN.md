@@ -23,12 +23,15 @@ files, so the two builds share the interpreter, maths, tokeniser and editor.
 |---|---|---|
 | CPU | Z80 at 3.5 MHz, 50 Hz IM 1 interrupt, `FRAMES` as today | the rig's core (`z80.c`), no ULA contention; core 0 |
 | RAM | 64K map as today: ROM `$0000-$3FFF`, RAM above | `$4000-$5AFF` becomes plain RAM (no display file) |
-| Display | ports: glyph at (col,row) with attribute and OVER/INVERSE, plot, line, scroll, CLS, cursor | 320×320 1-bpp bitmap + one attribute per 4×8 cell (80×40), Spectrum palette and FLASH; changed rows pushed to the ST7796SP panel (RGB565) over SPI from core 1 |
+| Display | ports: glyph at (col,row) with attribute and OVER/INVERSE, plot, line, scroll, CLS, cursor | 320×320 1-bpp bitmap + one attribute per 8×8 cell (40×40), text in the display's own 8×8 font (`emu/font8x8.h`, public domain), Spectrum palette and FLASH; changed rows pushed to the ST7796SP panel (RGB565) over SPI from core 1 |
 | Keyboard | unchanged: the Spectrum key matrix on port `$FE` (scan, `KEY(k$)`, BREAK, INKEY$) | I2C keyboard controller polled each frame; each PicoCalc key held down is shown as its Spectrum keys (e.g. `(` as SYMBOL SHIFT + 8, ← as CAPS SHIFT + 5) |
 | Sound | unchanged: port `$FE` bit 4 (BEEP, chime) | beeper edges timestamped in T-states, played on the PWM audio pins |
 | Storage | unchanged: `SA-BYTES` / `LD-BYTES` | trapped at those addresses: header+data go to `/OpticOS/<name>.tap` on the SD card; the wanted name is read from `LG_NAME` |
 
-Text becomes **80 columns × 40 rows**: 320×320 pixels in the existing 4×8 font.
+Text becomes **40 columns × 40 rows**: 320×320 pixels in an 8×8 font that the
+display device draws (an earlier 80×40 layout in the ROM's 4×8 font was too
+small to read on the PicoCalc's screen). The ROM's 4×8 font stays for the
+Spectrum build.
 Graphics become **320×320**, origin bottom left.
 
 ## What changes in the Z80 source
@@ -56,7 +59,7 @@ Graphics become **320×320**, origin bottom left.
 - **Rig: PicoCalc mode.** The rig runs `opticos_pc.rom` against a C model of the
   PicoCalc devices (the same code the firmware uses, minus the LCD and I2C
   drivers). The Python tests then run headless on the Mac and read the
-  80×40 text buffer directly. This is the main proof before any hardware.
+  40×40 text buffer directly. This is the main proof before any hardware.
 - **Firmware:** `picocalc/` holds a pico-sdk CMake project for RP2350. It has
   ST7796SP SPI, keyboard I2C, PWM audio, and FatFs on SD, and builds `opticos.uf2`
   with the ROM embedded.
@@ -65,7 +68,7 @@ Graphics become **320×320**, origin bottom left.
 
 | # | Delivers | Proof |
 |---|---|---|
-| P1 | core split; `PICOCALC` flag; geometry equates; rig PicoCalc mode with text display and keyboard | Spectrum ROM byte-identical and its tests pass; PicoCalc ROM boots in the rig, and PRINT/LIST/editor tests pass at 80×40 |
+| P1 | core split; `PICOCALC` flag; geometry equates; rig PicoCalc mode with text display and keyboard | Spectrum ROM byte-identical and its tests pass; PicoCalc ROM boots in the rig, and PRINT/LIST/editor tests pass at 40×40 |
 | P2 | colours, FLASH, cursor, scroll, PLOT/DRAW 320×320, boot screen | rig screenshots; graphics tests |
 | P3 | SAVE/LOAD/VERIFY to files via traps | round-trip tests in the rig (host directory) |
 | P4 | RP2350 firmware: LCD, keyboard, audio, SD; UF2 | boots on your PicoCalc |

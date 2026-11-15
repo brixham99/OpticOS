@@ -43,7 +43,8 @@ b.line('CLS'); key_line('PRINT 1234'); caps(LEFT, 2); caps(DEL); caps(RIGHT); ke
 r = rows(); check('left, DELETE, right, insert', r[-2], '1394')   # PRINT 1234 -> PRINT 1394
 b.line('CLS'); long = 'PRINT "' + 'abcdefghij' * 11 + '"'
 key_line(long); enter(); r = rows()
-check('126-char line, two rows', (len(long), r[-2]), (len(long), ('abcdefghij' * 11)[COLS:]))
+out = 'abcdefghij' * 11                    # the output wraps; its last row:
+check('126-char line, output wraps', (len(long), r[-2]), (len(long), out[(len(out) - 1) // COLS * COLS:]))
 b.run(['PRINT 1', 'PRINT 1/0', 'PRINT 3'], 'RUN')
 check('error line becomes current', prog_list(), ['PRINT 1', '>PRINT 1/0', 'PRINT 3'])
 check('RUN still works after edits', b.run(['PRINT 6*7'], 'RUN')[1:], ['42'])

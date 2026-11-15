@@ -7,4 +7,5 @@ int z_frame(void);                           /* run one 50 Hz frame */
 void z_key(int row, int bit, int down);      /* Spectrum matrix: row 0-7 ($FE..$7F), bit 0-4 */
 int z_beeps(void);                           /* beeper edges since the last call */
 uint8_t *pc_bits(void);                      /* 320 lines x 40 bytes, bit 7 leftmost */
-uint8_t *pc_attrs(void);                     /* 40 rows x 80 cells, Spectrum attributes */
+uint8_t *pc_attrs(void);                     /* 40 rows x 40 cells, Spectrum attributes */
+const uint8_t *pc_font(void);                /* the 8x8 font, codes 32-127, 8 bytes each */

@@ -17,6 +17,7 @@
 #include "picocalc.h"
 #include "lcd.h"
 #include "kbd.h"
+#include "font8x8.h"
 
 extern const unsigned char opticos_rom[16384];
 int z_getpc(void);
@@ -28,7 +29,7 @@ int z_getpc(void);
 static volatile uint32_t frames_run, frame_us;
 
 #define W 320
-#define COLS 80
+#define COLS 40
 #define ROWS 40
 #define FRAME_US 20000
 
@@ -54,9 +55,9 @@ static void draw_row(int r, int flash_on){
       uint8_t at = a[c], br = (at & 0x40) >> 3;
       uint16_t ink = PAL[(at & 7) | br], paper = PAL[((at >> 3) & 7) | br];
       if (at & 0x80) { fl = 1; if (flash_on) { uint16_t t = ink; ink = paper; paper = t; } }
-      uint8_t nib = (c & 1) ? b[c >> 1] & 15 : b[c >> 1] >> 4;
-      for (int m = 8; m; m >>= 1) {
-        uint16_t p = (nib & m) ? ink : paper;
+      uint8_t px = b[c];
+      for (int m = 0x80; m; m >>= 1) {
+        uint16_t p = (px & m) ? ink : paper;
         *o++ = p >> 8; *o++ = p;
       }
     }
@@ -73,17 +74,16 @@ static void test_pattern(void){
   }
 }
 
-/* text in the ROM's 4x8 font, white on blue, on character row r */
+/* text in the display's 8x8 font, white on blue, on character row r */
 static void status_line(int r, const char *s){
   uint8_t *o = line_buf;
   for (int y = 0; y < 8; y++)
     for (int c = 0; c < COLS; c++) {
       int ch = *s && c < (int)strlen(s) ? s[c] : ' ';
       if (ch < 32 || ch > 127) ch = '?';
-      uint8_t f = opticos_rom[0x3E80 + 8 * ((ch - 32) >> 1) + y];
-      uint8_t nib = (ch & 1) ? f & 15 : f >> 4;
-      for (int m = 8; m; m >>= 1) {
-        uint16_t p = (nib & m) ? PAL[15] : PAL[9];
+      uint8_t f = font8x8[ch - 32][y];
+      for (int m = 0x80; m; m >>= 1) {
+        uint16_t p = (f & m) ? PAL[15] : PAL[9];
         *o++ = p >> 8; *o++ = p;
       }
     }
@@ -119,7 +119,7 @@ static void core1_main(void){
     flash_was = flash_on;
 #if DIAG
     char st[COLS + 1];
-    snprintf(st, sizeof st, "DIAG frames %lu  PC %04X  frame %lu us", (unsigned long)frames_run,
+    snprintf(st, sizeof st, "%lu PC %04X %lu us", (unsigned long)frames_run,
              z_getpc(), (unsigned long)frame_us);
     status_line(ROWS - 1, st);
     kbd_light((frames_run / 25) & 1);

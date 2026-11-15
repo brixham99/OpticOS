@@ -33,6 +33,7 @@ lib.z_ear_pos.restype = ctypes.c_long
 pclib = build(os.path.join(HERE, 'libpicocalc.so'), os.path.join(EMU, 'picocalc.c'))
 pclib.pc_bits.restype = ctypes.POINTER(ctypes.c_uint8)
 pclib.pc_attrs.restype = ctypes.POINTER(ctypes.c_uint8)
+pclib.pc_font.restype = ctypes.POINTER(ctypes.c_uint8)
 
 # --- keyboard: (row, bit); rows $FE..$7F
 ROWS = ['^zxcv', 'asdfg', 'qwert', '12345', '09876', 'poiuy', '\nlkjh', ' #mnb']  # ^ caps, # sym
@@ -193,7 +194,8 @@ PAL = [(0, 0, 0), (0, 0, 215), (215, 0, 0), (215, 0, 215), (0, 215, 0), (0, 215,
 BPAL = [(0, 0, 0), (0, 0, 255), (255, 0, 0), (255, 0, 255), (0, 255, 0), (0, 255, 255), (255, 255, 0), (255, 255, 255)]
 
 class PicoCalc(Spectrum):
-    """The PicoCalc machine: 320x320 display, attributes per 4x8 cell."""
+    """The PicoCalc machine: 320x320 display, 40x40 text in its own 8x8 font,
+    attributes per 8x8 cell."""
     lib = pclib
     W = H = 320
     def tape(self, *a, **k): raise NotImplementedError('the PicoCalc has no tape')
@@ -202,14 +204,27 @@ class PicoCalc(Spectrum):
         """320 rows x 320 bools (ink pixels, before attributes)."""
         b = self.lib.pc_bits()
         return [[(b[y * 40 + (x >> 3)] >> (7 - (x & 7))) & 1 for x in range(320)] for y in range(320)]
-    def attr(self, col, row): return self.lib.pc_attrs()[row * 80 + col]
+    def attr(self, col, row): return self.lib.pc_attrs()[row * 40 + col]
+    def text_rows(self, font=None):
+        """Decode the screen as 40 rows of 40 characters in the display's
+        8x8 font (the ROM font argument is the Spectrum's, and unused)."""
+        f = self.lib.pc_font()
+        glyphs = {tuple(f[8 * (ch - 32) + r] for r in range(8)): chr(ch) for ch in range(32, 127)}
+        b = self.lib.pc_bits(); out = []
+        for row in range(40):
+            s = ''
+            for col in range(40):
+                g = tuple(b[(row * 8 + r) * 40 + col] for r in range(8))
+                s += glyphs.get(g, '\x7f' if all(v == 255 for v in g) else '\ufffd')
+            out.append(s.rstrip())
+        return out
     def image(self, scale=2, border=False):
         from PIL import Image
         bm = self.bitmap(); a = self.lib.pc_attrs()
         im = Image.new('RGB', (320, 320)); px = im.load()
         for y in range(320):
             for x in range(320):
-                at = a[(y >> 3) * 80 + (x >> 2)]
+                at = a[(y >> 3) * 40 + (x >> 3)]
                 p = BPAL if at & 0x40 else PAL
                 px[x, y] = p[at & 7] if bm[y][x] else p[(at >> 3) & 7]
         return im.resize((320 * scale, 320 * scale), Image.NEAREST)

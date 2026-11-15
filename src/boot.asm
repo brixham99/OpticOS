@@ -105,8 +105,15 @@ bt_nb:  ld (hl),a
         call chime              ; (also drops keys typed before the prompt)
         jp console
 
+        if PICOCALC             ; 40 columns: the banner on two lines
+banner: defm "OpticOS (c) 2026"
+        defb 13
+        defm "Optica Technology Desig"
+        defb 'n'+$80
+        else
 banner: defm "OpticOS (c) 2026 Optica Technology Desig"
         defb 'n'+$80
+        endif
 banner2: defm "OpticBASIC v1.0."
         defb '3'+$80
 

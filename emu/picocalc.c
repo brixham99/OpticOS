@@ -7,8 +7,9 @@
  *   port $D1  out: the display, register B (DV_* in src/sysvars.inc)
  *
  * The display is a 320x320 1-bit bitmap with one Spectrum attribute byte per
- * 4x8 character cell (80x40).  Glyphs come from the ROM's own 4x8 font at
- * $3E80.  This file is the device model only: the rig (tools/rig/pcrig.py)
+ * 8x8 character cell (40x40).  Glyphs come from the display's own 8x8 font
+ * (font8x8.h); the ROM's 4x8 font is the Spectrum build's.  This file is
+ * the device model only: the rig (tools/rig/rig.py)
  * reads the bitmap and attributes directly, and the firmware draws them on
  * the LCD.
  */
@@ -17,12 +18,12 @@
 
 #define CONTEND(a)
 #include "z80core.h"
+#include "font8x8.h"
 
 #define PC_W 320
 #define PC_H 320
-#define PC_COLS 80
+#define PC_COLS 40
 #define PC_ROWS 40
-#define FONT 0x3E80
 
 enum { DV_COL, DV_ROW, DV_ATTR, DV_MASK, DV_FLAG, DV_GLYPH, DV_CELL, DV_SCRL, DV_CLS,
        DV_CUR, DV_XL, DV_XH, DV_YL, DV_YH, DV_PLOT, DV_LINE, DV_MOVE };
@@ -35,6 +36,7 @@ static struct { u8 col, row, attr, mask, flag; int x, y, px, py; } dv;
 
 u8 *pc_bits(void){ return &bits[0][0]; }
 u8 *pc_attrs(void){ return &attrs[0][0]; }
+const u8 *pc_font(void){ return &font8x8[0][0]; }
 
 /* attribute merge: bits set in mask keep the cell's own value */
 static void cell_attr(int col, int row){
@@ -43,14 +45,12 @@ static void cell_attr(int col, int row){
 
 static void glyph(u8 ch){
   if (dv.col >= PC_COLS || dv.row >= PC_ROWS || ch < 32 || ch > 127) return;
-  const u8 *f = &mem[FONT + 8 * ((ch - 32) >> 1)];
-  int shift = (dv.col & 1) ? 0 : 4;               /* even columns: high nibble */
+  const u8 *f = font8x8[ch - 32];
   for (int r = 0; r < 8; r++) {
-    u8 g = (ch & 1) ? f[r] & 15 : f[r] >> 4;
-    if (dv.flag & 4) g = ~g & 15;                  /* INVERSE */
-    u8 *b = &bits[dv.row * 8 + r][dv.col >> 1];
-    if (dv.flag & 1) *b ^= g << shift;             /* OVER */
-    else *b = (*b & ~(15 << shift)) | g << shift;
+    u8 g = f[r];
+    if (dv.flag & 4) g = ~g;                       /* INVERSE */
+    u8 *b = &bits[dv.row * 8 + r][dv.col];
+    if (dv.flag & 1) *b ^= g; else *b = g;         /* OVER */
   }
   cell_attr(dv.col, dv.row);
 }
@@ -58,8 +58,7 @@ static void glyph(u8 ch){
 /* the cell at COL, ROW inverted (the console cursor) */
 static void cursor(void){
   if (dv.col >= PC_COLS || dv.row >= PC_ROWS) return;
-  int shift = (dv.col & 1) ? 0 : 4;
-  for (int r = 0; r < 8; r++) bits[dv.row * 8 + r][dv.col >> 1] ^= 15 << shift;
+  for (int r = 0; r < 8; r++) bits[dv.row * 8 + r][dv.col] ^= 0xFF;
 }
 
 /* (x, y) from the bottom left; INVERSE resets, OVER flips */
@@ -68,7 +67,7 @@ static void plot(int x, int y){
   int py = PC_H - 1 - y;
   u8 *b = &bits[py][x >> 3], m = 0x80 >> (x & 7);
   if (dv.flag & 4) *b &= ~m; else if (dv.flag & 1) *b ^= m; else *b |= m;
-  cell_attr(x >> 2, py >> 3);
+  cell_attr(x >> 3, py >> 3);
 }
 
 /* from (px, py) to (x, y), not plotting the first point: the ROM's Spectrum
