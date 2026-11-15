@@ -14,7 +14,7 @@ The boot message reads:
 OpticOS (c) 2026 Optica Technology Design
 ```
 
-**Status: Phases 0–5 complete.** The planned feature list (after the cuts in spec §12) is built and fits the 16K ROM with 116 bytes to spare (v1.0.3, below the 221-byte margin rule). The ROM boots, loads ordinary game tapes, runs structured OpticBASIC programs, and has a Sinclair-style line editor. The **[user manual (PDF)](docs/manual/OpticOS_User_Manual.pdf)** covers the whole system, with worked examples ([source](docs/manual)). The **[example tape](examples)** (`.tap` and `.tzx`) holds the manual's examples and three more, verified in Fuse. Still to do before a v1.0: a check on real hardware and a real TV. The design is in the [specification (PDF)](docs/spec.pdf) ([Markdown](docs/spec.md)); §4.8 lists what is built.
+**Status: Phases 0–5 complete.** The planned feature list (after the cuts in spec §12) is built and fits the 16K ROM with 116 bytes to spare (v1.0.3; 116 is now the accepted margin). The ROM boots, loads ordinary game tapes, runs structured OpticBASIC programs, and has a Sinclair-style line editor. The **[user manual (PDF)](docs/manual/OpticOS_User_Manual.pdf)** covers the whole system, with worked examples ([source](docs/manual)). The **[example tape](examples)** (`.tap` and `.tzx`) holds the manual's examples and three more, verified in Fuse. OpticOS has been run on real hardware, a Cobra (see [Running OpticOS](#running-opticos)), but not yet on an original Sinclair Spectrum. The design is in the [specification (PDF)](docs/spec.pdf) ([Markdown](docs/spec.md)); §4.8 lists what is built.
 
 | Phase | What it delivered | Report |
 |---|---|---|
@@ -40,7 +40,7 @@ All are from real [Fuse](https://fuse-emulator.sourceforge.net/) with traps and 
 
 ## What works today
 
-- A drop-in 16K ROM for the 48K Spectrum, on emulators such as Fuse (not yet tried on real hardware).
+- A drop-in 16K ROM for the 48K Spectrum. It runs on emulators such as Fuse and on The Spectrum (2024), and a user has confirmed it on a Cobra, a real machine. It has not yet been tried on an original Sinclair Spectrum.
 - **64-column text** in an original 4×8 font, with colours (`INK PAPER FLASH BRIGHT INVERSE OVER`, also inside PRINT), scrolling and `PRINT AT`/`TAB`.
 - **Graphics and sound:** `PLOT`, `DRAW dx,dy`, `DRAW TO x,y` on the full 256×192 screen, and `BEEP duration, pitch`. At a cold start it plays the BBC Micro's two power-on tones in reverse, at half their length: 523 Hz for 0.15 s, then 122 Hz for 0.45 s (spec §6.7).
 - **OpticBASIC with no line numbers:**
@@ -104,13 +104,40 @@ fuse-sdl --machine 48 --rom-48 build/opticos.rom --no-traps --no-detect-loader -
 
 Since v1.0.1 the ROM keeps the tape layout that emulator traps expect, so Fuse's tape traps work and `.tap` files load at once; v1.0 itself needs `--no-traps`. The second line turns the traps and loader acceleration off, so tapes load from the real signal in real time, as on a Spectrum; the tests run both ways. `build/` is gitignored. You need `pasmo` 0.5.3, `gcc` and Python 3 with Pillow.
 
-### On The Spectrum (2024)
+## Running OpticOS
+
+OpticOS is a standard 16K ROM image, so anything that can run a 48K Spectrum with a different ROM can run it. Besides Fuse (above), these ways are known:
+
+### Real hardware: the Cobra
+
+Vicențiu Iordăchescu runs OpticOS on a [Cobra](https://cobrasov.org/), a real machine. He flashed `opticos.rom` into its EEPROM unchanged; the Cobra can also load a ROM from tape. This is the first confirmed run on real hardware. OpticOS has still not been tried on an original Sinclair Spectrum.
+
+### The Spectrum (2024)
 
 On The Spectrum from Retro Games, use the `.tzx` tapes: its instant `.tap` loading only works with ROMs it recognises, and pressing ENTER in Media select to auto-load does not work with OpticOS. In Media select pick the `.tzx` and press **M** (not ENTER), close the menu, type `LOAD ""`, then hold HOME and press Down to open the tape controller and press play. On Fuse and other emulators `.tap` files load as usual. See the manual, "Loading on The Spectrum (2024)".
 
+### Limoniter
+
+[Limoniter](https://limoniter.com), the text and hex editor for older computers by Jolyon Ralph, supports OpticBASIC directly. Choose **File > New**, pick **OpticBasic**, write your program and press **F9** to test it in Limoniter's built-in ZX Spectrum emulator. Version 0.9 is due to update OpticOS automatically.
+
+### OpticOS/RAM
+
+[OpticOS/RAM](https://github.com/tuklusan/OpticOS/releases), by Supratim Sanyal, is a fork that turns OpticOS into a program that loads into RAM, so no ROM swap is needed. Its release page describes it as a RAM-resident edition for a standard 48K Spectrum: boot with the normal Sinclair ROM, type `LOAD ""` and play its `.tzx`, whose BASIC loader loads and starts it. It does not load ordinary Sinclair BASIC or game tapes, and you reset the machine to return to Sinclair BASIC. See its page for details and its own testing status.
+
+### Community
+
+Questions, reports and ideas are welcome in the [Spectrum Computing forum thread](https://spectrumcomputing.co.uk/forums/viewtopic.php?f=3&t=16427).
+
+## Planned / under consideration
+
+- **UDGs** (user-defined graphics) are planned. They were dropped earlier for lack of space (spec §12), so they need some space optimisations first.
+- **A 32-column mode** or **a 128K edition** is being considered.
+
+There are no dates for any of these.
+
 ## ROM byte usage (Phase 5 complete)
 
-16,268 of 16,384 bytes are placed, leaving **116 free** in v1.0.3, **105 below the margin rule** of at least 221 spare (it was 256 until v1.0.1; v1.0.2 had 227 free). v1.0.3's new tape stripe colours cost 10 bytes and the LIST `cont?` pause 101; the shorter chime cost nothing. By module, as `tools/check_layout.py` reports them:
+16,268 of 16,384 bytes are placed, leaving **116 free** in v1.0.3. 116 bytes is now the accepted margin, agreed by Nathan in place of the earlier rule of at least 221 spare (256 until v1.0.1; v1.0.2 had 227 free). v1.0.3's new tape stripe colours cost 10 bytes and the LIST `cont?` pause 101; the shorter chime cost nothing. By module, as `tools/check_layout.py` reports them:
 
 | Part | Bytes |
 |---|---:|
