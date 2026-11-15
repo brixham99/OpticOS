@@ -4,8 +4,9 @@
  * OpticOS ROM and its display, keyboard and storage devices), one 50 Hz
  * frame every 20 ms, and plays the beeper (audio.c).  Core 1 owns the rest
  * of the hardware: it polls the keyboard into the key matrix and copies
- * changed character rows of the machine's display to the LCD.  The two share only the bitmap, attributes and key matrix, where a
- * torn read costs at most one stale row until the next pass.
+ * the rows that changed to the LCD (OpticOS's display, or the Spectrum
+ * screen).  The two share only the machine's display and key matrix, where
+ * a torn read costs at most one stale row until the next pass.
  *
  * On the serial console (the PicoCalc's USB-C port: UART0, 115200 baud),
  * core 0 reports how long a frame takes to emulate. */
@@ -18,17 +19,8 @@
 #include "lcd.h"
 #include "kbd.h"
 #include "audio.h"
-#include "font8x8.h"
 
 extern const unsigned char opticos_rom[16384];
-int z_getpc(void);
-
-/* bring-up diagnostics: a colour-bar test pattern at start, then a status
- * line on the bottom row (frames, Z80 PC, frame time), and the keyboard
- * backlight blinks once a second while the Z80 runs */
-#define DIAG 0
-static volatile uint32_t frames_run, frame_us;
-
 #define W 320
 #define COLS 40
 #define ROWS 40
@@ -38,7 +30,7 @@ static volatile uint32_t frames_run, frame_us;
 static uint8_t shadow_bits[W * W / 8], shadow_attrs[ROWS * COLS];
 static uint8_t line_buf[8 * W * 2];
 static uint8_t row_flash[ROWS];
-static uint32_t core1_stack[16384 / 4];        /* snprintf needs more than the 2K default */
+static uint32_t core1_stack[16384 / 4];        /* (more than the 2K default) */
 
 static uint16_t PAL[16];
 static const uint8_t PAL_RGB[16][3] = {
@@ -112,41 +104,11 @@ static void spectrum_pass(int flash_on, int flash_changed, int all){
   }
 }
 
-static void test_pattern(void){
-  for (int r = 0; r < ROWS; r++) {
-    uint8_t *o = line_buf;
-    for (int i = 0; i < 8 * W; i++) { uint16_t p = PAL[8 + (i % W) / 40]; *o++ = p >> 8; *o++ = p; }
-    lcd_lines(r * 8, 8, line_buf);
-  }
-}
-
-/* text in the display's 8x8 font, white on blue, on character row r */
-static void status_line(int r, const char *s){
-  uint8_t *o = line_buf;
-  for (int y = 0; y < 8; y++)
-    for (int c = 0; c < COLS; c++) {
-      int ch = *s && c < (int)strlen(s) ? s[c] : ' ';
-      if (ch < 32 || ch > 127) ch = '?';
-      uint8_t f = font8x8[ch - 32][y];
-      for (int m = 0x80; m; m >>= 1) {
-        uint16_t p = (f & m) ? PAL[15] : PAL[9];
-        *o++ = p >> 8; *o++ = p;
-      }
-    }
-  lcd_lines(r * 8, 8, line_buf);
-}
-
 static void core1_main(void){
   for (int i = 0; i < 16; i++) PAL[i] = lcd_rgb(PAL_RGB[i][0], PAL_RGB[i][1], PAL_RGB[i][2]);
-  printf("opticos: core 1 up, keyboard and backlight\n");
-  kbd_init();
-  printf("opticos: LCD init\n");
+  kbd_init();                                    /* (also the LCD's backlight) */
   lcd_init();
-  printf("opticos: LCD init done, test pattern\n");
-#if DIAG
-  test_pattern();
-  sleep_ms(2000);
-#endif
+  printf("opticos: core 1 up: keyboard, LCD\n");
   const uint8_t *bits = pc_bits(), *attrs = pc_attrs();
   int flash_was = -1, mode_was = -1;
   for (;;) {
@@ -166,14 +128,6 @@ static void core1_main(void){
       }
     }
     flash_was = flash_on;
-#if DIAG
-    char st[COLS + 1];
-    snprintf(st, sizeof st, "%lu PC %04X %lu us", (unsigned long)frames_run,
-             z_getpc(), (unsigned long)frame_us);
-    status_line(ROWS - 1, st);
-    kbd_light((frames_run / 25) & 1);
-    memset(&shadow_attrs[(ROWS - 1) * COLS], 0xFF, COLS);    /* redraw the row when DIAG is off */
-#endif
   }
 }
 
@@ -214,7 +168,6 @@ int main(void){
     beeper();                                    /* this frame's sound, 20 ms behind */
     uint64_t t = time_us_64() - t0;
     busy += t; if (t > worst) worst = t;
-    frames_run++; frame_us = t;
     next += FRAME_US;
     uint64_t now = time_us_64();
     if (now < next) sleep_until(from_us_since_boot(next));

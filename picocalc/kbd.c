@@ -25,7 +25,6 @@
 #define KBD_BAUD 10000
 #define REG_FIFO 0x09
 #define REG_LCD_BL 0x05              /* LCD backlight: 16-240 */
-#define REG_KBD_BL 0x0A              /* keyboard backlight: 0, 32-224 */
 #define LCD_BL_LEVEL 192
 #define FIFO_WAIT_US 16000           /* the reference code's write-to-read delay */
 #define MIN_HOLD_US  60000           /* every key is held for at least 3 frames */
@@ -162,16 +161,10 @@ void kbd_init(void){
   printf("opticos: keyboard controller %s\n", ok ? "answered" : "did not answer");
 }
 
-/* the keyboard backlight on or off; applied by kbd_poll between FIFO reads */
-static int light_want, light_have;
-void kbd_light(int on){ light_want = on; }
 
 void kbd_poll(void){
   uint64_t now = time_us_64();
-  if (fifo_state == 0 && light_want != light_have) {
-    reg_write(REG_KBD_BL, light_want ? 96 : 0);
-    light_have = light_want;
-  } else if (fifo_state == 0 && now >= fifo_t) {
+  if (fifo_state == 0 && now >= fifo_t) {
     uint8_t reg = REG_FIFO;
     if (i2c_write_timeout_us(KBD_I2C, KBD_ADDR, &reg, 1, false, 20000) == 1) fifo_state = 1;
     fifo_t = time_us_64() + FIFO_WAIT_US;
