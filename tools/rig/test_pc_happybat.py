@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Happy Bat for the PicoCalc (examples/picocalc), played in the rig: LOAD
-"happybatpc" from a card holding examples/picocalc/happybatpc.tap runs the
-game, which loads its own code; the title screen; a game flown by an
+"happybatpc" from a card holding examples/picocalc/picocalc_examples.tap
+runs the game, which loads its own code; the title screen; a game flown by an
 autopilot (it steers the bat for the middle of the next gap) that must
 score, at full speed (a step every 2 frames); then game over.  Screenshots
 go to build/picocalc/.  Needs pasmo (for the code's symbols) and the tape
@@ -23,7 +23,7 @@ def check(name, got, want):
 
 code, HB = assemble()
 card = tempfile.mkdtemp(prefix='hbpc_card_')
-shutil.copy(os.path.join(EX, 'happybatpc.tap'), card)
+shutil.copy(os.path.join(EX, 'picocalc_examples.tap'), card)
 b = Basic(); s = b.s; s.sd(card)
 def typed(text):                        # a line typed at the prompt, without waiting for the prompt again
     s.run_until(SYM['cg_lp'], 20_000_000)

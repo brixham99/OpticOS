@@ -1,5 +1,7 @@
 # OpticOS example tape
 
+For OpticOS on the ClockworkPi PicoCalc, see [`picocalc/`](picocalc/README.md): the same examples redone for its 40 × 40 screen, and Happy Bat ported.
+
 `opticos_examples.tap` (and the same blocks as `opticos_examples.tzx`) holds twelve OpticBASIC programs and one block of machine code, all saved by the OpticOS ROM itself. The programs are in its "Program:" format (a type-0 header, then data starting with the `OB` $01 $00 signature). The machine code is an ordinary "Bytes:" block (type 3). Every program was loaded and run in Fuse, both from the real tape signal with traps off (`--no-traps --no-detect-loader --no-accelerate-loader`) and with Fuse's tape traps and loader acceleration on (its defaults); the screenshots in `shots/` are from the traps-off runs.
 
 ## Loading
