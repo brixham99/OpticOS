@@ -30,12 +30,14 @@ target_compile_options(opticos PRIVATE -O2 -Wall -Wno-unused-function)
 target_link_libraries(opticos pico_stdlib pico_multicore hardware_spi hardware_i2c)
 # run from RAM: the Z80 core's big dispatch loop is too slow from XIP flash
 pico_set_binary_type(opticos copy_to_ram)
-pico_enable_stdio_usb(opticos 1)
-pico_enable_stdio_uart(opticos 0)
+# serial output: in the PicoCalc only the USB-C port (wired to UART0, GP0/GP1,
+# 115200) carries a serial console; the Pico's own USB does not show up
+pico_enable_stdio_usb(opticos 0)
+pico_enable_stdio_uart(opticos 1)
 pico_add_extra_outputs(opticos)
 
 # lcdtest.uf2: LCD and keyboard-controller bring-up only (no emulator, one
-# core, no USB): the screen cycles red, green, blue, white once a second and
+# core): the screen cycles red, green, blue, white once a second and
 # the keyboard backlight toggles with it
 add_executable(lcdtest lcdtest.c lcd.c)
 target_compile_options(lcdtest PRIVATE -O2 -Wall)
@@ -43,3 +45,4 @@ target_link_libraries(lcdtest pico_stdlib hardware_spi hardware_i2c)
 pico_enable_stdio_usb(lcdtest 0)
 pico_enable_stdio_uart(lcdtest 1)
 pico_add_extra_outputs(lcdtest)
+

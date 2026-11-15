@@ -7,7 +7,8 @@
  * LCD.  The two share only the bitmap, attributes and key matrix, where a
  * torn read costs at most one stale row until the next pass.
  *
- * Over USB serial, core 0 reports how long a frame takes to emulate. */
+ * On the serial console (the PicoCalc's USB-C port: UART0, 115200 baud),
+ * core 0 reports how long a frame takes to emulate. */
 #include <stdio.h>
 #include <string.h>
 #include "pico/stdlib.h"
