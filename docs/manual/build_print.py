@@ -5,9 +5,9 @@
   OpticOS_Manual_A5_interior.pdf  exactly A5 (148 x 210 mm), no bleed, every page but the front cover,
                                   padded with blank pages to a multiple of 4; page 1 (the title page) is a recto
 
-Cover: Nathan's ring-bound layout (print/cover_source_ringbound.pdf) re-set at 154 x 216 mm. His page maps onto
-the trim box; his background JPEG (with his horizontal stretch) is scaled to cover the bleed; his logo image and
-his text (vector, the embedded Aptos subset and his exact text runs) keep their relative places. Only the
+Cover: Nathan's ring-bound layout (print/cover_source_ringbound.pdf, from macOS) re-set at 154 x 216 mm. His page maps
+onto the trim box; his background JPEG (with his horizontal stretch) is scaled to cover the bleed; his logo image and
+his text (vector, the embedded Aptos subsets and his exact text runs) keep their relative places. Only the
 copyright line moves, up to 5 mm inside the trim (his is 2.6 mm). The left-hand text is 13.7 mm inside the
 trim, clear of the 12 mm ring-hole zone.
 
@@ -32,26 +32,37 @@ INNER, OUTER = 20, 12                # mm, binding gutter and outside margin
 MIN_CODE = 6.0                       # pt, smallest code size
 
 def cover(src_pdf, out_pdf, min_inside=5.0):
+    """Nathan's cover (a macOS Quartz PDF: background JPEG drawn over the whole page, logo image with alpha,
+    Aptos text in scaled q ... cm BT ... ET Q blocks) re-set on a page of trim + bleed."""
     sp = PdfReader(src_pdf).pages[0]
     SW, SH = float(sp.mediabox.width), float(sp.mediabox.height)
     c = sp.get_contents().get_data().decode('latin-1')
-    runs = re.findall(r'/F1 ([\d.]+) Tf\s+1 0 0 1 ([\d.]+) ([\d.]+) Tm.*?(\[.*?\]) TJ', c, re.S)
-    bg = re.search(r'([\d.]+) 0 0 ([\d.]+) ([\d.]+) ([\d.]+) cm\s*/Image6 Do', c).groups()
-    logo = re.search(r'([\d.]+) 0 0 ([\d.]+) ([\d.]+) ([\d.]+) cm\s*/Image7 Do', c).groups()
-    assert len(runs) == 7, runs
+    num = r'(-?[\d.]+)'
+    c = re.sub(r'\s+', ' ', c)                            # Quartz breaks lines anywhere
+    draws = re.findall(r'%s 0 0 %s %s %s cm /(\w+) Do' % (num, num, num, num), c)
+    bg = [d for d in draws if abs(float(d[0]) - SW) < 1 and abs(float(d[1]) - SH) < 2]
+    logo = [d for d in draws if d not in bg]
+    assert len(bg) == 1 and len(logo) == 1, draws
+    texts = re.findall(r'q %s 0 0 %s %s %s cm (BT.*?ET) Q' % (num, num, num, num), c, re.S)
+    assert len(texts) == 7, len(texts)
     b = BLEED * PT; W = (TRIM[0] + 2 * BLEED) * PT; H = (TRIM[1] + 2 * BLEED) * PT
     sx, sy = TRIM[0] * PT / SW, TRIM[1] * PT / SH; k = math.sqrt(sx * sy)   # his page -> the trim box
     X = lambda x: b + x * sx; Y = lambda y: b + y * sy
-    bw = W; bh = float(bg[1]) * W / float(bg[0])                            # his background aspect, as wide as the bleed
-    ops = ['q %.4f 0 0 %.4f 0 %.4f cm /Image6 Do Q' % (bw, bh, (H - bh) / 2)]
-    lw, lh, lx, ly = map(float, logo)
-    ops.append('q %.4f 0 0 %.4f %.4f %.4f cm /Image7 Do Q' % (lw * k, lh * k, X(lx), Y(ly)))
-    for size, x, y, tj in runs:
-        size, x, y = float(size), float(x), float(y)
-        ny = Y(y)
-        if y < 0.1 * SH:   # the copyright line: at least min_inside mm above the trim (Aptos descender about 0.25 em)
-            ny = max(ny, b + min_inside * PT + 0.25 * size * k)
-        ops.append('BT /F1 %.3f Tf 1 g 1 0 0 1 %.4f %.4f Tm %s TJ ET' % (size * k, X(x), ny, tj))
+    bw = W; bh = float(bg[0][1]) * W / float(bg[0][0])                      # his background aspect, as wide as the bleed
+    ops = ['q %.4f 0 0 %.4f 0 %.4f cm /%s Do Q' % (bw, bh, (H - bh) / 2, bg[0][4])]
+    lw, lh, lx, ly = map(float, logo[0][:4])
+    ops.append('q %.4f 0 0 %.4f %.4f %.4f cm /%s Do Q' % (lw * k, lh * k, X(lx), Y(ly), logo[0][4]))
+    info = []
+    for a, d, ex, ey, bt in texts:
+        a, d, ex, ey = map(float, (a, d, ex, ey))
+        tm = re.search(r'%s 0 0 %s %s %s Tm' % (num, num, num, num), bt)
+        ts, tx, ty = float(tm.group(1)), float(tm.group(3)), float(tm.group(4))
+        x, base, size = ex + a * tx, ey + d * ty, a * ts          # where his text starts, its baseline and size on his page
+        nx, nb = X(x), Y(base)
+        if base < 0.1 * SH:   # the copyright line: at least min_inside mm above the trim (Aptos descender about 0.25 em)
+            nb = max(nb, b + min_inside * PT + 0.25 * size * k)
+        ops.append('q /Cs1 cs 1 1 1 sc %.6f 0 0 %.6f %.4f %.4f cm %s Q' % (a * k, d * k, nx - a * k * tx, nb - d * k * ty, bt))
+        info.append((size, x, base))
     wr = PdfWriter(); p = wr.add_page(sp)
     for key in ('/StructParents', '/Tabs', '/CropBox', '/BleedBox', '/TrimBox', '/ArtBox'):
         if key in p: del p[key]
@@ -61,8 +72,11 @@ def cover(src_pdf, out_pdf, min_inside=5.0):
     p[NameObject('/TrimBox')] = RectangleObject([b, b, W - b, H - b])
     wr.add_metadata({'/Title': 'OpticOS User Manual: cover (A5 with 3 mm bleed, ring bound)'})
     with open(out_pdf, 'wb') as f: wr.write(f)
-    print('cover: %s, background %d x %d px at %.0f x %.0f ppi, logo at %.0f ppi' % (
-        out_pdf, 1152, 1728, 1152 / (bw / 72), 1728 / (bh / 72), 409 / (lw * k / 72)))
+    xo = sp['/Resources']['/XObject']
+    bgo, lgo = xo['/' + bg[0][4]], xo['/' + logo[0][4]]
+    bgpx = int(bgo['/Width']), int(bgo['/Height']); lgpx = int(lgo['/Width'])
+    print('cover: %s, background %d x %d px at %.0f x %.0f ppi, logo %d px wide at %.0f ppi' % (
+        out_pdf, bgpx[0], bgpx[1], bgpx[0] / (bw / 72), bgpx[1] / (bh / 72), lgpx, lgpx / (lw * k / 72)))
 
 # --- code boxes: 148 mm - 20 - 12 mm margins - 2 x 3 mm padding - 2 pt rule; JetBrains Mono is 0.6 em a character
 CODE_W = (TRIM[0] - INNER - OUTER - 6) * PT - 2
