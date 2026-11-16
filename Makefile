@@ -32,7 +32,13 @@ coef:
 fuse: build/opticos.rom
 	python3 tools/fuse_phase1.py build/opticos.rom build/fuse /workspace/spectrum-ball/bounceball.tap
 
+manual:
+	python3 docs/manual/build.py
+
+manual-print:
+	python3 docs/manual/build_print.py
+
 clean:
 	rm -rf build tools/rig/libz80.so
 
-.PHONY: rig zex check fuse clean coef
+.PHONY: rig zex check fuse clean coef manual manual-print

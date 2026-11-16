@@ -11,3 +11,5 @@ __pycache__/
 .DS_Store
 *.so
 tools/rig/tests/cache/
+docs/manual/manual_print.html
+docs/manual/print/.interior_raw.pdf

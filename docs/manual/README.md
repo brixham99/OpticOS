@@ -7,3 +7,4 @@
 - The recursive tree screenshot (`img/run_tree.png`, chapters 9 and 13) was retaken in Fuse with the v1.0.3 ROM for edition 6.
 - `fuse_shots.py` types the examples into real Fuse (tape traps off) and takes the screenshots in `img/`. The game screenshots and the editing screenshot come from the phase 1 and phase 4 reports.
 - `preview/` has PNGs of the cover and one reference page.
+- `print/` is the A5 print edition: the cover with 3 mm bleed and the interior pages, made by `python3 build_print.py` (see `print/README.md`). The Inter subsets in `fonts/` include Latin Extended-A, so names such as Vicențiu Iordăchescu print in Inter.
