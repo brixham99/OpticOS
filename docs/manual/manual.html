@@ -76,7 +76,7 @@ figcaption { font-style: italic; font-size: 7.5pt; color: #444; margin-top: 1mm;
   <div class="t2">OpticBASIC User Manual</div>
   <div class="shot"><img src="img/boot.png" alt="The OpticOS start-up screen"></div>
   <div class="t3">For the 48K ZX Spectrum</div>
-  <div class="t4">ROM v1.0.3 &nbsp;&bull;&nbsp; Manual edition 5, November 2026 &nbsp;&bull;&nbsp; &copy; 2026 Optica Technology Design</div>
+  <div class="t4">ROM v1.0.3 &nbsp;&bull;&nbsp; Manual edition 6, November 2026 &nbsp;&bull;&nbsp; &copy; 2026 Optica Technology Design</div>
 </section>
 <section class="toc"><h1>Contents</h1><ol><li><a href="#c1"><span>1</span><em>Introduction</em><b>4</b></a></li>
 <li><a href="#c2"><span>2</span><em>Getting started</em><b>6</b></a></li>
@@ -91,20 +91,21 @@ figcaption { font-style: italic; font-size: 7.5pt; color: #444; margin-top: 1mm;
 <li><a href="#c11"><span>11</span><em>Memory map and system variables</em><b>33</b></a></li>
 <li><a href="#c12"><span>12</span><em>Limits and differences from Sinclair BASIC</em><b>36</b></a></li>
 <li><a href="#c13"><span>13</span><em>Worked examples</em><b>38</b></a></li>
-<li><a href="#c14"><span>14</span><em>Happy Bat's machine code</em><b>59</b></a></li></ol>
+<li><a href="#c14"><span>14</span><em>Happy Bat</em><b>48</b></a></li></ol>
 <p class="colophon">OpticOS and OpticBASIC &copy; 2026 Optica Technology Design. ZX Spectrum is a trademark of its owners; OpticOS is not connected with Sinclair Research or Amstrad. Screenshots are from the Fuse emulator.</p></section>
 <h1 id="c1"><span class="num">1</span>Introduction</h1>
 <p>OpticOS is a new 16K ROM for the 48K ZX Spectrum. It replaces the Sinclair ROM, and it brings its own language, <strong>OpticBASIC</strong>: a structured BASIC with named procedures and functions, block IF, CASE, WHILE, REPEAT and TRY, and no line numbers at all. Text is printed at <strong>64 columns</strong> in a 4-pixel font, so a listing shows twice as much as on a Sinclair screen.</p>
 <p>OpticOS keeps the parts of the Spectrum that other software relies on. The tape format is the standard one, and the ROM routines that games call, such as <code>LD-BYTES</code> and <code>BEEPER</code>, are at their usual addresses. Ordinary commercial games load with <code>LOAD ""</code> through a small legacy loader that understands the BASIC loader programs on their tapes.</p>
 <p>OpticOS is a clean-room design. It contains no Sinclair, Amstrad or Tasword code or artwork, and every build is checked to make sure that no run of 12 or more bytes is shared with the original ROM.</p>
+<p>For a first demonstration, try the recursive tree in chapter 13: a dozen lines of OpticBASIC, with a procedure that calls itself, draw a whole tree in about 25 seconds.</p>
 <p>This manual describes OpticOS and OpticBASIC exactly as they are built. Every example in it was typed into the ROM and run, and the screenshots come from the Fuse emulator with its tape traps turned off.</p>
 <h2>What you need</h2>
 <ul>
 <li>A 48K ZX Spectrum, or an emulator. OpticOS also starts on a 16K machine, with less room for programs.</li>
-<li>The ROM file <code>opticos.rom</code> (16,384 bytes). In Fuse, start with <code>fuse --machine 48 --rom-48 opticos.rom --no-traps</code> to load from the real tape signal, as on a real Spectrum, or leave the tape traps on to load <code>.tap</code> files at once (this needs ROM v1.0.1 or later; v1.0 itself needs <code>--no-traps</code>). On The Spectrum from Retro Games, put <code>opticos.rom</code> on its USB stick as <code>/THESPECTRUM/roms/48.rom</code> and load <code>.tzx</code> tapes (chapter 8, "Loading on The Spectrum (2024)"). On real hardware the ROM goes in an EPROM in place of the original; this has not yet been tried.</li>
+<li>The ROM file <code>opticos.rom</code> (16,384 bytes). In Fuse, start with <code>fuse --machine 48 --rom-48 opticos.rom --no-traps</code> to load from the real tape signal, as on a real Spectrum, or leave the tape traps on to load <code>.tap</code> files at once (this needs ROM v1.0.1 or later; v1.0 itself needs <code>--no-traps</code>). On The Spectrum from Retro Games, put <code>opticos.rom</code> on its USB stick as <code>/THESPECTRUM/roms/48.rom</code> and load <code>.tzx</code> tapes (chapter 8, "Loading on The Spectrum (2024)"). On real hardware the ROM goes in an EPROM or EEPROM in place of the original: Vicențiu Iordăchescu runs OpticOS on a Cobra, a real machine, with <code>opticos.rom</code> flashed into its EEPROM unchanged. OpticOS has not yet been tried on an original Sinclair Spectrum.</li>
 </ul>
 <h2>How this manual is laid out</h2>
-<p>Chapters 2 to 4 cover starting up, the keyboard and screen, and typing in and editing programs. Chapter 5 describes the language, and chapter 6 is an A–Z reference of every keyword and function. Then come errors, tape, graphics and sound, machine code, and the memory map. Chapter 12 lists the limits and the differences from Sinclair BASIC, and chapter 13 has worked examples.</p>
+<p>Chapters 2 to 4 cover starting up, the keyboard and screen, and typing in and editing programs. Chapter 5 describes the language, and chapter 6 is an A–Z reference of every keyword and function. Then come errors, tape, graphics and sound, machine code, and the memory map. Chapter 12 lists the limits and the differences from Sinclair BASIC, chapter 13 has worked examples, and chapter 14 is Happy Bat, a complete game in OpticBASIC and machine code.</p>
 <p>In syntax lines, <code>[ ]</code> marks something optional, <code>|</code> separates alternatives, and <code>…</code> means "more of the same". Names in <em>italics</em> stand for something you supply.</p>
 <h1 id="c2"><span class="num">2</span>Getting started</h1>
 <h2>The start-up screen</h2>
@@ -1200,6 +1201,8 @@ branch 128, 0, PI / 2, 50
 INK 6: PRINT AT 0, 0; &quot;A tree in &quot;; INT((FRAMES - t) / 50); &quot; seconds&quot;
 </code></pre>
 <p>It takes about 25 seconds, and prints how long it took.</p>
+<figure><img src="img/run_tree.png"><figcaption>The finished tree in Fuse, with the time it took.</figcaption></figure>
+
 <h2>The Union Flag</h2>
 <p>The flag fills the top 16 character rows. The blue field and the central cross are printed as whole colour cells with PAPER; the white diagonals are drawn as short horizontal runs with PLOT and DRAW; and the thin red diagonals are made by clearing pixels with INVERSE 1 over red paper, so the red shows through while the white stays. Because each 8×8 colour cell holds no more than two colours, there is no colour clash. Remember that a colour cell is two of OpticBASIC's 64 text columns wide.</p>
 <pre><code>' The Union Flag, drawn by colour cells and lines
@@ -1277,11 +1280,12 @@ PRINT AT 22, 0; &quot;Drawn in &quot;; INT((FRAMES - t) / 5) / 10; &quot; second
 </code></pre>
 <figure><img src="img/run_flag.png"><figcaption>The finished flag. It takes about 18 seconds and prints how long it took.</figcaption></figure>
 
-<h2>Happy Bat</h2>
+<h1 id="c14"><span class="num">14</span>Happy Bat</h1>
 <p>Happy Bat is a complete game in the style of Flappy Bird. Fly the bat through the gaps in the pipes and score a point for each one you pass. Touching a pipe, the ground or the sky ends the game. At first the gaps are wide and the pipes far apart, and both close up as the score rises. SPACE flaps the bat's wings and BREAK stops the program. The game is on the example tape: type <code>LOAD "happybat"</code> and it runs by itself. Its own repository is <a href="https://github.com/brixham99/happy-bat">brixham99/happy-bat</a>.</p>
 <figure class="pair"><img src="img/run_happybat_title.png"><img src="img/run_happybat_play.png"><figcaption>The title screen, and the bat flying between two pipes.</figcaption></figure>
 
-<p>The example shows how to share a game between OpticBASIC and machine code. An OpticBASIC statement takes a few hundredths of a second, which is far too slow to move pipes a few pixels at a time. So the work is divided:</p>
+<h2>How it works</h2>
+<p>The game shows how to share the work between OpticBASIC and machine code. An OpticBASIC statement takes a few hundredths of a second, which is far too slow to move pipes a few pixels at a time. So the work is divided:</p>
 <ul>
 <li><strong>OpticBASIC</strong> runs the game: the title screen, when each pipe appears and where its gap is, how the game gets harder, the score and best score, the game-over box, and starting again.</li>
 <li><strong>Machine code</strong> (1,095 bytes at 60000–61094) does everything that touches the screen in each step. It scrolls the ground, moves and draws up to four pipes, reads SPACE, applies gravity and the flap, and draws the bat, checking whether it has hit anything.</li>
@@ -1366,6 +1370,7 @@ PRINT AT 22, 0; &quot;Drawn in &quot;; INT((FRAMES - t) / 5) / 10; &quot; second
 </tbody>
 </table>
 <p>The machine code must leave IX, IY and the alternate registers alone, because OpticBASIC uses them. It waits for the next frame with HALT, and reads FRAMES (23672) to pace itself. With the game loaded, <code>PRINT FREE</code> shows about 25,400 bytes free, and the figure stays the same however many games are played.</p>
+<h2>The program</h2>
 <p>The program starts with <code>CLEAR 59999</code>, then loads the code with <code>LOAD "hbcode" CODE</code> unless the code is already there. <code>CLEAR</code> must be in the main program, not in a procedure, so the tape saves the program with <code>SAVE "happybat" AUTO start</code>, and PROC <code>start</code> simply does <code>RUN</code>.</p>
 <pre><code>' =============================================================
 ' HAPPY BAT - a Flappy Bird-style game for OpticOS v1.0.1
@@ -1537,9 +1542,7 @@ DEF PROC game_over
   UNTIL KEY(&quot; &quot;)
 ENDPROC
 </code></pre>
-<figure class="pair"><img src="img/run_happybat_score.png"><img src="img/run_happybat_over.png"><figcaption>The score rising, and a new best score at game over.</figcaption></figure>
-
-<h3>Entering the machine code</h3>
+<h2>Entering the machine code</h2>
 <p>You do not need an assembler to make the machine code. The program below holds all 1,095 bytes as DATA lines. Each line has its address, 8 bytes in hex (<code>$C3</code> is 195) and a check number: the line's bytes multiplied by 1, 2, 3 … 8 and added together. That catches a mistyped byte, and also two bytes typed the wrong way round. If a line is wrong, the program stops with that line's address, for example <code>Check the line at 60024</code>. A line left out stops it with <code>DATA out of step at …</code>. The last DATA item is the sum of every byte.</p>
 <p>To make your own Happy Bat tape:</p>
 <ol>
@@ -1716,9 +1719,9 @@ DATA 61080, $00, $FB, $FF, $FE, $00, $7F, $BF, $FF, 6422
 DATA 61088, $FE, $00, $07, $FB, $FF, $FF, $E0, 5652
 DATA 128134
 </code></pre>
-<p>The annotated assembler source, <code>happybat.asm</code>, is printed in full in the next chapter.</p>
-<h1 id="c14"><span class="num">14</span>Happy Bat's machine code</h1>
-<p>This is the complete source of Happy Bat's machine code. It is written for the pasmo assembler (<code>pasmo --bin happybat.asm hbcode.bin</code>). The DATA lines in the previous chapter are its output. Like the rest of OpticOS, it is original, clean-room code: it uses and calls no Sinclair ROM code. It touches only the screen, the keyboard and speaker port, FRAMES and its own variables.</p>
+<p>The annotated assembler source, <code>happybat.asm</code>, is printed in full in the next section.</p>
+<h2>Happy Bat's machine code</h2>
+<p>This is the complete source of Happy Bat's machine code. It is written for the pasmo assembler (<code>pasmo --bin happybat.asm hbcode.bin</code>). The DATA lines in the previous section are its output. Like the rest of OpticOS, it is original, clean-room code: it uses and calls no Sinclair ROM code. It touches only the screen, the keyboard and speaker port, FRAMES and its own variables.</p>
 <p>The main routines are:</p>
 <table>
 <thead>

@@ -6,16 +6,18 @@ OpticOS keeps the parts of the Spectrum that other software relies on. The tape 
 
 OpticOS is a clean-room design. It contains no Sinclair, Amstrad or Tasword code or artwork, and every build is checked to make sure that no run of 12 or more bytes is shared with the original ROM.
 
+For a first demonstration, try the recursive tree in chapter 13: a dozen lines of OpticBASIC, with a procedure that calls itself, draw a whole tree in about 25 seconds.
+
 This manual describes OpticOS and OpticBASIC exactly as they are built. Every example in it was typed into the ROM and run, and the screenshots come from the Fuse emulator with its tape traps turned off.
 
 ## What you need
 
 - A 48K ZX Spectrum, or an emulator. OpticOS also starts on a 16K machine, with less room for programs.
-- The ROM file `opticos.rom` (16,384 bytes). In Fuse, start with `fuse --machine 48 --rom-48 opticos.rom --no-traps` to load from the real tape signal, as on a real Spectrum, or leave the tape traps on to load `.tap` files at once (this needs ROM v1.0.1 or later; v1.0 itself needs `--no-traps`). On The Spectrum from Retro Games, put `opticos.rom` on its USB stick as `/THESPECTRUM/roms/48.rom` and load `.tzx` tapes (chapter 8, "Loading on The Spectrum (2024)"). On real hardware the ROM goes in an EPROM in place of the original; this has not yet been tried.
+- The ROM file `opticos.rom` (16,384 bytes). In Fuse, start with `fuse --machine 48 --rom-48 opticos.rom --no-traps` to load from the real tape signal, as on a real Spectrum, or leave the tape traps on to load `.tap` files at once (this needs ROM v1.0.1 or later; v1.0 itself needs `--no-traps`). On The Spectrum from Retro Games, put `opticos.rom` on its USB stick as `/THESPECTRUM/roms/48.rom` and load `.tzx` tapes (chapter 8, "Loading on The Spectrum (2024)"). On real hardware the ROM goes in an EPROM or EEPROM in place of the original: Vicențiu Iordăchescu runs OpticOS on a Cobra, a real machine, with `opticos.rom` flashed into its EEPROM unchanged. OpticOS has not yet been tried on an original Sinclair Spectrum.
 
 ## How this manual is laid out
 
-Chapters 2 to 4 cover starting up, the keyboard and screen, and typing in and editing programs. Chapter 5 describes the language, and chapter 6 is an A–Z reference of every keyword and function. Then come errors, tape, graphics and sound, machine code, and the memory map. Chapter 12 lists the limits and the differences from Sinclair BASIC, and chapter 13 has worked examples.
+Chapters 2 to 4 cover starting up, the keyboard and screen, and typing in and editing programs. Chapter 5 describes the language, and chapter 6 is an A–Z reference of every keyword and function. Then come errors, tape, graphics and sound, machine code, and the memory map. Chapter 12 lists the limits and the differences from Sinclair BASIC, chapter 13 has worked examples, and chapter 14 is Happy Bat, a complete game in OpticBASIC and machine code.
 
 In syntax lines, `[ ]` marks something optional, `|` separates alternatives, and `…` means "more of the same". Names in *italics* stand for something you supply.
 
@@ -762,6 +764,8 @@ INCLUDE tree.bas
 
 It takes about 25 seconds, and prints how long it took.
 
+<figure><img src="img/run_tree.png"><figcaption>The finished tree in Fuse, with the time it took.</figcaption></figure>
+
 ## The Union Flag
 
 The flag fills the top 16 character rows. The blue field and the central cross are printed as whole colour cells with PAPER; the white diagonals are drawn as short horizontal runs with PLOT and DRAW; and the thin red diagonals are made by clearing pixels with INVERSE 1 over red paper, so the red shows through while the white stays. Because each 8×8 colour cell holds no more than two colours, there is no colour clash. Remember that a colour cell is two of OpticBASIC's 64 text columns wide.
@@ -772,13 +776,15 @@ INCLUDE flag.bas
 
 <figure><img src="img/run_flag.png"><figcaption>The finished flag. It takes about 18 seconds and prints how long it took.</figcaption></figure>
 
-## Happy Bat
+# Happy Bat
 
 Happy Bat is a complete game in the style of Flappy Bird. Fly the bat through the gaps in the pipes and score a point for each one you pass. Touching a pipe, the ground or the sky ends the game. At first the gaps are wide and the pipes far apart, and both close up as the score rises. SPACE flaps the bat's wings and BREAK stops the program. The game is on the example tape: type `LOAD "happybat"` and it runs by itself. Its own repository is [brixham99/happy-bat](https://github.com/brixham99/happy-bat).
 
 <figure class="pair"><img src="img/run_happybat_title.png"><img src="img/run_happybat_play.png"><figcaption>The title screen, and the bat flying between two pipes.</figcaption></figure>
 
-The example shows how to share a game between OpticBASIC and machine code. An OpticBASIC statement takes a few hundredths of a second, which is far too slow to move pipes a few pixels at a time. So the work is divided:
+## How it works
+
+The game shows how to share the work between OpticBASIC and machine code. An OpticBASIC statement takes a few hundredths of a second, which is far too slow to move pipes a few pixels at a time. So the work is divided:
 
 * **OpticBASIC** runs the game: the title screen, when each pipe appears and where its gap is, how the game gets harder, the score and best score, the game-over box, and starting again.
 * **Machine code** (1,095 bytes at 60000–61094) does everything that touches the screen in each step. It scrolls the ground, moves and draws up to four pipes, reads SPACE, applies gravity and the flap, and draws the bat, checking whether it has hit anything.
@@ -811,15 +817,15 @@ The gap starts at 78 lines and closes by 2 lines a point, down to 52 from a scor
 
 The machine code must leave IX, IY and the alternate registers alone, because OpticBASIC uses them. It waits for the next frame with HALT, and reads FRAMES (23672) to pace itself. With the game loaded, `PRINT FREE` shows about 25,400 bytes free, and the figure stays the same however many games are played.
 
+## The program
+
 The program starts with `CLEAR 59999`, then loads the code with `LOAD "hbcode" CODE` unless the code is already there. `CLEAR` must be in the main program, not in a procedure, so the tape saves the program with `SAVE "happybat" AUTO start`, and PROC `start` simply does `RUN`.
 
 ```
 INCLUDE happybat.bas
 ```
 
-<figure class="pair"><img src="img/run_happybat_score.png"><img src="img/run_happybat_over.png"><figcaption>The score rising, and a new best score at game over.</figcaption></figure>
-
-### Entering the machine code
+## Entering the machine code
 
 You do not need an assembler to make the machine code. The program below holds all 1,095 bytes as DATA lines. Each line has its address, 8 bytes in hex (`$C3` is 195) and a check number: the line's bytes multiplied by 1, 2, 3 … 8 and added together. That catches a mistyped byte, and also two bytes typed the wrong way round. If a line is wrong, the program stops with that line's address, for example `Check the line at 60024`. A line left out stops it with `DATA out of step at …`. The last DATA item is the sum of every byte.
 
@@ -835,11 +841,11 @@ If the code is already in memory, the game finds it by the "HB" at 60014 and doe
 INCLUDE hbloader.bas
 ```
 
-The annotated assembler source, `happybat.asm`, is printed in full in the next chapter.
+The annotated assembler source, `happybat.asm`, is printed in full in the next section.
 
-# Happy Bat's machine code
+## Happy Bat's machine code
 
-This is the complete source of Happy Bat's machine code. It is written for the pasmo assembler (`pasmo --bin happybat.asm hbcode.bin`). The DATA lines in the previous chapter are its output. Like the rest of OpticOS, it is original, clean-room code: it uses and calls no Sinclair ROM code. It touches only the screen, the keyboard and speaker port, FRAMES and its own variables.
+This is the complete source of Happy Bat's machine code. It is written for the pasmo assembler (`pasmo --bin happybat.asm hbcode.bin`). The DATA lines in the previous section are its output. Like the rest of OpticOS, it is original, clean-room code: it uses and calls no Sinclair ROM code. It touches only the screen, the keyboard and speaker port, FRAMES and its own variables.
 
 The main routines are:
 

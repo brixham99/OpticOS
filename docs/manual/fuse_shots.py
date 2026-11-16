@@ -10,7 +10,8 @@ from fuse_phase2 import type_line
 OUT = os.path.join(HERE, 'img'); os.makedirs(OUT, exist_ok=True)
 def prog(name): return [l.strip() for l in open(os.path.join(HERE, 'examples', name)) if l.strip()]
 def enter(f, lines):
-    type_line(f, 'NEW'); type_line(f, 'AUTO')
+    type_line(f, 'NEW'); time.sleep(4.5)   # NEW is a cold start (v1.0.2+): wait for the chime and the key swallow
+    type_line(f, 'AUTO')
     for l in lines: type_line(f, l)
     type_line(f, '')
 subprocess.run(['pkill', '-f', 'fuse-sdl.*opticos'])
