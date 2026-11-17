@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Print edition of the manual (ring bound, printed double-sided), written to docs/manual/print/:
+"""Print edition of the manual (ring bound, printed single-sided), written to docs/manual/print/:
 
   OpticOS_Manual_A5_cover.pdf     one page, 154 x 216 mm: A5 plus 3 mm bleed on every edge (TrimBox set)
   OpticOS_Manual_A5_interior.pdf  exactly A5 (148 x 210 mm), no bleed, every page but the front cover,
-                                  padded with blank pages to a multiple of 4; page 1 (the title page) is a recto
+                                  every page laid out the same (single-sided), no padding pages
 
 Cover: Nathan's ring-bound layout (print/cover_source_ringbound.pdf, from macOS) re-set at 154 x 216 mm. His page maps
 onto the trim box; his background JPEG (with his horizontal stretch) is scaled to cover the bleed; his logo image and
@@ -11,8 +11,8 @@ his text (vector, the embedded Aptos subsets and his exact text runs) keep their
 copyright line moves, up to 5 mm inside the trim (his is 2.6 mm). The left-hand text is 13.7 mm inside the
 trim, clear of the 12 mm ring-hole zone.
 
-Interior: laid out afresh from manual.md and template.html at A5 (not shrunk), with a binding gutter: inner
-margin 20 mm (left on odd pages, right on even pages), outer 12 mm; the headers, page numbers and images follow.
+Interior: laid out afresh from manual.md and template.html at A5 (not shrunk), with a binding gutter: 20 mm
+on the left of every page and 12 mm on the right (single-sided, so no mirroring); headers, page numbers and images follow.
 Listings never wrap: a code box too wide is set smaller, but never below 6 pt; a line still too long at 6 pt is
 broken, the rest going on the next line after a "→" (in assembler, as a "; →" comment), with a note under the box.
 Chrome rounds page sizes to 0.01 in, so the exact page boxes are set afterwards with pypdf.
@@ -28,7 +28,7 @@ HERE = build.HERE
 OUT = os.path.join(HERE, 'print')
 PT = 72 / 25.4                       # points per mm
 TRIM = (148, 210); BLEED = 3         # mm
-INNER, OUTER = 20, 12                # mm, binding gutter and outside margin
+INNER, OUTER = 20, 12                # mm, binding gutter (left of every page) and outside margin (right)
 MIN_CODE = 6.0                       # pt, smallest code size
 
 def cover(src_pdf, out_pdf, min_inside=5.0):
@@ -134,11 +134,10 @@ def fit_code(body):
 def interior():
     t = open(os.path.join(HERE, 'template.html'), encoding='utf-8').read()
     t, n = re.subn(r'@page \{ size: 420pt 595.28pt;[^\n]*?\*/', '@page { size: 148mm 210mm; /* A5, print interior */', t); assert n == 1
-    gutter = ('@page :right { margin-left: %dmm; margin-right: %dmm; }   /* odd pages (rectos): the gutter on the left */\n'
-              '@page :left { margin-left: %dmm; margin-right: %dmm; }    /* even pages (versos): the gutter on the right */\n'
+    gutter = ('@page { margin-left: %dmm; margin-right: %dmm; }   /* single-sided: the binding gutter on the left of every page */\n'
               '.keep { display: inline-block; break-inside: avoid; }\n'
               '.contnote { font-size: 7pt; font-style: italic; color: #444; margin: -2mm 0 3mm; text-align: left; }\n'
-              % (INNER, OUTER, OUTER, INNER))
+              % (INNER, OUTER))
     t, n = re.subn(r'(@page front \{)', gutter + r'\1', t); assert n == 1
     t, n = re.subn(r'<section class="cover front">.*?</section>\n', '', t, flags=re.S); assert n == 1   # the cover is printed separately
     html = os.path.join(HERE, 'manual_print.html')
@@ -154,13 +153,12 @@ def interior():
         p.mediabox = box; p.cropbox = box; p.trimbox = box
         wr.add_page(p)
     content = len(wr.pages)
-    while len(wr.pages) % 4: wr.add_blank_page(w, h)
-    wr.add_metadata({'/Title': 'OpticOS User Manual: A5 print interior (ring bound, double-sided)'})
+    wr.add_metadata({'/Title': 'OpticOS User Manual: A5 print interior (ring bound, single-sided)'})
     out = os.path.join(OUT, 'OpticOS_Manual_A5_interior.pdf')
     with open(out, 'wb') as f: wr.write(f)
     os.remove(raw)
-    print('interior: %s, %d pages + %d blank = %d; code sizes %.2f-%.2f pt, %d boxes set smaller' % (
-        out, content, len(wr.pages) - content, len(wr.pages), min(SIZES), max(SIZES), sum(1 for s in SIZES if s < 7.6 and s != 6.0)))
+    print('interior: %s, %d pages; code sizes %.2f-%.2f pt, %d boxes set smaller' % (
+        out, len(wr.pages), min(SIZES), max(SIZES), sum(1 for s in SIZES if s < 7.6 and s != 6.0)))
 
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
