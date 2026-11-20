@@ -96,6 +96,7 @@ si_pc:  ld hl,(CH_ADD)
         ld (VID),hl
         call sym_find
         jr nc,proc_call
+        jp ext_hook             ; not a PROC: offer it to a 128K extension ROM (ext128.asm)
 err_noprc: rst 8
         defb ERR_NOPRC
 st_let: rst $18
