@@ -37,3 +37,7 @@ All text stays at least 10 mm from the paper edges and from the fold (13 mm on t
 The text uses Inter, and the code uses JetBrains Mono (both from `docs/manual/fonts`). The colours are the logo's twelve hues.
 
 Every command and the program on page 2 were typed into OpticOS in Fuse by `fuse_quickstart.py`, and the grabs show the results. OpticBASIC has no line numbers, so the first program is entered with `AUTO`. The loading steps follow the manual, chapter 8, "Loading on The Spectrum (2024)". The tape names are those in the repositories: `opticos_examples.tzx`, `happybat.tzx` and `dino.tzx` (from [ZX-Dino](https://github.com/brixham99/ZX-Dino)).
+
+## Printer-friendly copies
+
+`*_A4_print_HP.pdf` are 300 dpi picture versions for printers that reject the normal PDF. Side 2 is turned 180 degrees, so print them double-sided with the same flip setting that worked on an HP: all four pages come out the same way up.
