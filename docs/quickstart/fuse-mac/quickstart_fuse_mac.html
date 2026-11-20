@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en-GB"><head><meta charset="utf-8"><title>OpticOS QuickStart: Fuse on the Mac</title>
+<style>
+@font-face { font-family: "QS Sans"; font-weight: 400; src: url(../../manual/fonts/Inter-Regular.ttf); }
+@font-face { font-family: "QS Sans"; font-weight: 400; font-style: italic; src: url(../../manual/fonts/Inter-Italic.ttf); }
+@font-face { font-family: "QS Sans"; font-weight: 500; src: url(../../manual/fonts/Inter-Medium.ttf); }
+@font-face { font-family: "QS Sans"; font-weight: 600; src: url(../../manual/fonts/Inter-SemiBold.ttf); }
+@font-face { font-family: "QS Sans"; font-weight: 700; src: url(../../manual/fonts/Inter-Bold.ttf); }
+@font-face { font-family: "QS Mono"; font-weight: 400; src: url(../../manual/fonts/JetBrainsMono-Regular.ttf); }
+@font-face { font-family: "QS Mono"; font-weight: 700; src: url(../../manual/fonts/JetBrainsMono-Bold.ttf); }
+@page { size: {{PAGESIZE}}; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font: 8.2pt/1.4 "QS Sans", sans-serif; color: #1a1a1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+/* an A4 side holds two A5 pages; the reader PDF has one A5 page per sheet */
+.sheet { width: 297mm; height: 210mm; display: flex; page-break-after: always; overflow: hidden; }
+.sheet:last-child, .pg.solo:last-child { page-break-after: auto; }
+.pg { width: 148.5mm; height: 210mm; position: relative; overflow: hidden; flex: none; }
+.pg.solo { page-break-after: always; }
+/* margins: 10 mm at the outer edges, 13 mm at the fold (both well over the 5 mm safe area) */
+.in { position: absolute; top: 10mm; bottom: 10mm; display: flex; flex-direction: column; }
+.pg.L .in { left: 10mm; right: 13mm; }      /* left half of the A4: the fold is on its right */
+.pg.R .in { left: 13mm; right: 10mm; }      /* right half: the fold is on its left */
+.hue { flex: none; height: 2.4mm; border-radius: 1.2mm; background: linear-gradient(90deg,
+  #fe2712 0 8.33%, #fe5308 0 16.66%, #fb9902 0 25%, #fabc02 0 33.33%, #fefe33 0 41.66%, #d0ea2b 0 50%,
+  #66b032 0 58.33%, #0391ce 0 66.66%, #0247fe 0 75%, #3d01a4 0 83.33%, #8601af 0 91.66%, #a7194b 0 100%); }
+.folio { margin-top: auto; padding-top: 2mm; display: flex; justify-content: space-between; font-size: 6.6pt; color: #777; border-top: .25mm solid #ddd; }
+h1 { font-size: 15pt; font-weight: 700; margin: 4mm 0 1mm; letter-spacing: -.015em; line-height: 1.1; }
+h1 small { display: block; font-size: 7.4pt; font-weight: 600; letter-spacing: .22em; color: var(--c); text-transform: uppercase; margin-bottom: 1mm; }
+h2 { font-size: 9.6pt; font-weight: 700; margin: 2.8mm 0 .8mm; }
+p { margin: 0 0 1.4mm; }
+code, kbd, .mono { font-family: "QS Mono", monospace; }
+code { font-size: 7.8pt; background: #f1f1f1; padding: 0 .7mm; border-radius: .6mm; }
+kbd { display: inline-block; border: .25mm solid #888; border-bottom-width: .5mm; border-radius: .9mm; padding: 0 .9mm;
+      line-height: 1.25; background: #f6f6f6; font-weight: 700; font-size: 6.9pt; }
+pre { font: 7.8pt/1.38 "QS Mono", monospace; background: #f4f5f7; border-left: 1mm solid var(--c); border-radius: 0 1mm 1mm 0;
+      padding: 1.8mm 2.6mm; margin: 1mm 0 1.6mm; white-space: pre; }
+pre .c { color: #777; font-family: "QS Sans"; font-size: 7pt; }
+.note { color: #555; font-size: 7.4pt; }
+.tip { border-left: 1mm solid #fe2712; background: #fff4f0; padding: 1.8mm 2.6mm; border-radius: 0 1mm 1mm 0; font-size: 7.8pt; margin-top: 2.6mm; }
+.shot { display: block; width: 100%; border-radius: 1mm; }
+figure { margin: 1mm 0 1.4mm; } figcaption { font-size: 6.9pt; color: #666; font-style: italic; margin-top: .8mm; }
+ol.steps { list-style: none; padding: 0; margin: 1mm 0 0; counter-reset: s; }
+ol.steps li { counter-increment: s; position: relative; padding-left: 8mm; margin-bottom: 2.2mm; min-height: 6mm; }
+ol.steps li::before { content: counter(s); position: absolute; left: 0; top: -.3mm; width: 5.6mm; height: 5.6mm; border-radius: 50%;
+  background: var(--c); color: #fff; font: 700 8.6pt/5.6mm "QS Sans"; text-align: center; }
+table.tapes { border-collapse: collapse; margin: 1mm 0 .4mm; width: 100%; }
+table.tapes td { padding: .5mm 2mm .5mm 0; vertical-align: top; border-bottom: .2mm solid #eee; }
+table.tapes td:first-child { font-family: "QS Mono", monospace; font-size: 7.6pt; white-space: nowrap; }
+.colours { display: flex; gap: .6mm; margin: 1mm 0 1.4mm; }
+.colours span { flex: 1; text-align: center; font-size: 6.4pt; padding: .7mm 0; border-radius: .6mm; border: .2mm solid #ccc; }
+/* cover */
+.cover .in { justify-content: flex-start; }
+.cover .logo { width: 82mm; margin: 10mm auto 0; display: block; }
+.cover h1 { text-align: center; font-size: 26pt; margin: 12mm 0 1mm; letter-spacing: -.025em; }
+.cover h1 span { color: #0247fe; }
+.cover .sub { text-align: center; font-size: 12pt; font-weight: 500; color: #444; margin: 0 0 10mm; }
+.cover figure { margin: 0 6mm; }
+.cover figcaption { text-align: center; }
+/* back page */
+.game { border: .3mm solid #ccc; border-top: 1.2mm solid var(--g); border-radius: 1.4mm; padding: 2.2mm 3mm 1.6mm; margin: 2mm 0 2.6mm; }
+.game h2 { margin: 0 0 1mm; }
+.game table td { padding: .5mm 3mm .5mm 0; vertical-align: top; }
+.links { display: flex; flex-direction: column; gap: 2.4mm; margin-top: 1.6mm; }
+.links div { display: flex; gap: 3mm; align-items: center; }
+.links svg { width: 17mm; height: 17mm; flex: none; }
+.links b { display: block; font-size: 8.6pt; } .links span { font-size: 7.4pt; color: #444; }
+.copy { margin-top: auto; text-align: center; }
+.copy b { display: block; font-size: 8.6pt; margin-bottom: 1.2mm; }
+.copy p { font-size: 6.4pt; color: #777; line-height: 1.4; margin: 0; }
+table.keys { border-collapse: collapse; width: 100%; margin: 1mm 0 1.2mm; }
+table.keys td { padding: .55mm 2mm .55mm 0; border-bottom: .2mm solid #eee; vertical-align: top; }
+table.keys td:first-child { white-space: nowrap; width: 31mm; }
+table.files { border-collapse: collapse; width: 100%; margin: .6mm 0 .4mm; }
+table.files td { padding: .4mm 2mm .4mm 0; border-bottom: .2mm solid #eee; vertical-align: top; font-size: 7.6pt; }
+table.files td:first-child { font-family: "QS Mono", monospace; font-size: 7.2pt; white-space: nowrap; }
+.rel { display: flex; gap: 3mm; align-items: flex-start; }
+.rel svg { width: 19mm; height: 19mm; flex: none; margin-top: .6mm; }
+.qrrow { display: flex; gap: 3mm; margin-top: 1.2mm; }
+.qrrow div { flex: 1; text-align: center; }
+.qrrow svg { width: 16mm; height: 16mm; display: block; margin: 0 auto 1mm; }
+.qrrow b { display: block; font-size: 7.8pt; } .qrrow span { font-size: 6.4pt; color: #444; }
+.games { display: flex; gap: 2.4mm; } .games .game { flex: 1; margin: 1.4mm 0 1.6mm; padding: 1.8mm 2.4mm 1.4mm; }
+.games .game td { font-size: 7.6pt; padding-right: 1.6mm; }
+</style></head>
+<body>
+{{PAGES}}
+</body></html>
+
+<!-- ===================================================================== -->
+<template id="p1">
+<div class="in cover">
+  <div class="hue"></div>
+  <img class="logo" src="optica_logo_crop.svg" alt="Optica Technology Design">
+  <h1>Optic<span>OS</span> QuickStart</h1>
+  <p class="sub">Fuse on the Mac</p>
+  <figure><img class="shot" src="../img/boot.png" alt="The OpticOS start-up screen">
+  <figcaption>OpticOS starting up in the Fuse emulator (a real screen grab)</figcaption></figure>
+  <div class="folio" style="margin-top:auto"><span>Optica Technology Design</span><span>opticos • fuse for macos</span></div>
+</div>
+</template>
+
+<template id="p2">
+<div class="in" style="--c:#fe5308">
+  <div class="hue"></div>
+  <h1><small>Part 1</small>Setting up</h1>
+  <h2>1. Get OpticOS</h2>
+  <div class="rel">{{QR_REL}}<div>
+  <p>Download the latest release from GitHub:<br><b>github.com/brixham99/OpticOS/releases/latest</b></p>
+  <p class="note">Release v1.0.3 (14 November 2026) has these files:</p></div></div>
+  <table class="files">
+  <tr><td>opticos.rom</td><td>the OpticOS ROM (16 KB): the one you need</td></tr>
+  <tr><td>OpticOS_User_Manual.pdf</td><td>the full user manual</td></tr>
+  <tr><td>opticos_examples.tzx / .tap</td><td>the example tape (either works in Fuse)</td></tr>
+  <tr><td>spec.pdf</td><td>the technical specification</td></tr></table>
+  <p class="note">The games are in their own repositories (links on the back page): <span class="mono">happybat.tzx</span> from Happy Bat's releases, and <span class="mono">dino.tzx</span> from the ZX-Dino repository.</p>
+  <h2>2. Install Fuse for macOS</h2>
+  <p>Fuse for macOS 1.10.1 needs a Mac with Apple silicon and macOS 14.4 or later.</p>
+  <ol class="steps">
+  <li>Go to <b>fuse-for-macosx.sourceforge.io</b> and download <span class="mono">FuseForMacOS-1.10.1.zip</span>, or in Terminal type <code>brew install --cask fredm-fuse</code> <span class="note">(not <code>fuse</code>: that is a different app)</span>.</li>
+  <li>Double-click the zip, then drag <b>Fuse</b> from the <i>Fuse for macOS</i> folder into <b>Applications</b>.</li>
+  <li>Open Fuse. It is signed and notarised by its developer, so macOS just asks you once to confirm opening an app from the internet: click <b>Open</b>.</li>
+  </ol>
+  <h2>3. Make OpticOS the Spectrum's ROM</h2>
+  <ol class="steps">
+  <li>Keep <span class="mono">opticos.rom</span> somewhere it will stay, such as a folder in Documents (not inside the Fuse app).</li>
+  <li>Choose <b>Fuse &gt; Preferences…</b> (<kbd>⌘</kbd><kbd>,</kbd>; newer macOS may call it Settings…) and open the <b>ROM</b> pane. Set the ROM for <b>Spectrum 48K</b> to <span class="mono">opticos.rom</span>.</li>
+  <li>In the <b>Machine</b> pane choose <b>Spectrum 48K</b>.</li>
+  <li>Choose <b>Machine &gt; Hard Reset</b>. OpticOS starts, with a two-note chime.</li>
+  </ol>
+  <p class="note">Preferences &gt; General &gt; <i>Reset Preferences</i> puts Fuse back as it was. On Linux, start the Unix Fuse with <code>fuse --machine 48 --rom-48 opticos.rom</code>.</p>
+  <div class="folio"><span>2</span><span>OpticOS QuickStart: Fuse on the Mac</span></div>
+</div>
+</template>
+
+<template id="p3">
+<div class="in" style="--c:#0391ce">
+  <div class="hue"></div>
+  <h1><small>Part 2</small>Typing on a Mac</h1>
+  <p>Letters, numbers, <kbd>SPACE</kbd> and <kbd>return</kbd> (<kbd>ENTER</kbd>) work as normal. Type keywords letter by letter, in capitals or not. Wait for the chime to finish before you type.</p>
+  <table class="keys">
+  <tr><td><b>Spectrum key</b></td><td><b>On the Mac</b></td></tr>
+  <tr><td><kbd>CAPS SHIFT</kbd></td><td><kbd>shift</kbd></td></tr>
+  <tr><td><kbd>SYMBOL SHIFT</kbd></td><td><kbd>option</kbd> (or <kbd>⌘</kbd>, but ⌘ with O, B, J and others are Fuse menu shortcuts)</td></tr>
+  <tr><td><kbd>DELETE</kbd></td><td><kbd>delete</kbd></td></tr>
+  <tr><td><kbd>BREAK</kbd></td><td><kbd>shift</kbd>+<kbd>SPACE</kbd> (stops a program)</td></tr>
+  <tr><td><code>"</code> <code>:</code> <code>;</code> <code>+</code> <code>=</code></td><td>usually just type them; or <kbd>option</kbd> with <kbd>P</kbd> <kbd>Z</kbd> <kbd>O</kbd> <kbd>K</kbd> <kbd>L</kbd></td></tr>
+  <tr><td><code>*</code></td><td><kbd>option</kbd>+<kbd>B</kbd></td></tr></table>
+  <h2>Try these at the prompt</h2>
+<pre>] PRINT "Hello from OpticOS!"
+] PRINT 2 + 2
+] BORDER 1: PAPER 6: INK 1: CLS
+] PRINT "Blue on yellow"
+] BEEP 0.5, 7    <span class="c">a G for half a second</span></pre>
+  <div class="colours"><span style="background:#000;color:#fff">0 black</span><span style="background:#0000d8;color:#fff">1 blue</span><span style="background:#d80000;color:#fff">2 red</span><span style="background:#d800d8;color:#fff">3 magenta</span><span style="background:#00d800">4 green</span><span style="background:#00d8d8">5 cyan</span><span style="background:#d8d800">6 yellow</span><span style="background:#fff">7 white</span></div>
+  <h2>Your first program</h2>
+  <p>OpticBASIC has no line numbers. Type <code>AUTO</code> and the prompt becomes <code>+</code>: each line you type is added to the program. Press <kbd>return</kbd> on an empty line to finish.</p>
+<pre style="--c:#0391ce">] AUTO
++ FOR i = 1 TO 5
++ PRINT INK i; "OpticOS "; i
++ BEEP 0.1, i * 2       <span class="c">* is option+B</span>
++ NEXT
++                <span class="c">just return</span>
+] RUN            <span class="c">run it</span>
+] LIST           <span class="c">see it again, neatly indented</span></pre>
+  <p>RUN prints five lines in five colours, with a rising beep for each. <code>NEW</code> wipes the program and restarts OpticOS, just like switching on.</p>
+  <div class="folio"><span>OpticOS QuickStart: Fuse on the Mac</span><span>3</span></div>
+</div>
+</template>
+
+<template id="p4">
+<div class="in" style="--c:#8601af">
+  <div class="hue"></div>
+  <h1><small>Part 3</small>Loading tapes</h1>
+  <ol class="steps">
+  <li>Choose <b>File &gt; Open File…</b> (<kbd>⌘</kbd><kbd>O</kbd>) and pick a tape: <span class="mono">.tzx</span> or <span class="mono">.tap</span>.</li>
+  <li>Type <code>LOAD ""</code> and press <kbd>return</kbd>. With Fuse's standard settings the tape loads in a moment. If it doesn't start, choose <b>Media &gt; Tape &gt; Play</b>.</li>
+  </ol>
+  <p class="note">With <i>Auto-load media</i> on (the default), opening a tape restarts the Spectrum. OpticOS ignores Fuse's automatic typing, so you get a fresh <span class="mono">]</span> prompt and the tape waits for your <code>LOAD ""</code>. To open a tape without losing your program, set <b>Preferences &gt; General &gt; Auto-load media</b> to <i>Disabled</i>.</p>
+  <figure style="display:flex;gap:3mm;align-items:flex-end;margin-top:1.4mm"><img class="shot" style="width:52%" src="img/examples_menu.png" alt="The examples tape's menu in Fuse"><figcaption>The examples tape after <span class="mono">LOAD ""</span> in Fuse with its standard settings.</figcaption></figure>
+  <p><b>The examples tape</b> shows this menu. Then load one by name: <code>LOAD "tree"</code>, <code>RUN</code> (about 25 seconds), <code>LIST</code>. <b>The games</b> start by themselves.</p>
+  <h2 style="margin-top:2mm">Game controls</h2>
+  <div class="games">
+  <div class="game" style="--g:#66b032"><h2>Dino Run</h2><table>
+    <tr><td><kbd>SPACE</kbd> <kbd>Q</kbd> <kbd>7</kbd></td><td>jump (hold to go higher)</td></tr>
+    <tr><td><kbd>A</kbd> <kbd>6</kbd></td><td>duck</td></tr>
+    <tr><td><kbd>SPACE</kbd></td><td>start, or play again</td></tr></table>
+    <p class="note" style="margin:.8mm 0 0">Night falls at 700 points.</p></div>
+  <div class="game" style="--g:#fb9902"><h2>Happy Bat</h2><table>
+    <tr><td><kbd>SPACE</kbd></td><td>flap</td></tr>
+    <tr><td><kbd>shift</kbd>+<kbd>SPACE</kbd></td><td>BREAK: stop</td></tr></table>
+    <p class="note" style="margin:.8mm 0 0">Flap through the gaps in the pipes.</p></div>
+  </div>
+  <h2>Find out more</h2>
+  <div class="qrrow">
+    <div>{{QR_OPTICOS}}<b>OpticOS</b><span>github.com/brixham99/OpticOS</span></div>
+    <div>{{QR_DINO}}<b>Dino Run</b><span>github.com/brixham99/ZX-Dino</span></div>
+    <div>{{QR_BAT}}<b>Happy Bat</b><span>github.com/brixham99/happy-bat</span></div>
+  </div>
+  <div class="copy"><div class="hue" style="margin-bottom:2.4mm"></div><b>OpticOS (c) 2026 Optica Technology Design</b>
+  <p>Fuse and Fuse for macOS are free software by their own authors; "ZX Spectrum" and "Sinclair" belong to their owners. OpticOS is original clean-room work, not affiliated with any of them. Dino Run is a fan recreation of Google Chrome's dinosaur game, not affiliated with Google. Mac and macOS are trademarks of Apple Inc.</p></div>
+</div>
+</template>

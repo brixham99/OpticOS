@@ -1,5 +1,7 @@
 # OpticOS QuickStart for The Spectrum
 
+There is a second booklet in the same format for the Fuse emulator on a Mac: [fuse-mac/](fuse-mac).
+
 This is a four-page A5 booklet to go in the box with an OpticOS USB stick for The Spectrum (Retro Games, 2024). It prints on one A4 sheet, double-sided, and folds in half.
 
 | Page | Contents |
