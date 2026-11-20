@@ -114,7 +114,7 @@ Vicențiu Iordăchescu runs OpticOS on a [Cobra](https://cobrasov.org/), a real 
 
 ### The Spectrum (2024)
 
-A one-page [QuickStart sheet](docs/quickstart) (A5, PDF) covers this for people using an OpticOS USB stick. On The Spectrum from Retro Games, use the `.tzx` tapes: its instant `.tap` loading only works with ROMs it recognises, and pressing ENTER in Media select to auto-load does not work with OpticOS. In Media select pick the `.tzx` and press **M** (not ENTER), close the menu, type `LOAD ""`, then hold HOME and press Down to open the tape controller and press play. On Fuse and other emulators `.tap` files load as usual. See the manual, "Loading on The Spectrum (2024)".
+A four-page [QuickStart booklet](docs/quickstart) (one A4 sheet, printed double-sided and folded to A5) covers this for people using an OpticOS USB stick. On The Spectrum from Retro Games, use the `.tzx` tapes: its instant `.tap` loading only works with ROMs it recognises, and pressing ENTER in Media select to auto-load does not work with OpticOS. In Media select pick the `.tzx` and press **M** (not ENTER), close the menu, type `LOAD ""`, then hold HOME and press Down to open the tape controller and press play. On Fuse and other emulators `.tap` files load as usual. See the manual, "Loading on The Spectrum (2024)".
 
 ### Limoniter
 

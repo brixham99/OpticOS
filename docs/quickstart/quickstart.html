@@ -2,103 +2,169 @@
 <html lang="en-GB"><head><meta charset="utf-8"><title>OpticOS QuickStart for The Spectrum</title>
 <style>
 @font-face { font-family: "QS Sans"; font-weight: 400; src: url(../manual/fonts/Inter-Regular.ttf); }
+@font-face { font-family: "QS Sans"; font-weight: 400; font-style: italic; src: url(../manual/fonts/Inter-Italic.ttf); }
 @font-face { font-family: "QS Sans"; font-weight: 500; src: url(../manual/fonts/Inter-Medium.ttf); }
 @font-face { font-family: "QS Sans"; font-weight: 600; src: url(../manual/fonts/Inter-SemiBold.ttf); }
 @font-face { font-family: "QS Sans"; font-weight: 700; src: url(../manual/fonts/Inter-Bold.ttf); }
 @font-face { font-family: "QS Mono"; font-weight: 400; src: url(../manual/fonts/JetBrainsMono-Regular.ttf); }
 @font-face { font-family: "QS Mono"; font-weight: 700; src: url(../manual/fonts/JetBrainsMono-Bold.ttf); }
-/* {{BLEED}} is 0mm (trim) or 3mm (bleed); the trim box is always 148 x 210 mm (A5) */
-:root { --b: {{BLEED}}; --safe: 8mm; }
-@page { size: calc(148mm + 2 * var(--b)) calc(210mm + 2 * var(--b)); margin: 0; }
+@page { size: {{PAGESIZE}}; margin: 0; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
-body { width: calc(148mm + 2 * var(--b)); height: calc(210mm + 2 * var(--b)); position: relative; overflow: hidden;
-       font: 7.6pt/1.38 "QS Sans", sans-serif; color: #1a1a1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-/* the logo's twelve hues, as a band across the top and a thin one at the foot (both run into the bleed) */
-.hue { position: absolute; left: 0; right: 0; background: linear-gradient(90deg,
+body { font: 8.2pt/1.4 "QS Sans", sans-serif; color: #1a1a1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+/* an A4 side holds two A5 pages; the reader PDF has one A5 page per sheet */
+.sheet { width: 297mm; height: 210mm; display: flex; page-break-after: always; overflow: hidden; }
+.sheet:last-child, .pg.solo:last-child { page-break-after: auto; }
+.pg { width: 148.5mm; height: 210mm; position: relative; overflow: hidden; flex: none; }
+.pg.solo { page-break-after: always; }
+/* margins: 10 mm at the outer edges, 13 mm at the fold (both well over the 5 mm safe area) */
+.in { position: absolute; top: 10mm; bottom: 10mm; display: flex; flex-direction: column; }
+.pg.L .in { left: 10mm; right: 13mm; }      /* left half of the A4: the fold is on its right */
+.pg.R .in { left: 13mm; right: 10mm; }      /* right half: the fold is on its left */
+.hue { flex: none; height: 2.4mm; border-radius: 1.2mm; background: linear-gradient(90deg,
   #fe2712 0 8.33%, #fe5308 0 16.66%, #fb9902 0 25%, #fabc02 0 33.33%, #fefe33 0 41.66%, #d0ea2b 0 50%,
   #66b032 0 58.33%, #0391ce 0 66.66%, #0247fe 0 75%, #3d01a4 0 83.33%, #8601af 0 91.66%, #a7194b 0 100%); }
-.hue.top { top: 0; height: calc(var(--b) + 3.2mm); }
-.hue.foot { bottom: 0; height: calc(var(--b) + 1.6mm); }
-.page { position: absolute; left: calc(var(--b) + var(--safe)); top: calc(var(--b) + 3.2mm + 4.5mm);
-        width: calc(148mm - 2 * var(--safe)); height: calc(210mm - 3.2mm - 4.5mm - var(--safe) - 1mm); display: flex; flex-direction: column; }
-header { display: flex; align-items: center; justify-content: space-between; border-bottom: .35mm solid #1a1a1a; padding-bottom: 2.4mm; }
-header .logo { height: 15mm; }
-header .title { text-align: right; }
-header h1 { font-size: 19pt; font-weight: 700; margin: 0; letter-spacing: -.02em; line-height: 1; }
-header h1 span { color: #0247fe; }
-header p { margin: 1.2mm 0 0; font-size: 8.4pt; font-weight: 500; color: #444; }
-.intro { margin: 2.6mm 0 2mm; font-size: 8pt; }
-ol.steps { list-style: none; margin: 0; padding: 0; counter-reset: s; }
-ol.steps > li { counter-increment: s; position: relative; padding-left: 8.4mm; margin-bottom: 1.9mm; }
-ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: -.2mm; width: 5.8mm; height: 5.8mm; border-radius: 50%;
-  background: var(--c); color: #fff; font: 700 9pt/5.8mm "QS Sans"; text-align: center; }
-ol.steps > li:nth-child(1) { --c: #fe2712; } ol.steps > li:nth-child(2) { --c: #fb9902; }
-ol.steps > li:nth-child(3) { --c: #66b032; } ol.steps > li:nth-child(4) { --c: #0391ce; }
-ol.steps > li:nth-child(5) { --c: #8601af; }
-h2 { font-size: 9.4pt; font-weight: 700; margin: 0 0 .6mm; letter-spacing: -.005em; }
-p { margin: 0 0 1mm; }
-code, kbd, .mono { font-family: "QS Mono", monospace; font-size: 7.3pt; }
-kbd { display: inline-block; border: .25mm solid #888; border-bottom-width: .5mm; border-radius: .9mm; padding: 0 .9mm; line-height: 1.25;
-      background: #f6f6f6; font-weight: 700; font-size: 6.6pt; }
-code { background: #f1f1f1; padding: 0 .7mm; border-radius: .6mm; }
-.boot { display: flex; gap: 3mm; align-items: center; margin-top: 1mm; }
-.boot img { width: 58mm; border-radius: 1mm; display: block; }
-.boot p { font-size: 7.2pt; color: #333; margin: 0; }
-table.tapes { border-collapse: collapse; margin: .8mm 0 1mm; }
-table.tapes td { padding: .25mm 2.6mm .25mm 0; vertical-align: top; }
-table.tapes td:first-child { font-family: "QS Mono", monospace; font-size: 7.2pt; white-space: nowrap; }
-.note { color: #444; font-size: 7.1pt; }
-.games { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2mm; margin-top: 1mm; }
-.games div { border: .3mm solid #ccc; border-top: 1mm solid var(--c); border-radius: 1.2mm; padding: 1.4mm 1.8mm 1.2mm; font-size: 7pt; line-height: 1.33; }
-.games h3 { margin: 0 0 .7mm; font-size: 8.2pt; font-weight: 700; }
-.games p { margin: 0 0 .7mm; }
-.trouble { margin-top: 2.2mm; border-left: 1mm solid #fe2712; background: #fff4f0; padding: 1.6mm 2.4mm; font-size: 7.1pt; border-radius: 0 1mm 1mm 0; }
-.trouble p { margin: 0 0 .6mm; } .trouble p:last-child { margin: 0; }
-.links { margin-top: auto; padding-top: 2mm; display: flex; justify-content: space-between; gap: 2mm; }
-.links div { display: flex; gap: 1.8mm; align-items: center; width: 33%; }
-.links svg { width: 14mm; height: 14mm; flex: none; }
-.links b { display: block; font-size: 7.6pt; } .links span { font-size: 6.4pt; color: #444; }
-footer { margin-top: 2mm; font-size: 5.9pt; color: #666; line-height: 1.35; border-top: .25mm solid #ccc; padding-top: 1.2mm; }
+.folio { margin-top: auto; padding-top: 2mm; display: flex; justify-content: space-between; font-size: 6.6pt; color: #777; border-top: .25mm solid #ddd; }
+h1 { font-size: 15pt; font-weight: 700; margin: 4mm 0 1mm; letter-spacing: -.015em; line-height: 1.1; }
+h1 small { display: block; font-size: 7.4pt; font-weight: 600; letter-spacing: .22em; color: var(--c); text-transform: uppercase; margin-bottom: 1mm; }
+h2 { font-size: 9.6pt; font-weight: 700; margin: 2.8mm 0 .8mm; }
+p { margin: 0 0 1.4mm; }
+code, kbd, .mono { font-family: "QS Mono", monospace; }
+code { font-size: 7.8pt; background: #f1f1f1; padding: 0 .7mm; border-radius: .6mm; }
+kbd { display: inline-block; border: .25mm solid #888; border-bottom-width: .5mm; border-radius: .9mm; padding: 0 .9mm;
+      line-height: 1.25; background: #f6f6f6; font-weight: 700; font-size: 6.9pt; }
+pre { font: 7.8pt/1.38 "QS Mono", monospace; background: #f4f5f7; border-left: 1mm solid var(--c); border-radius: 0 1mm 1mm 0;
+      padding: 1.8mm 2.6mm; margin: 1mm 0 1.6mm; white-space: pre; }
+pre .c { color: #777; font-family: "QS Sans"; font-size: 7pt; }
+.note { color: #555; font-size: 7.4pt; }
+.tip { border-left: 1mm solid #fe2712; background: #fff4f0; padding: 1.8mm 2.6mm; border-radius: 0 1mm 1mm 0; font-size: 7.8pt; margin-top: 2.6mm; }
+.shot { display: block; width: 100%; border-radius: 1mm; }
+figure { margin: 1mm 0 1.4mm; } figcaption { font-size: 6.9pt; color: #666; font-style: italic; margin-top: .8mm; }
+ol.steps { list-style: none; padding: 0; margin: 1mm 0 0; counter-reset: s; }
+ol.steps li { counter-increment: s; position: relative; padding-left: 8mm; margin-bottom: 2.2mm; min-height: 6mm; }
+ol.steps li::before { content: counter(s); position: absolute; left: 0; top: -.3mm; width: 5.6mm; height: 5.6mm; border-radius: 50%;
+  background: var(--c); color: #fff; font: 700 8.6pt/5.6mm "QS Sans"; text-align: center; }
+table.tapes { border-collapse: collapse; margin: 1mm 0 .4mm; width: 100%; }
+table.tapes td { padding: .5mm 2mm .5mm 0; vertical-align: top; border-bottom: .2mm solid #eee; }
+table.tapes td:first-child { font-family: "QS Mono", monospace; font-size: 7.6pt; white-space: nowrap; }
+.colours { display: flex; gap: .6mm; margin: 1mm 0 1.4mm; }
+.colours span { flex: 1; text-align: center; font-size: 6.4pt; padding: .7mm 0; border-radius: .6mm; border: .2mm solid #ccc; }
+/* cover */
+.cover .in { justify-content: flex-start; }
+.cover .logo { width: 82mm; margin: 10mm auto 0; display: block; }
+.cover h1 { text-align: center; font-size: 26pt; margin: 12mm 0 1mm; letter-spacing: -.025em; }
+.cover h1 span { color: #0247fe; }
+.cover .sub { text-align: center; font-size: 12pt; font-weight: 500; color: #444; margin: 0 0 10mm; }
+.cover figure { margin: 0 6mm; }
+.cover figcaption { text-align: center; }
+/* back page */
+.game { border: .3mm solid #ccc; border-top: 1.2mm solid var(--g); border-radius: 1.4mm; padding: 2.2mm 3mm 1.6mm; margin: 2mm 0 2.6mm; }
+.game h2 { margin: 0 0 1mm; }
+.game table td { padding: .5mm 3mm .5mm 0; vertical-align: top; }
+.links { display: flex; flex-direction: column; gap: 2.4mm; margin-top: 1.6mm; }
+.links div { display: flex; gap: 3mm; align-items: center; }
+.links svg { width: 17mm; height: 17mm; flex: none; }
+.links b { display: block; font-size: 8.6pt; } .links span { font-size: 7.4pt; color: #444; }
+.copy { margin-top: auto; text-align: center; }
+.copy b { display: block; font-size: 8.6pt; margin-bottom: 1.2mm; }
+.copy p { font-size: 6.4pt; color: #777; line-height: 1.4; margin: 0; }
 </style></head>
 <body>
-<div class="hue top"></div><div class="hue foot"></div>
-<div class="page">
-<header>
-  <img class="logo" src="optica_logo_crop.svg" alt="Optica Technology Design">
-  <div class="title"><h1>Optic<span>OS</span> QuickStart</h1><p>for The Spectrum (Retro Games, 2024)</p></div>
-</header>
-<p class="intro">Welcome! This USB stick turns The Spectrum into an OpticOS machine, with structured OpticBASIC and two games to try. Five steps from the box to playing:</p>
-<ol class="steps">
-<li><h2>Plug in and switch on</h2>
-  <p>Plug the OpticOS USB stick into The Spectrum and switch on. It starts straight into OpticOS:</p>
-  <div class="boot"><img src="boot_top.png" alt="The OpticOS start-up screen">
-  <p>Colour bars across the top, then <b>OpticOS (c) 2026 Optica Technology Design</b>, the OpticBASIC version, and the <span class="mono"><b>]</b></span> prompt, ready for you to type.</p></div></li>
-<li><h2>Choose a tape</h2>
-  <p>Press <kbd>HOME</kbd> and choose <b>Media select</b>. Pick a <b>.tzx</b> tape and press <kbd>M</kbd> to put it in the tape player (not <kbd>ENTER</kbd>):</p>
-  <table class="tapes">
-  <tr><td>opticos_examples.tzx</td><td>the OpticBASIC examples, with a menu</td></tr>
-  <tr><td>happybat.tzx</td><td>Happy Bat, a flappy-bat game</td></tr>
-  <tr><td>dino.tzx</td><td>Dino Run, a dinosaur runner game</td></tr></table></li>
-<li><h2>Type LOAD ""</h2>
-  <p>Close the menu to go back to OpticOS. Type <code>LOAD ""</code> and press <kbd>ENTER</kbd>. <span class="note">(The " mark is <kbd>SYMBOL SHIFT</kbd> + <kbd>P</kbd>.)</span></p></li>
-<li><h2>Start the tape</h2>
-  <p>Hold <kbd>HOME</kbd> and press <kbd>6</kbd> (Down) to open the tape controls, then press <b>Play</b>. The border flashes red and black, then magenta and green, while it loads. <span class="note">Tip: the <i>Tape loading speed</i> setting makes it quicker.</span></p></li>
-<li><h2>Play!</h2>
-  <div class="games">
-  <div style="--c:#66b032"><h3>Dino Run</h3><p>Starts by itself.</p><p><kbd>SPACE</kbd>, <kbd>Q</kbd> or <kbd>7</kbd> jump (hold for higher)<br><kbd>A</kbd> or <kbd>6</kbd> duck<br><kbd>SPACE</kbd> to start again</p></div>
-  <div style="--c:#fb9902"><h3>Happy Bat</h3><p>Starts by itself.</p><p><kbd>SPACE</kbd> flap<br><kbd>BREAK</kbd> stop<br><span class="note">(BREAK is CAPS SHIFT + SPACE)</span></p></div>
-  <div style="--c:#0247fe"><h3>OpticBASIC</h3><p>The examples menu appears by itself. Leave the tape playing, type <code>LOAD "tree"</code>, then <code>RUN</code> to draw a recursive tree. <code>LIST</code> shows how it works.</p></div>
-  </div></li>
-</ol>
-<div class="trouble">
-  <p><b>Not loading?</b> Use the <b>.tzx</b> tapes: <b>.tap</b> files don't load on The Spectrum under OpticOS, and nor does pressing <kbd>ENTER</kbd> in Media select. Choose the tape with <kbd>M</kbd>, type <code>LOAD ""</code> first, then press Play.</p>
-</div>
-<div class="links">
-  <div>{{QR_OPTICOS}}<p><b>OpticOS manual</b><span>github.com/brixham99/<br>OpticOS</span></p></div>
-  <div>{{QR_DINO}}<p><b>Dino Run</b><span>github.com/brixham99/<br>ZX-Dino</span></p></div>
-  <div>{{QR_BAT}}<p><b>Happy Bat</b><span>github.com/brixham99/<br>happy-bat</span></p></div>
-</div>
-<footer>OpticOS and OpticBASIC © 2026 Optica Technology Design. The Spectrum is made by Retro Games Ltd; "ZX Spectrum" and "Sinclair" belong to their owners. OpticOS is original clean-room work, not affiliated with them. Dino Run is a fan recreation of Google Chrome's dinosaur game, not affiliated with Google.</footer>
-</div>
+{{PAGES}}
 </body></html>
+
+<!-- ===================================================================== -->
+<template id="p1">
+<div class="in cover">
+  <div class="hue"></div>
+  <img class="logo" src="optica_logo_crop.svg" alt="Optica Technology Design">
+  <h1>Optic<span>OS</span> QuickStart</h1>
+  <p class="sub">for The Spectrum</p>
+  <figure><img class="shot" src="img/boot.png" alt="The OpticOS start-up screen">
+  <figcaption>The OpticOS start-up screen (a real grab from the Fuse emulator)</figcaption></figure>
+  <div class="folio" style="margin-top:auto"><span>Optica Technology Design</span><span>opticos • the spectrum</span></div>
+</div>
+</template>
+
+<template id="p2">
+<div class="in" style="--c:#fe5308">
+  <div class="hue"></div>
+  <h1><small>Part 1</small>Getting started</h1>
+  <ol class="steps" style="--c:#fe5308">
+  <li><b>Plug the OpticOS USB stick into The Spectrum and switch on.</b> It boots straight into OpticOS: the colour bars, <span class="mono">OpticOS (c) 2026 Optica Technology Design</span>, the OpticBASIC version and the <span class="mono"><b>]</b></span> prompt. Wait for the two-note chime to finish before you type.</li>
+  <li><b>Type a line and press <kbd>ENTER</kbd></b> to run it. Type keywords letter by letter, in capitals or not. <kbd>SYMBOL SHIFT</kbd> gives the red symbols: <code>"</code> is <kbd>SYMBOL SHIFT</kbd>+<kbd>P</kbd>, <code>:</code> is <kbd>SYMBOL SHIFT</kbd>+<kbd>Z</kbd>.</li>
+  </ol>
+  <h2>Try these at the prompt</h2>
+<pre>] PRINT "Hello from OpticOS!"
+] PRINT 2 + 2
+] BORDER 1: PAPER 6: INK 1: CLS
+] PRINT "Blue on yellow"
+] BEEP 0.5, 7    <span class="c">a G for half a second</span></pre>
+  <div class="colours"><span style="background:#000;color:#fff">0 black</span><span style="background:#0000d8;color:#fff">1 blue</span><span style="background:#d80000;color:#fff">2 red</span><span style="background:#d800d8;color:#fff">3 magenta</span><span style="background:#00d800">4 green</span><span style="background:#00d8d8">5 cyan</span><span style="background:#d8d800">6 yellow</span><span style="background:#fff">7 white</span></div>
+  <h2>Your first program</h2>
+  <p>OpticBASIC has no line numbers. Type <code>AUTO</code> and the prompt becomes <code>+</code>: each line you type is added to the program. Press <kbd>ENTER</kbd> on an empty line to finish.</p>
+<pre>] AUTO
++ FOR i = 1 TO 5
++ PRINT INK i; "OpticOS "; i
++ BEEP 0.1, i * 2
++ NEXT
++                <span class="c">just ENTER</span>
+] RUN            <span class="c">run it</span>
+] LIST           <span class="c">see it again, neatly indented</span></pre>
+  <figure style="display:flex;gap:3mm;align-items:flex-end"><img class="shot" style="width:46%" src="img/prog_run_top.png" alt="The program and its output in Fuse"><figcaption>The program, then RUN, typed into the Fuse emulator: five lines in five colours, with a rising beep for each.</figcaption></figure>
+  <p><code>NEW</code> wipes the program and restarts OpticOS, just like switching on. <kbd>BREAK</kbd> (<kbd>CAPS SHIFT</kbd>+<kbd>SPACE</kbd>) stops a running program.</p>
+  <div class="folio"><span>2</span><span>OpticOS QuickStart</span></div>
+</div>
+</template>
+
+<template id="p3">
+<div class="in" style="--c:#0391ce">
+  <div class="hue"></div>
+  <h1><small>Part 2</small>Loading tapes</h1>
+  <p>Games and programs come as tape files on the USB stick. The Spectrum plays them into OpticOS just like a real cassette.</p>
+  <ol class="steps" style="--c:#0391ce">
+  <li>Press <kbd>HOME</kbd> and choose <b>Media select</b>.</li>
+  <li>Pick a <b>.tzx</b> tape and press <kbd>M</kbd> to put it in the tape player (not <kbd>ENTER</kbd>):
+    <table class="tapes">
+    <tr><td>opticos_examples.tzx</td><td>OpticBASIC examples, with a menu</td></tr>
+    <tr><td>happybat.tzx</td><td>Happy Bat</td></tr>
+    <tr><td>dino.tzx</td><td>Dino Run</td></tr></table></li>
+  <li>Close the menu to go back to OpticOS.</li>
+  <li>Type <code>LOAD ""</code> and press <kbd>ENTER</kbd>.</li>
+  <li>Hold <kbd>HOME</kbd> and press <kbd>6</kbd> (Down) to open the tape controls, then press <b>Play</b>.</li>
+  </ol>
+  <p>The border flashes red and black, then magenta and green, while the tape loads. <span class="note">The <i>Tape loading speed</i> setting makes it quicker.</span></p>
+  <h2>What happens next</h2>
+  <p><b>Happy Bat</b> and <b>Dino Run</b> start by themselves once they have loaded (controls on the back page).</p>
+  <p><b>The examples tape</b> shows its menu by itself. Leave the tape playing, then load one by name, for example the recursive tree:</p>
+<pre style="--c:#0391ce">] LOAD "tree"
+] RUN            <span class="c">draws a tree (about 25 seconds)</span>
+] LIST           <span class="c">see how it works</span></pre>
+  <div class="tip"><b>Tip: use the .tzx tapes.</b> <b>.tap</b> files don't load under OpticOS on The Spectrum, and nor does pressing <kbd>ENTER</kbd> in Media select. Choose the tape with <kbd>M</kbd>, type <code>LOAD ""</code>, then press Play.</div>
+  <div class="folio"><span>OpticOS QuickStart</span><span>3</span></div>
+</div>
+</template>
+
+<template id="p4">
+<div class="in">
+  <div class="hue"></div>
+  <h1><small style="color:#8601af">Play</small>Game controls</h1>
+  <div class="game" style="--g:#66b032"><h2>Dino Run</h2><table>
+    <tr><td><kbd>SPACE</kbd>, <kbd>Q</kbd> or <kbd>7</kbd></td><td>jump (hold for a higher jump)</td></tr>
+    <tr><td><kbd>A</kbd> or <kbd>6</kbd></td><td>duck</td></tr>
+    <tr><td><kbd>SPACE</kbd></td><td>start, or start again after GAME OVER</td></tr></table>
+    <p class="note" style="margin:1mm 0 0">Jump the cacti, and duck or jump the pterodactyls. Night falls at 700 points.</p></div>
+  <div class="game" style="--g:#fb9902"><h2>Happy Bat</h2><table>
+    <tr><td><kbd>SPACE</kbd></td><td>flap</td></tr>
+    <tr><td><kbd>BREAK</kbd></td><td>stop (<kbd>CAPS SHIFT</kbd>+<kbd>SPACE</kbd>)</td></tr></table>
+    <p class="note" style="margin:1mm 0 0">Flap through the gaps in the pipes.</p></div>
+  <h2>Find out more</h2>
+  <div class="links">
+    <div>{{QR_OPTICOS}}<p><b>OpticOS and the user manual</b><span>github.com/brixham99/OpticOS</span></p></div>
+    <div>{{QR_DINO}}<p><b>Dino Run</b><span>github.com/brixham99/ZX-Dino</span></p></div>
+    <div>{{QR_BAT}}<p><b>Happy Bat</b><span>github.com/brixham99/happy-bat</span></p></div>
+  </div>
+  <div class="copy"><div class="hue" style="margin-bottom:2.4mm"></div><b>OpticOS (c) 2026 Optica Technology Design</b>
+  <p>The Spectrum is made by Retro Games Ltd; "ZX Spectrum" and "Sinclair" belong to their owners. OpticOS is original clean-room work, not affiliated with them. Dino Run is a fan recreation of Google Chrome's dinosaur game, not affiliated with Google.</p></div>
+</div>
+</template>
