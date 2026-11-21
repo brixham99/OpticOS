@@ -803,7 +803,7 @@ GLYPHS: dict[str, tuple[str, ...]] = {
         "....",
         "....",
         "###.",
-        "#.#.",
+        "###.",
         "#.#.",
         "#.#.",
         "....",
@@ -1115,7 +1115,7 @@ FRAME_W, FRAME_H = SCREEN_W + 2 * BORDER_X, SCREEN_H + 2 * BORDER_Y
 BANNER = "OpticOS (c) 2026 Optica Technology Design"
 BANNER_ROW = 2
 BANNER_COL = 0
-BANNER2 = "OpticBASIC v1.0.1"
+BANNER2 = "OpticBASIC v1.0.3"
 BANNER2_ROW = 3
 PROMPT = "] "          # OpticOS direct-mode prompt
 PROMPT_ROW = 5

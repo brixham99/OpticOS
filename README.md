@@ -200,6 +200,12 @@ The artwork is original. The idea of a 64-column Spectrum display comes from Tas
 | [`font/make_font.py`](font/make_font.py) | Regenerates the font files and the boot mock-up |
 | [`assets/font_sheet.png`](assets/font_sheet.png) | A labelled sheet of all 96 glyphs |
 
+Lower-case `m` has a short middle stem under its top bar, so it no longer looks like `n` (rows 2–5: `###`, `###`, `#.#`, `#.#`; it was `###`, `#.#`, `#.#`, `#.#`). Fuse, before and after:
+
+| Before | After |
+|---|---|
+| ![m before](docs/font/font_m_before.png) | ![m after](docs/font/font_m_after.png) |
+
 ## What is not in this repository
 
 A Sinclair `48.rom` image is **not** included, and never will be. If a later test rig needs one as a behavioural reference, you must supply your own and keep it out of the tree (`roms/` and `*.rom` are gitignored).
