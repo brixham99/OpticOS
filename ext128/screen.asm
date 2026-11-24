@@ -32,83 +32,48 @@
 ; (cy & 7) << 5 | cx, which is also the cell's screen low byte.  SCREEN 2
 ; uses page k = 0 only.
 ; =====================================================================
-        include "os.inc"        ; OpticOS addresses (from build/opticos.sym)
 
-CH_ADD  equ $5C5D
 ATTR_P  equ $5C8D
 SMODE   equ $5CA0
+COORDS  equ $5C7D
+T_TO    equ $BD
 VID     equ $5BE0
 HDRBUF  equ $5B50
-TRAMP   equ HDRBUF
-TR_N0   equ TRAMP+2
-TR_T    equ TRAMP+10
-TR_N1   equ TRAMP+13
+STRAMP  equ HDRBUF
+STR_N0  equ STRAMP+2
+STR_T   equ STRAMP+10
+STR_N1  equ STRAMP+13
+
+; unpaged scratch for DRAW / BOX (free MEMBOT after SMODE, before NMIADD)
+LN_X0   equ $5CA1              ; start x, y (2)
+LN_X1   equ $5CA3              ; end x, y (2)
+BX_W    equ $5CA5
+BX_H    equ $5CA6
 
 FBP     equ $DC
 DFLP    equ $E8
 LIST0   equ $EB00
 LIST1   equ $F200
 VARS    equ $F900
-lp0     equ VARS                ; list ends
+lp0     equ VARS
 lp1     equ VARS+2
-b7sp    equ VARS+4              ; OpticOS's SP while we are in bank 7
-FRAMES  equ $5C78
-pcol    equ VARS+6              ; colour for PLOT / CLS
-rbase   equ VARS+7              ; render: screen base ($40 / $C0)
-rmask   equ VARS+8              ; render: dirty bit (1 / 2)
-mode    equ VARS+9              ; 1 or 2
-B7STK   equ $0000               ; top of bank 7
+b7sp    equ VARS+4
+pcol    equ VARS+6
+rbase   equ VARS+7
+rmask   equ VARS+8
+mode    equ VARS+9
+B7STK   equ $0000
+rd_end  equ VARS+10
+LN_CUR  equ VARS+12            ; current x (B) and row low (C) during a line
+MSXY    equ VARS+14            ; major step x, y
+NSXY    equ VARS+16            ; minor step x, y
+LN_RHI  equ VARS+18            ; high byte of the signed 16-bit row
 
-        org $0000               ; RST 0 while this ROM is paged: boot OpticOS
-        di
-        ld bc,$7FFD
-        xor a
-        ld de,$FFFF
-        jp OS_boot-2
-        org $0038               ; IM 1 while this ROM is paged (SCREEN FLIP's HALT):
-        push af                 ; FRAMES still counts (no keyboard scan here)
-        push hl
-        ld hl,FRAMES
-        inc (hl)
-        jr nz,im_x
-        inc l
-        inc (hl)
-        jr nz,im_x
-        inc l
-        inc (hl)
-im_x:   pop hl
-        pop af
-        ei
-        ret
-        org OS_boot-2
-        out (c),a
-        org OS_ext_back-2
-ret_os: out (c),a               ; back to OpticOS: next fetch is its ext_back
-        jp ext_stmt
-        org OS_xgo+10
-ret_x:  out (c),a               ; back to OpticOS at x_back (RET)
-        jp ext_x
-        org OS_x_rst+5
-        ret                     ; the way back from a call into OpticOS
-
-        org $1000
 ; ---------------------------------------------------------------- entry
-; ext_stmt: a statement name that is not a PROC
-ext_stmt:
-        ld hl,(CH_ADD)          ; $01 type hash length name
-        inc hl
-        inc hl
-        inc hl
-        ld de,n_screen
-        call namecmp
-        jr z,es_scr
-        ld a,(SMODE)            ; not ours: OpticOS's "No such PROC or FN"
-        and 8
-        ld bc,$7FFD
-        scf
-        jp ret_os
+; es_scr / es_box are reached from the merged ROM's ext_main once the name
+; has been matched.  ext_x is reached from OpticOS's xgo (E = 0/1/2/3).
 es_scr: call tr_set
-        call far
+        call sfar
         dw OS_id_skip           ; step over SCREEN
         ld hl,(CH_ADD)
         ld a,(hl)
@@ -120,13 +85,13 @@ es_scr: call tr_set
         ld de,n_flip
         call namecmp
         jp nz,os_syn
-        call far
+        call sfar
         dw OS_id_skip
         call flip
         jp back_ok
-es_n:   call far                ; SCREEN n
+es_n:   call sfar                ; SCREEN n
         dw OS_ev_expr
-        call far
+        call sfar
         dw OS_pop_int
         ld a,d
         or a
@@ -139,7 +104,7 @@ es_n:   call far                ; SCREEN n
         xor a                   ; SCREEN 0: screen 5, then OpticOS's CLS
         ld (SMODE),a
         call tr_set
-        call far
+        call sfar
         dw OS_CLS
         jp back_ok
 es_12:  ld (SMODE),a            ; SCREEN 1 / 2: screen 5 on show, PLOT shows at once
@@ -158,38 +123,41 @@ back_ok: or a                   ; NC: done
 back:   ld a,(SMODE)            ; ROM 0, RAM bank 0, the screen on show
         and 8
         ld bc,$7FFD
-        jp ret_os
+        jp OS_ext_back-2
 
 ; ext_x: E = 0 PLOT, 1 CLS (SCREEN 1/2 only), 2 a name used as a function
 ext_x:  ld a,e
         cp 2
         jp z,x_fn
+        cp 3
+        jp z,x_draw
         call tr_set
         ld a,e
         or a
         jr nz,x_cls
-        call far                ; PLOT x, y [, c]
+        call sfar                ; PLOT x, y [, c]
         dw OS_ev_expr
-        call far
+        call sfar
         dw OS_pop_int
         push de
         ld a,','
         call expect
-        call far
+        call sfar
         dw OS_ev_expr
-        call far
+        call sfar
         dw OS_pop_int
         push de
         call ink_col
+        ld e,a
         ld hl,(CH_ADD)
         ld a,(hl)
         cp ','
         jr nz,xp_c
         inc hl
         ld (CH_ADD),hl
-        call far
+        call sfar
         dw OS_ev_expr
-        call far
+        call sfar
         dw OS_pop_int
         ld a,d
         or a
@@ -197,11 +165,15 @@ ext_x:  ld a,e
         ld a,e
         cp 16
         jp nc,os_rng
-        ld h,e
         jr xp_d
-xp_c:   ld h,a                  ; H = colour
-xp_d:   pop de                  ; y
+xp_c:   ld a,e                  ; A = INK + 8 * BRIGHT
+xp_d:   ld h,a                  ; H = colour
+        pop de                  ; y
         pop bc                  ; x
+        ld a,c
+        ld (COORDS),a
+        ld a,e
+        ld (COORDS+1),a
         push hl
         call xy_chk             ; -> B = x, C = row from the top (or error)
         pop de                  ; D = colour
@@ -209,6 +181,7 @@ xp_d:   pop de                  ; y
         call plot
         call auto_show
         call b7_out
+        call chkbrk
         jp back_ok
 x_cls:  call paper_col          ; CLS
         ld d,a
@@ -216,6 +189,7 @@ x_cls:  call paper_col          ; CLS
         call fill
         call auto_show
         call b7_out
+        call chkbrk
         jp back_ok
 
 ; x_fn: POINT(x, y)?  VID = $01 type hash length name
@@ -230,20 +204,20 @@ x_fn:   ld hl,(VID)
         and 8
         or $10
         ld bc,$7FFD
-        jp ret_x
+        jp OS_xgo+10
 xf_pt:  call tr_set
         ld a,'('
         call expect
-        call far
+        call sfar
         dw OS_ev_expr
-        call far
+        call sfar
         dw OS_pop_int
         push de
         ld a,','
         call expect
-        call far
+        call sfar
         dw OS_ev_expr
-        call far
+        call sfar
         dw OS_pop_int
         push de
         ld a,')'
@@ -283,7 +257,7 @@ xf_c:   call xy_chk
         out (c),a               ; (bank 0, ROM 1 again)
         ei
 xf_p:   ld d,0
-        call far
+        call sfar
         dw OS_push_u
         pop hl                  ; drop xfn's return (it would raise the error)
         jp back_ok
@@ -293,20 +267,20 @@ xf_p:   ld d,0
 tr_set: push hl
         push de
         push bc
-        ld hl,tr_code
-        ld de,TRAMP
+        ld hl,str_code
+        ld de,STRAMP
         ld bc,17
         ldir
         ld a,(SMODE)
         and 8
-        ld (TR_N0),a
+        ld (STR_N0),a
         or $10
-        ld (TR_N1),a
+        ld (STR_N1),a
         pop bc
         pop de
         pop hl
         ret
-tr_code: push af                ; ROM 0 (same RAM bank and screen) ...
+str_code: push af                ; ROM 0 (same RAM bank and screen) ...
         ld a,0
         ld bc,$7FFD
         out (c),a
@@ -316,19 +290,19 @@ tr_code: push af                ; ROM 0 (same RAM bank and screen) ...
         jp OS_x_rst             ; ... and ROM 1 back via OpticOS's OUT and our RET
 ; far: call the OpticOS routine whose address follows the CALL (A, DE, HL
 ; and the flags pass both ways, except that A is lost on the way back)
-far:    ex (sp),hl
+sfar:    ex (sp),hl
         push de
         ld e,(hl)
         inc hl
         ld d,(hl)
         inc hl
-        ld (TR_T),de
+        ld (STR_T),de
         pop de
         ex (sp),hl
-        jp TRAMP
-os_rng: call far
+        jp STRAMP
+os_rng: call sfar
         dw OS_err_rng
-os_syn: call far
+os_syn: call sfar
         dw OS_err_syn
 ; expect: A = the token that must come next
 expect: ld hl,(CH_ADD)
@@ -336,17 +310,6 @@ expect: ld hl,(CH_ADD)
         jp nz,os_syn
         inc hl
         ld (CH_ADD),hl
-        ret
-; namecmp: HL = identifier length byte, DE = length-prefixed name; Z if equal
-namecmp: ld a,(de)
-        ld b,a
-        inc b
-nc_lp:  ld a,(de)
-        cp (hl)
-        ret nz
-        inc de
-        inc hl
-        djnz nc_lp
         ret
 ; ink_col / paper_col: the colour from ATTR_P (+ 8 for BRIGHT) -> pc_hold
 ink_col: ld a,(ATTR_P)
@@ -483,6 +446,7 @@ b7_in:  pop hl                  ; (D = colour for PLOT / CLS; BC, DE kept)
         pop bc
         jp (hl)
 b7_out: pop hl
+        di
         ld sp,(b7sp)
         ld a,(SMODE)
         and 8
@@ -785,15 +749,439 @@ fp_w:   ei
         out (c),a
         call b7_out
         ret
-rd_end  equ VARS+10
+
+
+; DRAW [TO] x, y [,c]: a Bresenham line from COORDS, in this mode's coordinates
+x_draw: call tr_set
+        ld hl,(COORDS)
+        ld (LN_X0),hl
+        ld hl,(CH_ADD)
+        ld a,(hl)
+        cp T_TO
+        jr z,xd_to
+        call sfar
+        dw OS_ev_expr
+        call sfar
+        dw OS_pop_int
+        push de
+        ld a,','
+        call expect
+        call sfar
+        dw OS_ev_expr
+        call sfar
+        dw OS_pop_int
+        pop bc
+        ld hl,(LN_X0)
+        ld a,l
+        add a,c
+        ld c,a
+        ld a,0
+        adc a,b
+        jp nz,os_rng
+        ld b,a
+        ld a,h
+        add a,e
+        ld e,a
+        ld a,0
+        adc a,d
+        jp nz,os_rng
+        ld d,a
+        jr xd_got
+xd_to:  inc hl
+        ld (CH_ADD),hl
+        call sfar
+        dw OS_ev_expr
+        call sfar
+        dw OS_pop_int
+        push de
+        ld a,','
+        call expect
+        call sfar
+        dw OS_ev_expr
+        call sfar
+        dw OS_pop_int
+        pop bc
+xd_got: ld a,b
+        or d
+        jp nz,os_rng
+        ld a,c
+        ld (LN_X1),a
+        ld a,e
+        ld (LN_X1+1),a
+        call ink_col
+        ld e,a
+        ld hl,(CH_ADD)
+        ld a,(hl)
+        cp ','
+        jr nz,xd_c
+        inc hl
+        ld (CH_ADD),hl
+        call sfar
+        dw OS_ev_expr
+        call sfar
+        dw OS_pop_int
+        ld a,d
+        or a
+        jp nz,os_rng
+        ld a,e
+        cp 16
+        jp nc,os_rng
+        ld e,a
+xd_c:   ld a,(LN_X1)
+        ld (COORDS),a
+        ld a,(LN_X1+1)
+        ld (COORDS+1),a
+        ld d,e
+        call b7_in
+        call lineto
+        call auto_show
+        call b7_out
+        call chkbrk
+        jp back_ok
+
+; BOX x, y, w, h [,c]: filled rectangle, (x,y) the bottom-left, w by h pixels
+es_box: call tr_set
+        call sfar
+        dw OS_id_skip
+        call sfar
+        dw OS_ev_expr
+        call sfar
+        dw OS_pop_int
+        push de
+        ld a,','
+        call expect
+        call sfar
+        dw OS_ev_expr
+        call sfar
+        dw OS_pop_int
+        push de
+        ld a,','
+        call expect
+        call sfar
+        dw OS_ev_expr
+        call sfar
+        dw OS_pop_int
+        push de
+        ld a,','
+        call expect
+        call sfar
+        dw OS_ev_expr
+        call sfar
+        dw OS_pop_int
+        push de
+        call ink_col
+        ld e,a
+        ld hl,(CH_ADD)
+        ld a,(hl)
+        cp ','
+        jr nz,xb_c
+        inc hl
+        ld (CH_ADD),hl
+        call sfar
+        dw OS_ev_expr
+        call sfar
+        dw OS_pop_int
+        ld a,d
+        or a
+        jp nz,os_rng
+        ld a,e
+        cp 16
+        jp nc,os_rng
+        ld e,a
+xb_c:   pop bc
+        ld a,b
+        or a
+        jp nz,os_rng
+        ld a,c
+        or a
+        jp z,os_rng
+        ld (BX_H),a
+        pop bc
+        ld a,b
+        or a
+        jp nz,os_rng
+        ld a,c
+        or a
+        jp z,os_rng
+        ld (BX_W),a
+        pop hl
+        pop bc
+        ld a,b
+        or h
+        jp nz,os_rng
+        ld a,c
+        ld (COORDS),a
+        ld a,l
+        ld (COORDS+1),a
+        ld d,e                  ; colour (b7_in stores it in pcol)
+        ld e,l                  ; E = y; C = x, both kept across b7_in
+        call b7_in
+        call boxfill
+        call auto_show
+        call b7_out
+        call chkbrk
+        jp back_ok
+
+; lineto: Bresenham from (LN_X0) to (LN_X1).  Off-screen pixels are skipped.
+lineto: ld a,(LN_X0)
+        ld b,a
+        ld a,(LN_X0+1)
+        ld e,a
+        call ytotop             ; B=x, C=rowl, A=rowh (signed 16-bit)
+        ld (LN_CUR),bc
+        ld (LN_RHI),a
+        ld a,(LN_X1)
+        ld b,a
+        ld a,(LN_X1+1)
+        ld e,a
+        call ytotop
+        ld e,c
+        ld d,a                  ; DE = end row (signed 16)
+        push de
+        ld hl,(LN_CUR)          ; L=row0l, H=x0
+        ld a,b
+        sub h                   ; |dx| = x1 - x0
+        ld b,1
+        jr nc,ln_xs
+        neg
+        ld b,-1
+ln_xs:  ld d,a                  ; D = |dx|
+        or a
+        jr nz,ln_xd
+        ld b,0                  ; sx = 0 when dx = 0
+ln_xd:  pop hl                  ; HL = end row
+        push de                 ; save |dx| (D) — E is scratch
+        push bc                 ; save sx (B)
+        ld a,(LN_RHI)
+        ld d,a
+        ld a,(LN_CUR)           ; row0l (LN_CUR is stored C then B)
+        ld e,a
+        or a
+        sbc hl,de               ; HL = end row - start row = drow
+        pop bc                  ; B = sx
+        ld a,h
+        or a
+        jr z,ln_yp              ; drow >= 0 (fits in 8 bits)
+        ld a,l
+        neg
+        ld e,a
+        ld c,-1
+        jr ln_yd
+ln_yp:  ld a,l
+        ld e,a
+        ld c,1
+        or a
+        jr nz,ln_yd
+        ld c,0                  ; sy = 0 when drow = 0
+ln_yd:  pop hl
+        ld d,h                  ; D = |dx|, E = |drow|, B = sx, C = sy
+        ld a,d
+        cp e
+        jr c,ln_ym
+        ld a,b
+        ld (MSXY),a
+        xor a
+        ld (MSXY+1),a
+        xor a
+        ld (NSXY),a
+        ld a,c
+        ld (NSXY+1),a
+        jr ln_go
+ln_ym:  ld a,c
+        ld (MSXY+1),a
+        xor a
+        ld (MSXY),a
+        ld a,b
+        ld (NSXY),a
+        xor a
+        ld (NSXY+1),a
+        ld a,d
+        ld d,e
+        ld e,a
+; error lives in C and is saved around any use of BC as (x, row).
+ln_go:  ld bc,(LN_CUR)
+        push de
+        call plot_cl
+        pop de
+        ld a,d
+        or a
+        ret z
+        ld b,d
+        srl a
+        ld c,a                  ; C = error = major/2
+ln_lp:  ld a,c
+        add a,e                 ; err += minor
+        jr c,ln_ge
+        cp d
+        jr c,ln_maj
+ln_ge:  sub d
+        ld c,a
+        push bc
+        ld bc,(LN_CUR)
+        ld hl,NSXY
+        call ln_add
+        ld (LN_CUR),bc
+        pop bc
+        ld a,c
+ln_maj: ld c,a
+        push bc
+        ld bc,(LN_CUR)
+        ld hl,MSXY
+        call ln_add
+        ld (LN_CUR),bc
+        push de
+        call plot_cl
+        pop de
+        pop bc
+        djnz ln_lp
+        ret
+
+; ln_add: BC += (HL) as x and signed drow; the 16-bit row at LN_CUR/LN_RHI
+; is updated (C is the new low byte, LN_RHI the high).  A is kept.
+ln_add: push af
+        ld a,b
+        add a,(hl)
+        ld b,a
+        inc hl
+        push de
+        ld a,(hl)               ; signed step in row
+        ld e,a
+        rla
+        sbc a,a
+        ld d,a
+        ld a,(LN_CUR)           ; current row low (C will match)
+        ld l,a
+        ld a,(LN_RHI)
+        ld h,a
+        add hl,de
+        ld a,l
+        ld (LN_CUR),a
+        ld c,a
+        ld a,h
+        ld (LN_RHI),a
+        pop de
+        pop af
+        ret
+
+; boxfill: C = x, E = y (bottom-left); BX_W, BX_H set.  Clipped to the mode.
+boxfill:
+        ld a,(SMODE)
+        and 3
+        cp 1
+        ld d,63
+        ld h,47
+        jr z,bf_lim
+        ld d,31
+        ld h,23
+bf_lim: ld a,c
+        cp d
+        jr z,bf_xs
+        ret nc
+bf_xs:  ld b,a
+        ld a,(BX_W)
+        dec a
+        add a,b
+        jr c,bf_xc
+        cp d
+        jr c,bf_xe
+        jr z,bf_xe
+bf_xc:  ld a,d
+bf_xe:  ld d,b
+        ld e,a
+        ld (NSXY),de
+        ld a,(COORDS+1)         ; y0, bottom-left origin (unpaged)
+        cp h
+        jr z,bf_ys
+        ret nc                  ; starts above the screen
+bf_ys:  ld e,a                  ; E = y0
+        ld a,(BX_H)
+        dec a
+        add a,e
+        jr c,bf_yc
+        cp h
+        jr c,bf_ye
+        jr z,bf_ye
+bf_yc:  ld a,h
+bf_ye:  ld b,a                  ; B = y_top (clipped)
+        ld a,h
+        sub b
+        ld c,a                  ; C = top row (start here)
+        ld a,h
+        ld hl,COORDS+1
+        sub (hl)
+        ld (MSXY+1),a           ; bottom row
+bf_row: ld de,(NSXY)            ; D = x0, E = x1
+        ld b,d
+bf_col: push bc
+        push de
+        call plot_cl            ; clip, in case a caller slips past the edges
+        pop de
+        pop bc
+        inc b                   ; next x; stop after plotting x1 (was: cp b
+        ld a,e                  ; then inc b, jr nc — that drew one extra
+        cp b                    ; pixel to the right, and at x = width it
+        jr nc,bf_col            ; wrapped in pix_addr to x = 0 of another row)
+        inc c
+        ld a,(MSXY+1)
+        cp c
+        jr nc,bf_row
+        ret
+
+; ytotop: B = x, E = y (0-255, bottom left)
+; -> B = x, C = row low, A = row high (signed 16-bit: maxy - y)
+ytotop: ld a,(SMODE)
+        and 3
+        cp 1
+        ld a,47
+        jr z,yt_1
+        ld a,23
+yt_1:   sub e
+        ld c,a
+        sbc a,a
+        ret
+
+; plot_cl: like plot, but skip a pixel that is off the screen (thick DRAW)
+plot_cl:
+        ld a,(LN_RHI)           ; off the top: signed row is negative
+        or a
+        ret nz
+        ld a,(SMODE)
+        and 3
+        cp 1
+        ld d,64
+        ld e,48
+        jr z,pc_m
+        ld d,32
+        ld e,24
+pc_m:   ld a,b
+        cp d
+        ret nc
+        ld a,c
+        cp e
+        ret nc
+        jp plot
+
+; chkbrk: if CAPS+SPACE is held, raise OpticOS's BREAK (after paging back)
+chkbrk: ld a,$7F
+        in a,($FE)
+        rra
+        ret c
+        ld a,$FE
+        in a,($FE)
+        rra
+        ret c
+        call sfar
+        dw OS_err_brk
+
 
 n_screen: db 6, "screen"
 n_flip: db 4, "flip"
 n_point: db 5, "point"
+n_box:  db 3, "box"
 
-        org $3E00
+        org $3B00
 TA2:    ; SCREEN 2: colour -> attribute (ink = paper, BRIGHT)
         include "ta2.inc"
-        org $3F00
+        org $3C00
 TA:     ; SCREEN 1: [ink << 4 | paper] -> attribute (BRIGHT from the ink unless black)
         include "ta.inc"

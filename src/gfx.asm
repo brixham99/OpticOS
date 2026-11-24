@@ -47,7 +47,7 @@ pl_s:   ld (hl),a
 err_rng: rst 8
         defb ERR_RANGE
 ; DRAW dx, dy (relative) / DRAW TO x, y
-st_draw: rst $18
+st_draw0: rst $18
         cp T_TO
         jr z,dr_to
         rst $30                 ; dx
