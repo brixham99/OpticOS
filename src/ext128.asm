@@ -15,8 +15,10 @@
 ; Published interface for extension ROMs: ext_back's address, CH_ADD at the
 ; name token, and the stack holding the run loop's return address.
 ext_hook:
+        ld a,(SMODE)            ; ROM slot 1, RAM bank 0 at $C000, and the screen
+        and 8                   ; on show stays on show (SCREEN FLIP's bit 3)
+        or $10
         ld bc,$7FFD
-        ld a,$10                ; ROM slot 1, RAM bank 0 at $C000, screen 5
         scf
         out (c),a
 ext_back:

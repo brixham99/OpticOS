@@ -1,6 +1,8 @@
 ; cls.asm - CLS at $0D6B: clear the screen to ATTR_P and home the cursor.
 m_cls_s:
-CLS:    ld hl,$4000
+CLS:    ld e,1                  ; SCREEN 1/2: the extension ROM's CLS (scr128)
+        call xchk
+        ld hl,$4000
         ld de,$4001
         ld bc,6143
         ld (hl),0

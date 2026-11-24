@@ -88,6 +88,14 @@ lb_nc:  ld a,$7F                ; time-out or BREAK?
         rra
         jr c,lb_wait            ; time-out: keep looking for a leader
         ret                     ; BREAK: carry clear, tape_ret reports it
+; scr128 (part, 12 bytes): every return to the console shows SCREEN 0
+; (RAM bank 0, ROM 0, screen 5); x_rst's OUT is also the extension ROM's
+; way back from a call into OpticOS (it has a RET at x_rst+5)
+console: xor a
+        ld (SMODE),a
+x_rst:  ld bc,$7FFD
+        out (c),a
+        jp console0
 m_ld_e:
         org $05E2
         ret                     ; $05E2: load traps resume here

@@ -2,7 +2,7 @@
 ; 4x8 cursor block.  The input line (up to 126 characters, two rows) is
 ; edited with left/right, DELETE and insert; ENTER hands it to con_line.
 m_con_s:
-console:
+console0:
         ld sp,(RAMTOP)
         ld hl,con_err
         push hl

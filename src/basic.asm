@@ -247,7 +247,7 @@ bd_e:   cp ')'
         jp tk
 ; fn_call: an FN (VID = its identifier, CH_ADD past it) -> its value pushed
 fn_call: call sym_find
-        jp c,err_novar
+        jp c,xfn                ; perhaps the extension ROM's (POINT)
         ld de,(CSB)             ; keep the machine stack clear of it
         ex de,hl
         ld bc,96

@@ -2,7 +2,7 @@
 ; Graphics: 256 x 192 pixels, origin bottom left; COORDS = last point.
 m_gfx_s:
 ; PLOT x, y
-st_plot: call ev_u8
+st_plot0: call ev_u8
         push de
         call argn
         pop bc                  ; C = x

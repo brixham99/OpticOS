@@ -76,6 +76,21 @@ secB_end:
         org $03B5
         include "sound.asm"
         include "strfn.asm"
+; scr128 (part, 19 bytes): xchk - in SCREEN 1/2 hand the statement to the
+; 128K extension ROM, dropping the caller's own code; in SCREEN 0 return.
+; xgo pages the extension ROM, keeping the screen on show; E = what to do
+; (0 PLOT, 1 CLS, 2 a name used as a function).  The extension answers at
+; xgo+12; without one (48K, or OpticOS in both slots) the RET runs.
+xchk:   ld a,(SMODE)
+        or a
+        ret z
+        pop hl
+xgo:    ld a,(SMODE)
+        and 8
+        or $10
+        ld bc,$7FFD
+        out (c),a
+x_back: ret
 secC_end:
 
 ; ---------------------------------------------------------------- $04C2
