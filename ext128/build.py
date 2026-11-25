@@ -3,7 +3,7 @@
 extension ROM for slot 1.  Starts from the generated SAY source in
 /workspace/opticos-speech/src/ext128.asm, retargets OpticOS addresses
 from this tree's build/opticos.sym, plants the screen-mode hooks, and
-includes ext128/screen.asm (PLOT/DRAW/BOX/CLS/POINT/SCREEN/FLIP) before
+includes ext128/screen.asm (PLOT/DRAW/BOX/CIRCLE/CLS/POINT/SCREEN/FLIP) before
 the AY volume table at $3D00."""
 import os, re, subprocess, shutil, sys
 
@@ -108,7 +108,7 @@ if needle not in src:
     sys.exit('ext_back gadget not found')
 src = src.replace(needle, needle + hooks, 1)
 
-# Dispatch SCREEN and BOX before SAY.
+# Dispatch SCREEN, BOX and CIRCLE (modes 1/2) before SAY.
 old_disp = """ext_main:
         ld hl,(CH_ADD)          ; $01 type hash length name
         inc hl
@@ -129,6 +129,13 @@ new_disp = """ext_main:
         ld de,n_box
         call namecmp
         jp z,es_box
+        ld a,(SMODE)
+        and 3
+        jr z,em_saychk          ; mode 0: CIRCLE is not a statement
+        ld de,n_circle
+        call namecmp
+        jp z,es_circ
+em_saychk:
         ld de,n_say
         call namecmp
         jp z,em_say

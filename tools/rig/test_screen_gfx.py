@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Unit tests for SCREEN 1/2 DRAW (Bresenham) and BOX, plus a framebuffer
-comparison of the Union Flag against a Python-rendered reference.
+"""Unit tests for SCREEN 1/2 DRAW (Bresenham), BOX and CIRCLE, plus a
+framebuffer comparison of the Union Flag against a Python-rendered reference.
 
-These call the extension ROM's lineto / boxfill / plot_cl / render0 in the
-48K rig: bank 7's framebuffer and lists sit at the same addresses, and the
+These call the extension ROM's lineto / boxfill / circ / plot_cl / render0 in
+the 48K rig: bank 7's framebuffer and lists sit at the same addresses, and the
 routines do not page while drawing.
 
   python3 tools/rig/test_screen_gfx.py
@@ -287,6 +287,37 @@ def zbox(s, x, y, wdt, hgt, colour=None):
     s.poke(COORDS, x); s.poke(COORDS + 1, y)
     s.poke(BX_W, wdt); s.poke(BX_H, hgt)
     s.call(SYM['boxfill'], IFF1=0, IFF2=0, BC=(x << 8) | x, DE=(0 << 8) | y)
+
+def midcircle(cx, cy, r, md):
+    """Midpoint circle, bottom-left origin, clipped; points as (x, row)."""
+    w, h = limits(md)
+    pts = set()
+    def add(x, y):
+        if 0 <= x < w and 0 <= y < h:
+            pts.add((x, ytotop(md, y)))
+    if r == 0:
+        add(cx, cy)
+        return pts
+    x, y = 0, r
+    d = 3 - 2 * r
+    while x <= y:
+        for ox, oy in ((x, y), (-x, y), (x, -y), (-x, -y),
+                       (y, x), (-y, x), (y, -x), (-y, -x)):
+            add(cx + ox, cy + oy)
+        if d > 0:
+            y -= 1
+            d += 4 * (x - y) + 10
+        else:
+            d += 4 * x + 6
+        x += 1
+    return pts
+
+def zcirc(s, cx, cy, r, colour=None):
+    if colour is not None:
+        s.poke(pcol, colour)
+    s.poke(LN_X0, cx); s.poke(LN_X0 + 1, cy)
+    s.poke(BX_W, r)
+    s.call(SYM['circ'], IFF1=0, IFF2=0)
 
 def painted(s, md):
     """Set of (x, row) whose colour is not 0."""
@@ -698,11 +729,76 @@ def screen_is_cell_grid(s, md, flag_h):
         return False, '%d ragged 4-row groups (not 4x4 chunky)' % ragged
     return True, '64x%d chunky, 4x4 cells clean, no spill' % flag_h
 
+def t_circle():
+    s = machine()
+    cases = [
+        # name, md, cx, cy, r
+        ('md1 r=0 at centre',          1, 32, 24, 0),
+        ('md1 r=1',                    1, 32, 24, 1),
+        ('md1 r=5',                    1, 32, 24, 5),
+        ('md1 r=10',                   1, 32, 24, 10),
+        ('md1 r=23 near full height',  1, 32, 24, 23),
+        ('md2 r=0 at centre',          2, 16, 12, 0),
+        ('md2 r=1',                    2, 16, 12, 1),
+        ('md2 r=6',                    2, 16, 12, 6),
+        ('md2 r=11 near full height',  2, 16, 12, 11),
+        ('md1 r=0 off the top-right',  1, 80, 60, 0),
+        ('md1 clipped at origin',      1, 0,  0,  8),
+        ('md1 clipped at top-right',   1, 63, 47, 8),
+        ('md1 clipped at bottom-left', 1, 0,  0,  1),
+        ('md2 clipped at origin',      2, 0,  0,  5),
+        ('md2 clipped at top-right',   2, 31, 23, 5),
+        ('md1 centre off, arc visible',1, 70, 24, 20),
+        ('md2 centre off, arc visible',2, 40, 12, 16),
+    ]
+    for name, md, cx, cy, r in cases:
+        setup(s, md, 7)
+        zcirc(s, cx, cy, r, 7)
+        got = painted(s, md)
+        want = midcircle(cx, cy, r, md)
+        extra, missing = got - want, want - got
+        check('CIRCLE %s matches midpoint reference' % name,
+              got == want,
+              'extra %s missing %s n=%d want=%d' % (
+                  list(extra)[:6], list(missing)[:6], len(got), len(want)))
+    # r=0 on-screen is exactly one pixel
+    setup(s, 1, 2)
+    zcirc(s, 10, 10, 0, 2)
+    fb = fb_get(s, 1)
+    n = sum(1 for row in fb for v in row if v)
+    check('CIRCLE r=0 paints exactly one pixel',
+          n == 1 and fb[ytotop(1, 10)][10] == 2, 'n=%d' % n)
+    # a clipped circle must not write outside the framebuffer
+    setup(s, 1, 7)
+    zcirc(s, 0, 0, 20, 7)
+    w, h = limits(1)
+    spill = [(x, r) for r, row in enumerate(fb_get(s, 1))
+             for x, v in enumerate(row) if v and not (0 <= x < w and 0 <= r < h)]
+    check('CIRCLE clipped at origin has no spill', spill == [], 'spill %s' % spill[:6])
+    # eight-way symmetry for an in-bounds circle
+    setup(s, 1, 7)
+    zcirc(s, 32, 24, 12, 7)
+    pts = painted(s, 1)
+    def bl(x, row):
+        return x, 47 - row
+    bad = []
+    for x, row in pts:
+        cx, cy = bl(x, row)
+        for sx, sy in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
+            ox, oy = cx - 32, cy - 24
+            tx, ty = 32 + sx * ox, 24 + sy * oy
+            tr = ytotop(1, ty)
+            if (tx, tr) not in pts:
+                bad.append((cx, cy, tx, ty))
+    check('CIRCLE md1 r=12 is 4-way symmetric about the centre',
+          bad == [], 'missing images %s' % bad[:6])
+
 def main():
     t_draw_octants()
     t_draw_clip()
     t_box_edges()
     t_box_no_wrap()
+    t_circle()
     t_flag_reference()
     nfail = sum(1 for _, ok, _ in results if not ok)
     print('\n%d tests, %d failed' % (len(results), nfail))

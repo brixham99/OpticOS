@@ -11,6 +11,10 @@
 ;                   wait for the frame, show it.  The first FLIP turns it on;
 ;                   SCREEN n turns it off (every PLOT / CLS then shows at once)
 ;   PLOT x,y[,c]    in SCREEN 1/2: colour c 0-15, or INK + 8 * BRIGHT
+;   DRAW [TO] x,y[,c]
+;   BOX x,y,w,h[,c] filled rectangle, (x,y) the bottom-left
+;   CIRCLE x,y,r[,c] midpoint circle, clipped (SCREEN 1/2 only; mode 0
+;                   has no CIRCLE — OpticOS dropped it in v0.7)
 ;   CLS             in SCREEN 1/2: every pixel PAPER + 8 * BRIGHT
 ;   POINT(x,y)      colour 0-15 in SCREEN 1/2; 1/0 (ink pixel) in SCREEN 0
 ; Origin bottom left, as PLOT.  Any return to the console (end of a program,
@@ -44,7 +48,7 @@ STR_N0  equ STRAMP+2
 STR_T   equ STRAMP+10
 STR_N1  equ STRAMP+13
 
-; unpaged scratch for DRAW / BOX (free MEMBOT after SMODE, before NMIADD)
+; unpaged scratch for DRAW / BOX / CIRCLE (free MEMBOT after SMODE, before NMIADD)
 LN_X0   equ $5CA1              ; start x, y (2)
 LN_X1   equ $5CA3              ; end x, y (2)
 BX_W    equ $5CA5
@@ -68,9 +72,12 @@ LN_CUR  equ VARS+12            ; current x (B) and row low (C) during a line
 MSXY    equ VARS+14            ; major step x, y
 NSXY    equ VARS+16            ; minor step x, y
 LN_RHI  equ VARS+18            ; high byte of the signed 16-bit row
+CIR_X   equ LN_CUR             ; midpoint circle: x (0..r)
+CIR_Y   equ LN_CUR+1           ;                  y (r..0)
+CIR_D   equ MSXY               ;                  16-bit signed decision
 
 ; ---------------------------------------------------------------- entry
-; es_scr / es_box are reached from the merged ROM's ext_main once the name
+; es_scr / es_box / es_circ are reached from the merged ROM's ext_main once the name
 ; has been matched.  ext_x is reached from OpticOS's xgo (E = 0/1/2/3).
 es_scr: call tr_set
         call sfar
@@ -922,6 +929,74 @@ xb_c:   pop bc
         call chkbrk
         jp back_ok
 
+; CIRCLE x, y, r [,c]: midpoint circle, centre (x,y) bottom-left, radius r.
+; SCREEN 1/2 only (the dispatcher does not claim the name in mode 0).
+es_circ: call tr_set
+        call sfar
+        dw OS_id_skip
+        call sfar
+        dw OS_ev_expr
+        call sfar
+        dw OS_pop_int
+        push de                 ; x
+        ld a,','
+        call expect
+        call sfar
+        dw OS_ev_expr
+        call sfar
+        dw OS_pop_int
+        push de                 ; y
+        ld a,','
+        call expect
+        call sfar
+        dw OS_ev_expr
+        call sfar
+        dw OS_pop_int
+        push de                 ; r
+        call ink_col
+        ld e,a
+        ld hl,(CH_ADD)
+        ld a,(hl)
+        cp ','
+        jr nz,xc_c
+        inc hl
+        ld (CH_ADD),hl
+        call sfar
+        dw OS_ev_expr
+        call sfar
+        dw OS_pop_int
+        ld a,d
+        or a
+        jp nz,os_rng
+        ld a,e
+        cp 16
+        jp nc,os_rng
+        ld e,a
+xc_c:   pop bc                  ; r (0 is a single pixel at the centre)
+        ld a,b
+        or a
+        jp nz,os_rng
+        ld a,c
+        ld (BX_W),a
+        pop hl                  ; y
+        pop bc                  ; x
+        ld a,b
+        or h
+        jp nz,os_rng
+        ld a,c
+        ld (LN_X0),a
+        ld (COORDS),a
+        ld a,l
+        ld (LN_X0+1),a
+        ld (COORDS+1),a
+        ld d,e
+        call b7_in
+        call circ
+        call auto_show
+        call b7_out
+        call chkbrk
+        jp back_ok
+
 ; lineto: Bresenham from (LN_X0) to (LN_X1).  Off-screen pixels are skipped.
 lineto: ld a,(LN_X0)
         ld b,a
@@ -1161,6 +1236,148 @@ pc_m:   ld a,b
         ret nc
         jp plot
 
+; circ: midpoint circle, centre (LN_X0, LN_X0+1), radius BX_W, colour pcol.
+; Off-screen pixels are skipped.  r = 0 plots the centre.
+circ:   ld a,(BX_W)
+        or a
+        jr nz,ci_go
+        ld a,(LN_X0)
+        ld b,a
+        ld a,(LN_X0+1)
+        ld e,a
+        call ytotop
+        ld (LN_RHI),a
+        jp plot_cl
+
+ci_go:  ld (CIR_Y),a            ; y = r
+        xor a
+        ld (CIR_X),a            ; x = 0
+        ld a,(BX_W)             ; d = 3 - 2*r  (16-bit signed)
+        ld l,a
+        ld h,0
+        add hl,hl
+        ex de,hl
+        ld hl,3
+        or a
+        sbc hl,de
+        ld (CIR_D),hl
+
+ci_lp:  ld a,(CIR_Y)
+        ld hl,CIR_X
+        cp (hl)
+        ret c                   ; y < x
+        call ci_oct
+        ; if d > 0: y--, d += 4*(x-y)+10; else d += 4*x+6; then x++
+        ld hl,(CIR_D)
+        ld a,h
+        and $80
+        jr nz,ci_dn             ; d < 0
+        ld a,h
+        or l
+        jr z,ci_dn              ; d = 0
+        ld hl,CIR_Y
+        dec (hl)
+        ld a,(CIR_X)
+        ld l,a
+        ld h,0
+        ld a,(CIR_Y)
+        ld e,a
+        ld d,0
+        or a
+        sbc hl,de               ; x-y
+        add hl,hl
+        add hl,hl
+        ld de,10
+        add hl,de
+        jr ci_ad
+ci_dn:  ld a,(CIR_X)
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        ld de,6
+        add hl,de
+ci_ad:  ld de,(CIR_D)
+        add hl,de
+        ld (CIR_D),hl
+        ld hl,CIR_X
+        inc (hl)
+        jr ci_lp
+
+; eight octants of (ox, oy) = (x, y) then (y, x)
+ci_oct: ld a,(CIR_X)
+        ld d,a
+        ld a,(CIR_Y)
+        ld e,a
+        xor a
+        ld b,a
+        call cpt                ; +x +y
+        inc b
+        call cpt                ; -x +y
+        inc b
+        call cpt                ; +x -y
+        inc b
+        call cpt                ; -x -y
+        ld a,(CIR_Y)
+        ld d,a
+        ld a,(CIR_X)
+        ld e,a
+        xor a
+        ld b,a
+        call cpt                ; +y +x
+        inc b
+        call cpt                ; -y +x
+        inc b
+        call cpt                ; +y -x
+        inc b
+        jp cpt                  ; -y -x
+
+; B bit 0: subtract ox from cx; bit 1: subtract oy from cy.  D=ox, E=oy.
+; ox, oy are unsigned 0..255 (r can be > 127, so they are not signed 8-bit).
+cpt:    push bc
+        push de
+        ld a,(LN_X0)
+        ld l,a
+        ld h,0
+        ld a,d
+        ld e,a
+        ld d,0
+        bit 0,b
+        jr nz,cpt_xs
+        add hl,de
+        jr cpt_xc
+cpt_xs: or a
+        sbc hl,de
+cpt_xc: ld a,h
+        or a
+        jr nz,cpt_o             ; not 0..255
+        ld c,l                  ; C = pixel x
+        pop de
+        push de
+        ld a,(LN_X0+1)
+        ld l,a
+        ld h,0
+        ld a,e
+        ld e,a
+        ld d,0
+        bit 1,b
+        jr nz,cpt_ys
+        add hl,de
+        jr cpt_yc
+cpt_ys: or a
+        sbc hl,de
+cpt_yc: ld a,h
+        or a
+        jr nz,cpt_o
+        ld e,l                  ; E = pixel y (bottom-left)
+        ld b,c
+        call ytotop
+        ld (LN_RHI),a
+        call plot_cl
+cpt_o:  pop de
+        pop bc
+        ret
+
 ; chkbrk: if CAPS+SPACE is held, raise OpticOS's BREAK (after paging back)
 chkbrk: ld a,$7F
         in a,($FE)
@@ -1178,6 +1395,7 @@ n_screen: db 6, "screen"
 n_flip: db 4, "flip"
 n_point: db 5, "point"
 n_box:  db 3, "box"
+n_circle: db 6, "circle"
 
         org $3B00
 TA2:    ; SCREEN 2: colour -> attribute (ink = paper, BRIGHT)

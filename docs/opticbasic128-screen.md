@@ -72,7 +72,7 @@ fuse-sdl --machine 128 --rom-128-0 build/opticos.rom --rom-128-1 build/opticos12
 ## Known limits (phase 1)
 
 - FRAMES and the keyboard aren't serviced while ROM 1 renders with interrupts off. A full-screen render loses a few interrupts, so FRAMES and WAIT run slow in heavy FLIP loops. ROM 1's IM 1 handler counts FRAMES during FLIP's wait.
-- DRAW, CIRCLE, PRINT and INPUT in modes 1/2 aren't handled.
+- PRINT and INPUT in modes 1/2 aren't handled (any text output returns to SCREEN 0). CIRCLE is implemented in modes 1/2; OpticOS mode 0 has no CIRCLE (dropped in v0.7).
 - On a 48K Spectrum, SCREEN gives "No such PROC or FN" as before, and nothing else changes (rig suites pass).
 
 ## Phase 2 (RC-6)
@@ -85,6 +85,7 @@ SCREEN and SAY now share one extension ROM (`build/opticos128ext.rom`, built by 
 |---|---|---|
 | `DRAW dx,dy[,c]` / `DRAW TO x,y[,c]` | unchanged | Bresenham in this mode's coordinates, from the last PLOT/DRAW/BOX corner. Off-screen pixels are skipped. The colour is optional (otherwise INK + 8×BRIGHT). |
 | `BOX x,y,w,h[,c]` | — (identifier, handled by the extension) | Filled rectangle; (x,y) is the bottom-left, w×h pixels, clipped to the mode. Not a keyword (BOX is not in the keyword table). |
+| `CIRCLE x,y,r[,c]` | not in OpticOS (dropped in v0.7; the name is "No such PROC or FN") | Midpoint circle, centre (x,y) bottom-left, radius r, clipped. r=0 is a single pixel. Colour optional (otherwise INK + 8×BRIGHT). Not a keyword. |
 | `PRINT`, `LIST`, the editor, error reports, `INPUT` prompts | unchanged | Any text output (RST 16) automatically returns to SCREEN 0 and shows screen 5. The picture stays until the next CLS. |
 
 Auto-show and SCREEN FLIP are unchanged. Interrupts are off while a line or box is written into the framebuffer (FRAMES does not advance for those few milliseconds); BREAK is sampled at the end of the statement.
@@ -102,7 +103,7 @@ The remaining time is OpticBASIC's per-row arithmetic for the saltires (32 or 16
 ### ROM space after phase 2
 
 - OpticOS ROM 0: the 32-byte SCREEN/SAY hooks are unchanged (81 bytes of unplaced section slack as reported by `check_layout`). DRAW and the RST 16 text hook used previously empty inter-section gaps (21 bytes before NMI, 5 before BEEPER, 6 before POKE_RET, 5 after RST 16). Remaining clean gaps of 4 bytes or more: $000B (5), $002B (5), $2038 (4).
-- Merged extension ROM: 3,012 bytes free ($302C–$3AFF and $3B10–$3BFF). SAY ends at $289D; screen code (PLOT/DRAW/BOX/CLS/POINT/SCREEN/FLIP) occupies $289D–$302C; TA2 at $3B00 (16 bytes); TA at $3C00 (256 bytes); AY volume table $3D00–$3FFF.
+- Merged extension ROM: 2,610 bytes free ($31BE–$3AFF and $3B10–$3BFF). SAY ends at $28AD; screen code (PLOT/DRAW/BOX/CIRCLE/CLS/POINT/SCREEN/FLIP) occupies $28AD–$31BE; TA2 at $3B00 (16 bytes); TA at $3C00 (256 bytes); AY volume table $3D00–$3FFF.
 
 ### DRAW / BOX correctness (phase 2 follow-up)
 
@@ -121,3 +122,11 @@ Fixes were checked with `tools/rig/test_screen_gfx.py` (59 tests, all passing): 
 The screenshots in `docs/screenmodes/` were retaken from a real Fuse 128K run after the thick offset-saltire listing and inspected. SCREEN 0 mid-arm vertical thickness is about 32–33 pixels (red about 8–9); divided by 4 that is ~8, divided by 8 about 4. Modes 1 and 2 keep the earlier thick white band (mode 1 mid-arm vertical 6–7 chunky pixels, red 2–3, no three-colour 2×2 attribute cells; mode 2 vertical 3–4 cells, red 1), with the official counterchange rather than a centred red. The previous thin 4-pixel / 3-cell horizontal spans had collapsed the vertical thickness to ~2 and a 1-cell staircase. In both modes the red sits to the left in the top half and to the right in the bottom half, with white remaining on both sides of the red, matching SCREEN 0 in each quadrant.
 
 `dband` (and the earlier `band`) must pass the colour to `DRAW TO` (`DRAW TO x2, y, c`). A bare `DRAW TO x2, y` uses INK, which is 7, so the red saltire was painted white after the first pixel.
+
+### CIRCLE (SCREEN 1 / 2)
+
+`CIRCLE x,y,r[,c]` is a midpoint circle in the extension ROM, written into the framebuffer with `plot_cl` (off-screen pixels skipped), dirty cells marked, and one `auto_show` render. OpticOS itself has no mode-0 `CIRCLE` (dropped in v0.7); in SCREEN 0 the name is not claimed, so it is "No such PROC or FN" as before.
+
+The demo `examples/src/circles128.bas` (tape `examples/circles128.tap` / `.tzx`) draws a concentric red/white target on a blue field in SCREEN 1 and SCREEN 2, and prints the mode-0 message first. Screenshots are in `docs/screenmodes/` (`circles_all_modes.png`, `circle_screen0.png` / `circle_screen1.png` / `circle_screen2.png`, `circle_timings.png`). Printed times: SCREEN 1 0.2 s, SCREEN 2 0.1 s. SCREEN 1 rings are circular at 64×48 but adjacent red/white strokes share attribute cells, so some segments show clash. SCREEN 2 is coarser and more octagonal, with no clash; the centre is a white plus with a blue hole because the demo's `rmax` is odd, so `r=0` is not drawn.
+
+A map of both 16K ROMs, generated from the built symbol files and `tools/check_layout.py` ranges, is `docs/screenmodes/rom_maps.png` (`tools/rom_map.py`).
