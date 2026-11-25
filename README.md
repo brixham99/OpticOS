@@ -125,7 +125,7 @@ The 128K edition needs **two files**. The Sinclair 128K ROMs are not used and ar
 - Text printed in mode 2 or 3 goes back to the **last text mode** used (0 or 1), not always to mode 0.
 - **`PLOT`**, **`DRAW`**, **`BOX`** and **`CIRCLE`** in every screen mode; **`SCREEN FLIP`** in modes 2 and 3; **`POINT`**.
 - **UDGs in mode 1 only:** 21 glyphs at codes 144–164, 8×8, read from the UDG system-variable area above RAMTOP and POKEd from BASIC. In mode 0 they print as `?` and the stored byte is left intact. **G-mode** (Caps+9) inserts codes 144–164 from keys a–u, in mode 1 only, and only inside strings.
-- **SAY / OpticVoice**, in the same extension ROM.
+- **SAY / OpticVoice**, in the same extension ROM. The speech data is on `say128.tzx` (or `.tap`) in the [v1.1 release](https://github.com/brixham99/OpticOS/releases). Load it once per session with `LOAD ""` (or `SAY LOAD`); that fills RAM banks 4, 6, 1 and 3. Until then, SAY reports `No speech data in bank 4`.
 
 The 128K demo tapes in [`examples/`](examples) are `flags128` (the flag in modes 0, 2 and 3), `circles128` (`CIRCLE` in modes 0–3) and `udg128` (a spaceship and an alien POKEd as UDGs and printed in mode 1). Load with `LOAD ""`, then play the tape. There are no line numbers in the demos.
 

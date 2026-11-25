@@ -44,7 +44,7 @@ What the extension adds:
 - Text printed in mode 2 or 3 returns to the last text mode used (0 or 1).
 - `PLOT`, `DRAW`, `BOX`, `CIRCLE` and `POINT` in every screen mode; `SCREEN FLIP` in modes 2 and 3.
 - UDGs in mode 1 only: 21 glyphs at codes 144–164, 8×8, POKEd into the UDG area above RAMTOP. In mode 0 they print as `?` and the stored byte is left intact. G-mode (Caps+9, keys a–u) inserts those codes in mode 1, inside strings only.
-- SAY / OpticVoice, in the same extension ROM.
+- SAY / OpticVoice, in the same extension ROM. The speech data is on `say128.tzx` (or `.tap`): load it once per session with `LOAD ""` (or `SAY LOAD`), which fills RAM banks 4, 6, 1 and 3. Until then, SAY reports `No speech data in bank 4`.
 
 The extension ROM has **1,204 bytes free**.
 
@@ -62,6 +62,7 @@ The Sinclair `48.rom`, the Sinclair 128K ROMs, snapshots and memory dumps are **
 | `flags128.tap` / `.tzx` | 128K | Flag demo, modes 0, 2 and 3 |
 | `circles128.tap` / `.tzx` | 128K | Circles in modes 0–3 |
 | `udg128.tap` / `.tzx` | 128K | UDG demo in mode 1 |
+| `say128.tap` / `.tzx` | 128K | OpticVoice speech data (load once per session with `LOAD ""` or `SAY LOAD`) |
 
 The user manual (`OpticOS_User_Manual.pdf`) and the specification (`spec.pdf`) have been rebuilt so their title lines show v1.1, and both are attached to this release.
 
