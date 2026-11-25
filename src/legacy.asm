@@ -28,7 +28,7 @@ lg_prog:
         ld (VARS),hl
         ld hl,(HDRBUF+13)       ; auto-start line
         bit 7,h
-        jp nz,con_ok
+        jr nz,con_ok
         call lg_goto
         jp lg_stmt
 
@@ -57,8 +57,7 @@ lf_n:   ld a,(hl)
         rst 16
         inc hl
         djnz lf_n
-        ld a,13
-        rst 16
+        call pr_eol
         ld a,(LG_WANT)
         ld hl,HDRBUF
         cp (hl)
@@ -268,8 +267,7 @@ lg_clear:                       ; CLEAR n: RAMTOP = n, fresh stack below it
         ld hl,con_err
         push hl
         ld (ERR_SP),sp
-        ld hl,(CH_ADD)
-        jp lg_ret
+        jp lg_stmt
 lg_poke:
         call lg_expr
         push de
@@ -411,8 +409,7 @@ lp_com: ld a,6
         rst 16
         ld a,1
         jr lp_set
-lp_apo: ld a,13
-        rst 16
+lp_apo: call pr_eol
         ld a,1
         jr lp_set
 lp_sep: ld a,b
@@ -449,9 +446,7 @@ lp_at:  call lg_expr
 lp_end: ld a,(LG_PSEP)
         or a
         ret nz
-        ld a,13
-        rst 16
-        ret
+        jp pr_eol
 
 ; ---- expressions: 16-bit integers.  Numbers use the hidden 5-byte form.
 lg_expr:

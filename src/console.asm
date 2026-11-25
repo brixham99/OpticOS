@@ -16,9 +16,7 @@ con_new:
         ld (ATTR_T),hl
         ld a,(S_POSN)
         or a
-        ld a,13
-        jr z,cn_ncr
-        rst 16
+        call nz,pr_eol
 cn_ncr: xor a
         ld (CON_LEN),a
         ld (EIDX),a
@@ -117,7 +115,6 @@ c_del:  ld a,(hl)               ; DELETE: the character left of the cursor
         jp z,k_rd
         ldir
         jp k_rd
-prm_t:  defb "]+**"
 con_enter:
         ld a,(CON_LEN)
         ld e,a
@@ -128,8 +125,7 @@ con_enter:
         ld hl,(ESTART)
         add hl,de
         call lin_pos
-        ld a,13
-        rst 16
+        call pr_eol
         ld hl,EMODE
         bit 2,(hl)
         res 2,(hl)
@@ -168,16 +164,21 @@ rd_n:   djnz rd_l
         ld a,(EIDX)
         ld e,a
         add hl,de
-; lin_pos: HL = row*64 + column -> S_POSN
-lin_pos: ld a,l
+; lin_pos: HL = row*width + column -> S_POSN.
+; In SCREEN 1 (OMODE=32) the extension does the 32-col form (E=5, D=0).
+lin_pos: ld d,0
+        call w_chk
+        ld a,l
         and 63
         add hl,hl
         add hl,hl
         ld l,a
         ld (S_POSN),hl
         ret
-; pos_lin: S_POSN -> HL = row*64 + column
-pos_lin: ld hl,(S_POSN)
+; pos_lin: S_POSN -> HL = row*width + column
+pos_lin: ld d,1
+        call w_chk
+        ld hl,(S_POSN)
         ld a,l
         ld l,h
         ld h,0
@@ -213,12 +214,14 @@ cg_lp:  ld a,(FRAMES)
 cg_got: res 5,(hl)
         ld a,(CUR_VIS)
         or a
-        xor a
+        ld a,0                  ; keep the flags from or a (xor a would set Z)
         call nz,cur_set
         ld a,(LAST_K)
         ret
 cur_set:                        ; A = new state; XOR the block at S_POSN
-        ld (CUR_VIS),a
+        ld (CUR_VIS),a          ; must be stored before w_cur (ld a,d)
+        jp w_cur
+cur_set_c:
         ld hl,(S_POSN)
         ld a,l
         cp 64

@@ -47,12 +47,12 @@ es_cr0:
         ld hl,EMSGN
         cp (hl)
         ld hl,EMBUF
-        jp z,pr_msg
+        jr z,pr_msg
         ld hl,err_tab
 es_lp:  ld a,(hl)
         inc hl
         cp c
-        jp z,pr_msg
+        jr z,pr_msg
         inc a                   ; $FF ends the table (after the OK entry)
         jr z,es_unk
 es_sk:  bit 7,(hl)

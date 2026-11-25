@@ -856,6 +856,46 @@ def t_circle_hires():
     check('CIRCLE hi INVERSE clears the centre pixel',
           not pix_hi(s, 128, ytotop(0, 96)), 'pixel still set')
 
+def t_mode1_draw_box_matches_mode0():
+    """SCREEN 1 uses the same 256x192 path as SCREEN 0 (SMODE=0).
+    OMODE (32 vs 64) must not change DRAW or BOX pixels."""
+    OMODE = 0x5C92
+    # Main-ROM PLOT/DRAW (the SCREEN 0/1 path when SMODE=0).  Call the
+    # graphics routines directly: BASIC line entry uses the editor hook,
+    # which on a 48K rig would take the OMODE=32 path into a no-op xgo.
+    from p3lib import Basic, SYM as MS
+    b = Basic()
+    s0 = b.s
+    iy = MS['ERR_NR']
+    def draw_main(om):
+        s0.poke(OMODE, om)
+        s0.load(0x4000, bytes(0x1B00))
+        # plot: BC = (B=y, C=x); ln_to: line from COORDS to (C, B)
+        s0.call(MS['plot'], BC=(10 << 8) | 10, IY=iy, IFF1=0, IFF2=0)
+        s0.call(MS['ln_to'], BC=(50 << 8) | 90, IY=iy, IFF1=0, IFF2=0)
+        s0.call(MS['plot'], BC=(20 << 8) | 200, IY=iy, IFF1=0, IFF2=0)
+        s0.call(MS['ln_to'], BC=(80 << 8) | 240, IY=iy, IFF1=0, IFF2=0)
+        return bytes(s0.block(0x4000, 0x1B00))
+    bm64, bm32 = draw_main(64), draw_main(32)
+    check('main-ROM DRAW bitmap identical at OMODE 32 and 64',
+          bm64 == bm32, '' if bm64 == bm32 else 'bytes differ')
+    check('main-ROM DRAW actually painted pixels',
+          any(bm64), 'bitmap was blank')
+    # Extension BOX and lineto in hi-res (SMODE=0 -> plot_hi)
+    s = machine()
+    def snap_ext(om):
+        setup(s, 0, 7)
+        s.poke(OMODE, om)
+        s.load(0x4000, bytes(0x1B00))
+        zbox(s, 20, 30, 80, 40, 7)
+        zline(s, 0, 0, 100, 80, 7)
+        return bytes(s.block(0x4000, 0x1B00))
+    ex64, ex32 = snap_ext(64), snap_ext(32)
+    check('hi-res BOX/DRAW bitmap identical at OMODE 32 and 64',
+          ex64 == ex32, '' if ex64 == ex32 else 'bytes differ')
+    check('hi-res BOX/DRAW actually painted pixels',
+          any(ex64), 'bitmap was blank')
+
 def main():
     t_draw_octants()
     t_draw_clip()
@@ -864,6 +904,7 @@ def main():
     t_circle()
     t_circle_hires()
     t_flag_reference()
+    t_mode1_draw_box_matches_mode0()
     nfail = sum(1 for _, ok, _ in results if not ok)
     print('\n%d tests, %d failed' % (len(results), nfail))
     return 0 if nfail == 0 else 1

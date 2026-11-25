@@ -588,7 +588,7 @@ sp_col: cpl                     ; as control codes 21-16 (21 - index)
         rst 16
         jr sp_lp
 sp_semi: rst $20
-        rst $18
+sp_ck:  rst $18
         call is_end
         ret z
         jr sp_lp
@@ -597,10 +597,7 @@ sp_com: ld a,6
         jr sp_semi
 sp_nl:  rst $20
         call pr_eol
-        rst $18
-        call is_end
-        ret z
-        jr sp_lp
+        jr sp_ck
 sp_at:  rst $20
         call ev_u8
         ld a,22
@@ -622,7 +619,7 @@ sp_tab: rst $20
         rst 16
         xor a
         rst 16
-        jp sp_lp
+        jr sp_lp
 ; s_print: HL = string entry -> printed
 s_print: inc hl
         inc hl

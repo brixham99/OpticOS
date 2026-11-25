@@ -104,14 +104,14 @@ ln_2:   ld d,a                  ; D = |dy|, B = y step
         jr nc,ln_y
         ld h,0                  ; x major
         ld l,c
-        ld c,0
+        ld c,h
         ld a,e
         ld e,d
         ld d,a
         jr ln_go
 ln_y:   ld h,b                  ; y major
         ld l,0
-        ld b,0
+        ld b,l
 ln_go:  ld (DIMB+4),hl          ; major step (H = y, L = x)
         ld (DIMB),bc            ; minor step
         ld (DIMB+2),de          ; m, n
@@ -153,5 +153,14 @@ c_add:  ld bc,(COORDS)
         ld (COORDS),bc
         pop af
         ret
+
+; w_chk: if OMODE=32, far-call editor hook E=5 (D already set); else return
+; to the 64-col body.  48K always has OMODE=64, so never reaches xgo.
+w_chk:  ld a,(OMODE)
+        and 32
+        ret z
+        pop af
+        ld e,5
+        jp xgo
 
 m_gfx_e:

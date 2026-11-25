@@ -20,6 +20,11 @@ RESET:  di
 ; ---------------------------------------------------------------- $0008
         org $0008
 RST8:   jp err_rst
+; ---------------------------------------------------------------- $000B
+        org $000B
+; 32-col editor (OMODE=32): w_cur continues here after ld d,2
+w_c2:   call w_chk
+        jr w_c3
 ; ---------------------------------------------------------------- $0010
         org $0010
 RST16:  jp x_txt                ; SCREEN 1-3: 32-col print, or return to last text mode
@@ -32,6 +37,9 @@ RST24:
 tk:     ld hl,(CH_ADD)          ; GET-CHAR: A = current token
         ld a,(hl)
         ret
+; ---------------------------------------------------------------- $001D
+        org $001D
+w_c3:   jp cur_set_c            ; 64-col cur_set after w_chk
 ; ---------------------------------------------------------------- $0020
         org $0020
 RST32:
@@ -43,6 +51,10 @@ skip1:  ld hl,(CH_ADD)          ; NEXT-CHAR: step over a one-byte token
         org $0028
 RST40:  jp fu_run                ; OpticOS's own maths byte-code (fptrans.asm);
                                 ; the Sinclair calculator is not provided
+; ---------------------------------------------------------------- $002B
+        org $002B
+w_cur:  ld d,2                  ; cur_set: 8-pixel cursor in the extension
+        jr w_c2
 ; ---------------------------------------------------------------- $0030
         org $0030
 RST48:
@@ -129,6 +141,7 @@ secE_end:
 secF_end:
 st_drx: call xchk
         jp st_draw0
+prm_t:  defb "]+**"             ; console prompt characters (moved here for I slack)
 ; ---------------------------------------------------------------- $096F
         org $096F
 POKE_RET:

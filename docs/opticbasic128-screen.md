@@ -58,10 +58,11 @@ There's no conflict with OpticOS 128 or SAY: neither uses bank 7. The renderer a
 
 `examples/src/flags128.bas` (tape `examples/flags128.tap`/`.tzx`): the Union Flag from `flag.bas`.
 
-- **SCREEN 0 and SCREEN 1:** drawn by the original listing (full-resolution PLOT). SCREEN 1 captions use the 32-column font.
+- **SCREEN 0:** drawn by the original listing (full-resolution PLOT).
 - **SCREEN 2 and SCREEN 3:** the same flag with `BOX` for the field and the cross, and `DRAW` of one horizontal run per arm per row for the saltires (`dband` in the listing). The red saltire is offset inside the white band with the same counterchange as SCREEN 0 (red to the left in the top half, to the right in the bottom half, white on both sides of the red). SCREEN 2 keeps the earlier ~6-chunky-pixel vertical band thickness (14 pixels horizontally, 5 of them red) with edges aligned to the 2×2 attribute grid; SCREEN 3 uses an ~3–4 cell vertical band (8 cells horizontally, 2 of them red).
+- **SCREEN 1** is the same 256×192 bitmap as SCREEN 0, so the demo does not show it separately.
 
-Screenshots are in `docs/screenmodes/` (`flags_all_modes.png`, `flag_screen0.png` / `flag_screen1.png` / `flag_screen2.png`).
+Screenshots are in `docs/screenmodes/` (`flags_all_modes.png`, `flag_screen0.png` / `flag_screen2.png` / `flag_screen3.png`).
 
 ## Running it
 
@@ -127,6 +128,6 @@ The screenshots in `docs/screenmodes/` were retaken from a real Fuse 128K run af
 
 `CIRCLE x,y,r[,c]` is a midpoint circle in the extension ROM. In SCREEN 2/3 it is written into the framebuffer with `plot_cl`, dirty cells marked, and one `auto_show` render. In SCREEN 0 and 1 the same midpoint walk plots the 256×192 bitmap on screen 5: with no `c`, the pixel follows OVER/INVERSE and the cell takes ATTR_T/MASK_T (as PLOT); with `c` 0–15 the ink pixel is set (unless INVERSE) and INK+BRIGHT are taken from `c`, leaving PAPER. 48K still reports "No such PROC or FN".
 
-The demo `examples/src/circles128.bas` (tape `examples/circles128.tap` / `.tzx`) draws a concentric red/white target on a blue field in all four modes, with rings four pixels (or four chunky pixels / cells) thick to cut clash. Screenshots are in `docs/screenmodes/` (`circles_all_modes.png`, `circle_screen0.png`–`circle_screen3.png`, `circle_timings.png`).
+The demo `examples/src/circles128.bas` (tape `examples/circles128.tap` / `.tzx`) draws a concentric red/white target on a blue field in all four modes. SCREEN 0 and 1 space the rings eight pixels apart so the attribute clash looks tidier; SCREEN 2 and 3 stay four chunky pixels / cells apart. Screenshots are in `docs/screenmodes/` (`circles_all_modes.png`, `circle_screen0.png`–`circle_screen3.png`, `circle_timings.png`).
 
 A map of both 16K ROMs, generated from the built symbol files and `tools/check_layout.py` ranges, is `docs/screenmodes/rom_maps.png` (`tools/rom_map.py`).

@@ -293,7 +293,7 @@ ph_eb:  ld (hl),a
         ret
 
 ; x_ed: editor width (E=5).  D = 0 lin_pos, 1 pos_lin, 2 cur_set.
-; Ready for a main-ROM hook; unused in this stage if the hook has no home.
+; Called from main ROM (E=5) when OMODE=32.
 x_ed:   ld a,d
         or a
         jr z,ed_lin
