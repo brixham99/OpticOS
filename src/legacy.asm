@@ -103,12 +103,7 @@ m_leg_s2:
 lg_goto:
         ex de,hl
         ld hl,(PROG)
-lgg_lp: push hl
-        ld bc,(VARS)
-        and a
-        sbc hl,bc
-        pop hl
-        jp nc,con_ok            ; ran off the end
+lgg_lp: call lg_off             ; ran off the end: back to the console
         ld a,(hl)
         cp d
         jr c,lgg_nx
@@ -126,6 +121,14 @@ lgg_nx: inc hl
         inc hl
         add hl,bc
         jr lgg_lp
+; lg_off: if HL has reached VARS, the loader program has ended
+lg_off: push hl
+        ld bc,(VARS)
+        and a
+        sbc hl,bc
+        pop hl
+        ret c
+        jp con_ok
 lg_line:                        ; HL = start of a line
         inc hl
         inc hl
@@ -154,12 +157,7 @@ ls_inc: inc hl
 ls_2:   cp 13
         jr nz,ls_3
         ld hl,(NXTLIN)
-        push hl
-        ld bc,(VARS)
-        and a
-        sbc hl,bc
-        pop hl
-        jp nc,con_ok
+        call lg_off
         call lg_line
         jr lg_stmt
 ls_3:   inc hl
@@ -268,11 +266,13 @@ lg_clear:                       ; CLEAR n: RAMTOP = n, fresh stack below it
         push hl
         ld (ERR_SP),sp
         jp lg_stmt
-lg_poke:
-        call lg_expr
+; lg_ee: two expressions separated by a comma -> first in the stack, second in DE
+lg_ee:  call lg_expr
         push de
         call lg_comma
-        call lg_expr
+        jp lg_expr
+lg_poke:
+        call lg_ee
         ld a,e
         pop de
         ld (de),a
@@ -429,10 +429,7 @@ lp_s2:  ld a,(hl)               ; "" inside a string prints one quote
 lp_set0:
         xor a
         jr lp_set
-lp_at:  call lg_expr
-        push de
-        call lg_comma
-        call lg_expr
+lp_at:  call lg_ee
         ld a,22
         rst 16
         pop bc

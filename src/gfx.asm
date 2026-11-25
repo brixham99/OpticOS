@@ -162,5 +162,20 @@ w_chk:  ld a,(OMODE)
         pop af
         ld e,5
         jp xgo
+; w_g: if OMODE=32, far-call G-mode hook E=6 (D = key); else return with
+; D unchanged.  48K always has OMODE=64, so never reaches xgo.
+w_g:    ld a,(OMODE)
+        and 32
+        ret z
+        jp xgo
+; ram_ok: DE = proposed RAMTOP.  "No room" if it would overlap the 168-byte
+; UDG area at the top of RAM (UDG stays at P_RAMT-167).
+ram_ok: ld hl,(P_RAMT)
+        ld bc,-168
+        add hl,bc
+        or a
+        sbc hl,de
+        jp c,err_nomem
+        ret
 
 m_gfx_e:

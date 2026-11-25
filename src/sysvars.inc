@@ -4,7 +4,7 @@
 
 KS_LAST  equ $5C00      ; reused (KSTATE): index of the key last seen, $FF none
 KS_CNT   equ $5C01      ; reused: auto-repeat countdown
-KS_MODE  equ $5C02      ; reused: bit 0 caps lock, bit 1 E mode pending
+KS_MODE  equ $5C02      ; bit 0 caps lock, bit 1 E mode pending, bit 2 G-mode (mode 1)
 CUR_VIS  equ $5C03      ; reused: console cursor currently drawn (0/1)
 LAST_K   equ $5C08
 REPDEL   equ $5C09

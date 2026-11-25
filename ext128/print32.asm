@@ -34,13 +34,17 @@ pr32:   ld c,a
         jr c,p32_ctl
         cp 128
         jr c,p32_gl
-        ld a,'?'
+        cp 144
+        jr c,p32_q
+        cp 165
+        jr c,p32_gl              ; 144-164: 8x8 from the UDG area
+p32_q:  ld a,'?'
 p32_gl: push af
         ld a,(S_POSN)
         cp 32
         call nc,p32_nl
         pop af
-        call draw8
+        call draw_ch
         ld hl,(S_POSN)
         call attr8
         call aset
@@ -148,6 +152,23 @@ p32_nl: inc (iy+NLCT-ERR_NR)
 p32_ok: ld (S_POSN),hl
         ret
 
+; draw_ch: A = glyph code.  32-127 from font8; 144-164 from (UDG)+8*(A-144).
+UDG     equ $5C7B
+draw_ch:
+        cp 144
+        jr c,draw8
+        cp 165
+        jr nc,draw8
+        sub 144
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld de,(UDG)
+        add hl,de
+        ex de,hl
+        jr draw8_de
 ; draw8: A = 32..127 at S_POSN, 8 x 8, INVERSE / OVER from P_FLAG.
 draw8:  sub 32
         ld l,a
@@ -158,6 +179,7 @@ draw8:  sub 32
         ld de,font8
         add hl,de
         ex de,hl                ; DE = glyph
+draw8_de:
         ld a,(P_FLAG)
         ld c,a                  ; C = P_FLAG
         ld hl,(S_POSN)
@@ -348,6 +370,36 @@ ed_c1:  ld a,(hl)
         ld (hl),a
         inc h
         djnz ed_c1
+        jp back_ok
+
+; x_g: G-mode (E=6).  D = key.  Mode 1 only (the main ROM calls us after
+; an OMODE=32 check).  Caps+9 (15) toggles KS_MODE bit 2 and is left as
+; 15 so the console still ignores it.  While on, a-u / A-U become 144-164.
+; ENTER clears the bit.  D is the remapped key; A and BC are lost on return.
+KS_MODE equ $5C02
+x_g:    ld a,d
+        cp 13
+        jr z,xg_cr
+        cp 15
+        jr z,xg_tg
+        ld hl,KS_MODE
+        bit 2,(hl)
+        jp z,back_ok
+        ld c,a
+        or $20
+        sub 'a'
+        cp 21
+        jp nc,back_ok
+        add a,144
+        ld d,a
+        jp back_ok
+xg_cr:  ld hl,KS_MODE
+        res 2,(hl)
+        jp back_ok
+xg_tg:  ld hl,KS_MODE
+        ld a,4
+        xor (hl)
+        ld (hl),a
         jp back_ok
 
 font8:  incbin "../fonts/optic8x8.bin"

@@ -131,3 +131,13 @@ The screenshots in `docs/screenmodes/` were retaken from a real Fuse 128K run af
 The demo `examples/src/circles128.bas` (tape `examples/circles128.tap` / `.tzx`) draws a concentric red/white target on a blue field in all four modes. SCREEN 0 and 1 space the rings eight pixels apart so the attribute clash looks tidier; SCREEN 2 and 3 stay four chunky pixels / cells apart. Screenshots are in `docs/screenmodes/` (`circles_all_modes.png`, `circle_screen0.png`–`circle_screen3.png`, `circle_timings.png`).
 
 A map of both 16K ROMs, generated from the built symbol files and `tools/check_layout.py` ranges, is `docs/screenmodes/rom_maps.png` (`tools/rom_map.py`).
+
+### UDGs (SCREEN 1 only)
+
+21 user-defined glyphs, codes 144–164 (G-mode keys a–u).  Each is 8×8, stored in the 168-byte area above RAMTOP (the UDG sysvar at 23675 points at the first byte).  They are POKEd from BASIC; un-POKEd glyphs are blank.  In SCREEN 1 they print as those bitmaps; in SCREEN 0 the same stored bytes print as `?` and are not rewritten.
+
+Caps+9 toggles G-mode in SCREEN 1 only.  While it is on, a–u / A–U insert codes 144–164, accepted by the tokeniser only inside strings.  ENTER, or Caps+9 again, leaves G-mode.  48K and SCREEN 0 ignore Caps+9.  `CLEAR n` will not let RAMTOP run into the UDG area (`No room`); the UDG pointer stays at the top of RAM.
+
+`USR "a"` was not added: after G-mode, the tokeniser and the CLEAR cap, section K had only three free bytes, which is not enough for a string form of USR.  `PEEK` of the UDG sysvar still gives the address of glyph `a`.
+
+The demo `examples/src/udg128.bas` (tape `examples/udg128.tap` / `.tzx`) POKEs a spaceship and an alien and prints them in SCREEN 1.  The screenshot is `docs/screenmodes/udg_mode1.png`.

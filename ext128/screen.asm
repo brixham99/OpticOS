@@ -147,7 +147,8 @@ back:   ld a,(SMODE)            ; ROM 0, RAM bank 0, the screen on show
         jp OS_ext_back-2
 
 ; ext_x: E = 0 PLOT, 1 CLS (SCREEN 2/3 only), 2 a name used as a function,
-;        3 DRAW, 4 32-col / last-text-mode print (D = char), 5 editor width
+;        3 DRAW, 4 32-col / last-text-mode print (D = char), 5 editor width,
+;        6 G-mode key (D = key) in SCREEN 1
 ext_x:  ld a,e
         cp 2
         jp z,x_fn
@@ -157,6 +158,8 @@ ext_x:  ld a,e
         jp z,x_txt32
         cp 5
         jp z,x_ed
+        cp 6
+        jp z,x_g
         call tr_set
         ld a,e
         or a

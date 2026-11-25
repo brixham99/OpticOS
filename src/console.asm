@@ -35,6 +35,10 @@ con_in: call pos_lin
 k_rd:   call redraw
 con_key:
         call con_getkey
+        ld d,a                  ; G-mode: Caps+9 / a-u in SCREEN 1 (E=6)
+        ld e,6
+        call w_g
+        ld a,d
         cp 13
         jp z,con_enter
         ld hl,EMODE
@@ -55,8 +59,8 @@ ck_n:   ld hl,EIDX
         jr z,c_del
         cp 32
         jr c,con_key
-        cp 128
-        jr nc,con_key
+        cp 165
+        jr nc,con_key           ; 32-127 and UDG codes 144-164
         push af                 ; insert at the cursor
         ld a,(CON_LEN)
         cp EMAX

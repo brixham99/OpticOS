@@ -19,9 +19,7 @@ cw_l:   call lk_chk
         ld (CH_ADD),hl
         cp T_ENDCASE
         jr z,cw_x
-        push af
-        call rd_link            ; DE = the next branch
-        pop af
+        call rd_link            ; DE = the next branch (A kept)
         cp T_OTHERWISE
         jr z,cw_y
         push de

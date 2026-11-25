@@ -181,16 +181,21 @@ ag_e:   pop af
 ; bind: HL = DEF line, B = argument values on the value stack -> each
 ; parameter made LOCAL and given its value; values popped; CH_ADD (and
 ; HL) after the parameter list, CURLN = the DEF line
-bind:   ld (CURLN),hl
+; skip_def: HL = DEF line -> HL past length, the keyword, the link slot
+; and an optional PROC or FN token
+skip_def:
         ld de,5
-        add hl,de               ; past length, DEF, link slot
+        add hl,de
         ld a,(hl)
         cp T_PROC
-        jr z,bd_s
+        jr z,sd_s
         cp T_FN
-        jr nz,bd_0
-bd_s:   inc hl
-bd_0:   ld (CH_ADD),hl
+        ret nz
+sd_s:   inc hl
+        ret
+bind:   ld (CURLN),hl
+        call skip_def           ; past length, DEF, link, optional PROC/FN
+        ld (CH_ADD),hl
         ld a,b
         ld (BCN),a
         ld l,b                  ; first argument = VSP - 5*count
@@ -321,15 +326,8 @@ sf_l:   inc hl
         push hl
         push de
         ex de,hl
-        ld de,5
-        add hl,de
-        ld a,(hl)
-        cp T_PROC
-        jr z,sym_1
-        cp T_FN
-        jr nz,sym_2
-sym_1:   inc hl
-sym_2:   ld de,(VID)
+        call skip_def
+        ld de,(VID)
         inc hl                  ; both at the type byte
         inc de
         ld a,(de)
@@ -707,7 +705,8 @@ st_endif:
 st_endcase: ret
 st_when equ st_else
 st_otherwise equ st_else
-st_while: call rd_link
+st_while:
+st_until: call rd_link
         push de
         call ev_expr
         call pop_num
@@ -721,15 +720,6 @@ st_wend: call rd_link
         call lk_chk
         jp go_line
 st_repeat: ret
-st_until: call rd_link
-        push de
-        call ev_expr
-        call pop_num
-        call fp_tst0
-        pop hl
-        ret nz
-        call lk_chk
-        jp go_after
 st_for: rst $18
         cp 1
         jp nz,err_syn
