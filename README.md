@@ -55,7 +55,7 @@ All are from real [Fuse](https://fuse-emulator.sourceforge.net/) with traps and 
 - **Tape compatibility.** The standard ROM tape format and entry points (`LD-BYTES`, `SA-BYTES`, `BEEPER`, the RST vectors and others) are kept, so `LOAD ""` loads ordinary games, including ones with a BASIC loader, through a small legacy shim.
 - **Clean-room implementation.** OpticOS contains no Sinclair, Amstrad or Tasword code or artwork. A build check confirms that no run of 12 or more bytes is shared with the original ROM.
 
-Not in v1.0.x: UDGs are planned and `MODE 32` is under consideration (see [Planned / under consideration](#planned--under-consideration)). Dropped by decision (spec §12): `CIRCLE`, `LABEL`/`GOTO`, `SOUND`, `ASN`/`ACS`, `SCREEN$()`, `ATTR`, `POINT`, `FIND`, `CONT`, array parameters by reference, `CALL` register arguments, `CAT`, the OpticBASIC `SCREEN$` tape forms (legacy loaders keep `LOAD "" SCREEN$`) and `JOY`.
+Not in v1.0.x: UDGs are planned.  On 128K, `SCREEN 1` is 32-column hi-res (see docs/opticbasic128-screen.md). Dropped by decision (spec §12) from the 48K ROM: `CIRCLE`, `LABEL`/`GOTO`, `SOUND`, `ASN`/`ACS`, `SCREEN$()`, `ATTR`, `POINT`, `FIND`, `CONT`, array parameters by reference, `CALL` register arguments, `CAT`, the OpticBASIC `SCREEN$` tape forms (legacy loaders keep `LOAD "" SCREEN$`) and `JOY`.
 
 ## A short example
 
@@ -139,7 +139,7 @@ Questions, reports and ideas are welcome in the [Spectrum Computing forum thread
 ## Planned / under consideration
 
 - **UDGs** (user-defined graphics) are planned. They were dropped earlier for lack of space (spec §12), so they need some space optimisations first.
-- **A 32-column mode** or **a 128K edition** is being considered.
+- A 32-column mode is `SCREEN 1` in the 128K edition (docs/opticbasic128-screen.md).
 
 There are no dates for any of these.
 

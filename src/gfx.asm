@@ -2,7 +2,7 @@
 ; Graphics: 256 x 192 pixels, origin bottom left; COORDS = last point.
 m_gfx_s:
 ; PLOT x, y
-st_plot: call ev_u8
+st_plot0: call ev_u8
         push de
         call argn
         pop bc                  ; C = x
@@ -47,7 +47,7 @@ pl_s:   ld (hl),a
 err_rng: rst 8
         defb ERR_RANGE
 ; DRAW dx, dy (relative) / DRAW TO x, y
-st_draw: rst $18
+st_draw0: rst $18
         cp T_TO
         jr z,dr_to
         rst $30                 ; dx
@@ -104,14 +104,14 @@ ln_2:   ld d,a                  ; D = |dy|, B = y step
         jr nc,ln_y
         ld h,0                  ; x major
         ld l,c
-        ld c,0
+        ld c,h
         ld a,e
         ld e,d
         ld d,a
         jr ln_go
 ln_y:   ld h,b                  ; y major
         ld l,0
-        ld b,0
+        ld b,l
 ln_go:  ld (DIMB+4),hl          ; major step (H = y, L = x)
         ld (DIMB),bc            ; minor step
         ld (DIMB+2),de          ; m, n
@@ -152,6 +152,30 @@ c_add:  ld bc,(COORDS)
         ld b,a
         ld (COORDS),bc
         pop af
+        ret
+
+; w_chk: if OMODE=32, far-call editor hook E=5 (D already set); else return
+; to the 64-col body.  48K always has OMODE=64, so never reaches xgo.
+w_chk:  ld a,(OMODE)
+        and 32
+        ret z
+        pop af
+        ld e,5
+        jp xgo
+; w_g: if OMODE=32, far-call G-mode hook E=6 (D = key); else return with
+; D unchanged.  48K always has OMODE=64, so never reaches xgo.
+w_g:    ld a,(OMODE)
+        and 32
+        ret z
+        jp xgo
+; ram_ok: DE = proposed RAMTOP.  "No room" if it would overlap the 168-byte
+; UDG area at the top of RAM (UDG stays at P_RAMT-167).
+ram_ok: ld hl,(P_RAMT)
+        ld bc,-168
+        add hl,bc
+        or a
+        sbc hl,de
+        jp c,err_nomem
         ret
 
 m_gfx_e:

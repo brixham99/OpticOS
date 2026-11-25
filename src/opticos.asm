@@ -20,15 +20,26 @@ RESET:  di
 ; ---------------------------------------------------------------- $0008
         org $0008
 RST8:   jp err_rst
+; ---------------------------------------------------------------- $000B
+        org $000B
+; 32-col editor (OMODE=32): w_cur continues here after ld d,2
+w_c2:   call w_chk
+        jr w_c3
 ; ---------------------------------------------------------------- $0010
         org $0010
-RST16:  jp print_a
+RST16:  jp x_txt                ; SCREEN 1-3: 32-col print, or return to last text mode
+xt_jp:  jp print_a
+err_brk: rst 8                  ; the extension ROM far-calls this for BREAK
+        defb ERR_BREAK
 ; ---------------------------------------------------------------- $0018
         org $0018
 RST24:
 tk:     ld hl,(CH_ADD)          ; GET-CHAR: A = current token
         ld a,(hl)
         ret
+; ---------------------------------------------------------------- $001D
+        org $001D
+w_c3:   jp cur_set_c            ; 64-col cur_set after w_chk
 ; ---------------------------------------------------------------- $0020
         org $0020
 RST32:
@@ -40,6 +51,10 @@ skip1:  ld hl,(CH_ADD)          ; NEXT-CHAR: step over a one-byte token
         org $0028
 RST40:  jp fu_run                ; OpticOS's own maths byte-code (fptrans.asm);
                                 ; the Sinclair calculator is not provided
+; ---------------------------------------------------------------- $002B
+        org $002B
+w_cur:  ld d,2                  ; cur_set: 8-pixel cursor in the extension
+        jr w_c2
 ; ---------------------------------------------------------------- $0030
         org $0030
 RST48:
@@ -50,7 +65,19 @@ m_rst_e:
 ; ---------------------------------------------------------------- $0038
         org $0038
         include "isr.asm"
-
+; scr128: mode 0 -> print_a; modes 1-3 -> xt_far (32-col, or last text mode).
+; This stub must stay within the 21 bytes up to NMI.
+x_txt:  push af                 ; 21 bytes: mode 0 -> print_a; else xt_far
+        ld a,(SMODE)
+        or a
+        jr nz,xt_m
+        ld a,(OMODE)
+        and 32
+        jr z,xt_ok
+xt_m:   pop af
+        jp xt_far
+xt_ok:  pop af
+        jr xt_jp
 ; ---------------------------------------------------------------- $0066
         org $0066
 NMI:    push hl
@@ -71,11 +98,28 @@ secB:
         include "keyboard.asm"
         include "misc.asm"
 secB_end:
-
+; scr128 (5 bytes): DRAW in SCREEN 2/3 goes to the extension ROM
+st_draw: ld e,3
+        jp st_drx
 ; ---------------------------------------------------------------- $03B5
         org $03B5
         include "sound.asm"
         include "strfn.asm"
+; scr128 (part, 19 bytes): xchk - in SCREEN 2/3 hand the statement to the
+; 128K extension ROM, dropping the caller's own code; in SCREEN 0/1 return.
+; xgo pages the extension ROM, keeping the screen on show; E = what to do
+; (0 PLOT, 1 CLS, 2 a name used as a function, 3 DRAW).  The extension answers at
+; xgo+12; without one (48K, or OpticOS in both slots) the RET runs.
+xchk:   ld a,(SMODE)
+        or a
+        ret z
+        pop hl
+xgo:    ld a,(SMODE)
+        and 8
+        or $10
+        ld bc,$7FFD
+        out (c),a
+x_back: ret
 secC_end:
 
 ; ---------------------------------------------------------------- $04C2
@@ -95,7 +139,9 @@ secE_end:
         include "errors.asm"            ; its message table covers $0767-$0808, so no
         include "tape.asm"              ; code is fetched where LD-BLOCK-level traps sit
 secF_end:
-
+st_drx: call xchk
+        jp st_draw0
+prm_t:  defb "]+**"             ; console prompt characters (moved here for I slack)
 ; ---------------------------------------------------------------- $096F
         org $096F
 POKE_RET:
@@ -109,11 +155,12 @@ secG_end:
 ; ---------------------------------------------------------------- $0D6B
         org $0D6B
         include "cls.asm"
+        include "ext128.asm"
 secH_end:
 
 ; ---------------------------------------------------------------- $0DAF
         org $0DAF
-CL_ALL: jp CLS
+CL_ALL: jr CLS
         include "console.asm"
         include "legacy.asm"
         include "list.asm"

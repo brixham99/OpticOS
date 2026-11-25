@@ -82,6 +82,16 @@ sa_half:                        ; wait 13*B, then flip MIC and border
 ; Either RET pops the handler pushed on entry, tape_ret at $053F, which
 ; other trapping interfaces (e.g. Spectranet) also return into.  tape_ret
 ; can run twice without harm.  check_layout.py checks these bytes.
+; scr128 (part, 15 bytes): a name used as a function that is neither a
+; variable nor an FN goes to the extension ROM first (POINT); PLOT in
+; SCREEN 1/2 goes to the extension ROM
+xfn:    ld e,2
+        call xgo
+        rst 8
+        defb ERR_NOVAR
+st_plot: ld e,0
+        call xchk
+        jp st_plot0
 m_sav_g:                        ; (zero-filled gap up to $053E)
         org $053E
 trap_ret:

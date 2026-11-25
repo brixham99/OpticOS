@@ -39,18 +39,20 @@ err_show:
         ld a,(S_POSN)
         or a
         ld a,13
-        call nz,pr_out
+        jr z,es_cr0
+        rst 16
+es_cr0:
         ld a,(ERR_NR)
         ld c,a
         ld hl,EMSGN
         cp (hl)
         ld hl,EMBUF
-        jp z,pr_msg
+        jr z,pr_msg
         ld hl,err_tab
 es_lp:  ld a,(hl)
         inc hl
         cp c
-        jp z,pr_msg
+        jr z,pr_msg
         inc a                   ; $FF ends the table (after the OK entry)
         jr z,es_unk
 es_sk:  bit 7,(hl)
@@ -68,7 +70,7 @@ es_unk: push bc                 ; pr_msg changes C
 pr_msg: ld a,(hl)
         push hl
         and $7F
-        call pr_out
+        rst 16
         pop hl
         bit 7,(hl)
         inc hl

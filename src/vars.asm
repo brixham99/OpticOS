@@ -307,15 +307,7 @@ s_assign:
         ld e,l
         call s_alloc            ; DE = new chars, back-pointer = descriptor
         pop hl
-        inc hl
-        inc hl
-        ld c,(hl)
-        ld b,0
-        inc hl
-        ld a,(hl)
-        inc hl
-        ld h,(hl)
-        ld l,a
+        call str_ptr
         push de
         push bc
         ldir

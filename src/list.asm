@@ -62,7 +62,6 @@ ln_open: inc hl
         jr z,lo_for
         cp T_DEF
         jr z,lo_def
-        ld a,b
         push hl
         ld hl,lo_tab
         ld c,7

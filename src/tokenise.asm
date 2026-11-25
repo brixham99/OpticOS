@@ -64,9 +64,9 @@ tz_4:   cp '>'
         ld a,'>'
         jr tz_em
 tz_5:   cp '&'
-        jr z,tz_hex
+        jp z,tz_hex
         cp '$'
-        jr z,tz_hex
+        jp z,tz_hex
         cp '%'
         jr z,tz_bin
         cp '.'
@@ -75,6 +75,12 @@ tz_5:   cp '&'
         jr nc,tz_num
         call is_alph
         jp nc,tz_word
+        cp 144                  ; UDG codes only belong inside strings
+        jr c,tz_em
+        cp 165
+        jr nc,tz_em
+        rst 8
+        defb ERR_SYN
 tz_em:  ld (de),a
         inc de
         jp tz_lp

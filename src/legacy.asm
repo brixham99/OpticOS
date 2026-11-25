@@ -28,7 +28,7 @@ lg_prog:
         ld (VARS),hl
         ld hl,(HDRBUF+13)       ; auto-start line
         bit 7,h
-        jp nz,con_ok
+        jr nz,con_ok
         call lg_goto
         jp lg_stmt
 
@@ -57,8 +57,7 @@ lf_n:   ld a,(hl)
         rst 16
         inc hl
         djnz lf_n
-        ld a,13
-        rst 16
+        call pr_eol
         ld a,(LG_WANT)
         ld hl,HDRBUF
         cp (hl)
@@ -104,12 +103,7 @@ m_leg_s2:
 lg_goto:
         ex de,hl
         ld hl,(PROG)
-lgg_lp: push hl
-        ld bc,(VARS)
-        and a
-        sbc hl,bc
-        pop hl
-        jp nc,con_ok            ; ran off the end
+lgg_lp: call lg_off             ; ran off the end: back to the console
         ld a,(hl)
         cp d
         jr c,lgg_nx
@@ -127,6 +121,14 @@ lgg_nx: inc hl
         inc hl
         add hl,bc
         jr lgg_lp
+; lg_off: if HL has reached VARS, the loader program has ended
+lg_off: push hl
+        ld bc,(VARS)
+        and a
+        sbc hl,bc
+        pop hl
+        ret c
+        jp con_ok
 lg_line:                        ; HL = start of a line
         inc hl
         inc hl
@@ -155,12 +157,7 @@ ls_inc: inc hl
 ls_2:   cp 13
         jr nz,ls_3
         ld hl,(NXTLIN)
-        push hl
-        ld bc,(VARS)
-        and a
-        sbc hl,bc
-        pop hl
-        jp nc,con_ok
+        call lg_off
         call lg_line
         jr lg_stmt
 ls_3:   inc hl
@@ -268,13 +265,14 @@ lg_clear:                       ; CLEAR n: RAMTOP = n, fresh stack below it
         ld hl,con_err
         push hl
         ld (ERR_SP),sp
-        ld hl,(CH_ADD)
-        jp lg_ret
-lg_poke:
-        call lg_expr
+        jp lg_stmt
+; lg_ee: two expressions separated by a comma -> first in the stack, second in DE
+lg_ee:  call lg_expr
         push de
         call lg_comma
-        call lg_expr
+        jp lg_expr
+lg_poke:
+        call lg_ee
         ld a,e
         pop de
         ld (de),a
@@ -411,8 +409,7 @@ lp_com: ld a,6
         rst 16
         ld a,1
         jr lp_set
-lp_apo: ld a,13
-        rst 16
+lp_apo: call pr_eol
         ld a,1
         jr lp_set
 lp_sep: ld a,b
@@ -432,10 +429,7 @@ lp_s2:  ld a,(hl)               ; "" inside a string prints one quote
 lp_set0:
         xor a
         jr lp_set
-lp_at:  call lg_expr
-        push de
-        call lg_comma
-        call lg_expr
+lp_at:  call lg_ee
         ld a,22
         rst 16
         pop bc
@@ -449,9 +443,7 @@ lp_at:  call lg_expr
 lp_end: ld a,(LG_PSEP)
         or a
         ret nz
-        ld a,13
-        rst 16
-        ret
+        jp pr_eol
 
 ; ---- expressions: 16-bit integers.  Numbers use the hidden 5-byte form.
 lg_expr:

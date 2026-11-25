@@ -139,10 +139,7 @@ op_mul: ld bc,fp_mul
         jr bin_n
 op_div: ld bc,fp_div
 bin_n:  push bc
-        call ev_2
-        call num_chk
-        ex de,hl
-        call num_chk
+        call num2
         ex de,hl
         pop bc
         jr bn_c
@@ -156,6 +153,11 @@ bn_c:   call jpbc
         jp ev_pop
 jpbc:   push bc
         ret
+; num2: two numbers on the stack -> HL and DE are their slots (each checked)
+num2:   call ev_2
+        call num_chk
+        ex de,hl
+        jp num_chk
 ; int2: two numbers as 16-bit integers -> DE = left, BC = right,
 ; HL = left slot (now the top)
 int2:   call pop_int
@@ -402,8 +404,9 @@ sk_r:   call ev_2
         ld bc,5
         ldir
         jp ev_pop
-; sk_cp: HL = string entry, DE = destination -> its chars copied, DE past
-sk_cp:  inc hl
+; str_ptr: HL = string entry -> BC = length, HL = characters
+str_ptr:
+        inc hl
         inc hl
         ld c,(hl)
         ld b,0
@@ -412,6 +415,9 @@ sk_cp:  inc hl
         inc hl
         ld h,(hl)
         ld l,a
+        ret
+; sk_cp: HL = string entry, DE = destination -> its chars copied, DE past
+sk_cp:  call str_ptr
         inc c
         dec c
         ret z
@@ -611,23 +617,20 @@ f_false: ld de,0
         jp push_int
 f_frames: ld de,(FRAMES)
         jp push_u
-f_lefts: call arg1s
+fs_prep: call arg1s
         call argn
         call rparen
         call ev_top
         inc hl
         inc hl
+        ret
+f_lefts: call fs_prep
         ld a,e
         cp (hl)
         ret nc
         ld (hl),a
         ret
-f_rights: call arg1s
-        call argn
-        call rparen
-        call ev_top
-        inc hl
-        inc hl
+f_rights: call fs_prep
         ld a,(hl)
         sub e
         ret c
@@ -781,10 +784,7 @@ mx_l:   rst $18
         jr nz,fm_e
         rst $20
         call ev_expr
-        call ev_2
-        call num_chk
-        ex de,hl
-        call num_chk
+        call num2
         push hl
         push de
         call fp_cmp             ; new vs best
