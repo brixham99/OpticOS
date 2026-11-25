@@ -47,6 +47,10 @@ OpticOS (c) 2026 Optica Technology Design
 | SAY / OpticVoice | No | Yes, in the same extension ROM |
 | `LOAD ""` of ordinary game tapes | Yes | Yes (in the 48K-compatible text mode) |
 
+The same short OpticBASIC program, LISTed in both text modes. These are Fuse screen grabs; there are no line numbers.
+
+![The same program LISTed in 64-column SCREEN 0 and 32-column SCREEN 1](docs/screenmodes/text_64_vs_32.png)
+
 ## The 48K edition
 
 The 48K edition is the 16K ROM image **`opticos.rom`**. Install it in place of the Sinclair ROM. It is also slot 0 of the 128K edition.
@@ -270,7 +274,7 @@ The free bytes are spread over the gaps between the ROM's fixed addresses.
 
 ## The boot screen
 
-The mock-up above matches the ROM's real boot screen pixel for pixel (the rig checks this). It is a faithful ZX Spectrum frame: 256×192 pixels of bitmap, with a 32-pixel black border, giving a 320×256 image (and a 3× nearest-neighbour upscale here so the text is readable). Paper is black, ink is white, bright is off.
+The picture at the top of this page is the boot screen, a 3× nearest-neighbour upscale of the 320×256 frame (256×192 pixels of bitmap with a 32-pixel black border) so the text is readable. The rig checks that the 1× frame matches the ROM pixel for pixel. Paper is black, ink is white, bright is off.
 
 Row 0 is a colour bar made from attribute cells only: 16 swatches, each two cells wide, showing black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Row 1 is blank. Row 2 holds the banner, `OpticOS (c) 2026 Optica Technology Design`, and row 3 the BASIC's name and version, `OpticBASIC v1.1`. Row 4 is blank. Row 5 shows the OpticOS prompt `] ` with the cursor block (character 127) at column 2. `]` is the direct-mode prompt everywhere. Everything below the bar is white on black. The font has no copyright glyph — a © is illegible at 3 pixels wide — so the banner uses ASCII `(c)`, as the specification requires.
 
@@ -287,7 +291,7 @@ The artwork is original. The idea of a 64-column Spectrum display comes from Tas
 | [`font/font4.txt`](font/font4.txt) | ASCII-art source for every glyph |
 | [`font/font4x8.py`](font/font4x8.py) | The same glyphs, plus the packed 384-byte image |
 | [`font/font4x8.bin`](font/font4x8.bin) | Packed font, ready to assemble at `$3E80` |
-| [`font/make_font.py`](font/make_font.py) | Regenerates the font files and the boot mock-up |
+| [`font/make_font.py`](font/make_font.py) | Regenerates the font files and the boot-screen image |
 | [`assets/font_sheet.png`](assets/font_sheet.png) | A labelled sheet of all 96 glyphs |
 
 Lower-case `m` has a short middle stem under its top bar, so it no longer looks like `n` (rows 2–5: `###`, `###`, `#.#`, `#.#`; it was `###`, `#.#`, `#.#`, `#.#`). Fuse, before and after:

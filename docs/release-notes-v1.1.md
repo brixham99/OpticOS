@@ -74,4 +74,4 @@ The user manual (`OpticOS_User_Manual.pdf`) and the specification (`spec.pdf`) h
 
 ## Documentation
 
-The README now splits the 48K and 128K editions, with a feature comparison table, install instructions, and screen grabs from `docs/screenmodes`. The specification is v0.19. The boot mock-up assets have been regenerated for `OpticBASIC v1.1`.
+The README now splits the 48K and 128K editions, with a feature comparison table, install instructions, and screen grabs from `docs/screenmodes`. The specification is v0.19. The boot-screen images have been regenerated for `OpticBASIC v1.1`.
