@@ -1115,7 +1115,7 @@ FRAME_W, FRAME_H = SCREEN_W + 2 * BORDER_X, SCREEN_H + 2 * BORDER_Y
 BANNER = "OpticOS (c) 2026 Optica Technology Design"
 BANNER_ROW = 2
 BANNER_COL = 0
-BANNER2 = "OpticBASIC v1.0.4"
+BANNER2 = "OpticBASIC v1.1"
 BANNER2_ROW = 3
 PROMPT = "] "          # OpticOS direct-mode prompt
 PROMPT_ROW = 5
@@ -1222,12 +1222,10 @@ def render_font_sheet_labelled() -> Image.Image:
 
 def main() -> None:
     validate()
-    destinations = [
-        Path("/workspace/newrom/font"),
-        Path("/workspace/opticos-repo/font"),
-    ]
+    repo = Path(__file__).resolve().parent.parent
+    destinations = [repo / "font"]
     preview = Path("/tmp/opticos-preview")
-    assets = Path("/workspace/opticos-repo/assets")
+    assets = repo / "assets"
     preview.mkdir(parents=True, exist_ok=True)
     assets.mkdir(parents=True, exist_ok=True)
 
