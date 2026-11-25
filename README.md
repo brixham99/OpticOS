@@ -47,9 +47,9 @@ OpticOS (c) 2026 Optica Technology Design
 | SAY / OpticVoice | No | Yes, in the same extension ROM |
 | `LOAD ""` of ordinary game tapes | Yes | Yes (in the 48K-compatible text mode) |
 
-The same short OpticBASIC program, LISTed in both text modes. These are Fuse screen grabs; there are no line numbers.
+The same colourful character-set display (codes 32–127) in both text modes. These are Fuse screen grabs.
 
-![The same program LISTed in 64-column SCREEN 0 and 32-column SCREEN 1](docs/screenmodes/text_64_vs_32.png)
+![The full OpticOS character set in 64-column SCREEN 0 and 32-column SCREEN 1](docs/screenmodes/text_64_vs_32.png)
 
 ## The 48K edition
 
