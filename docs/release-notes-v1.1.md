@@ -1,8 +1,6 @@
-# OpticOS v1.1 (draft release notes)
+# OpticOS v1.1
 
 25 November 2026.
-
-These notes are a draft for the GitHub release. The tag and the published release have **not** been created yet. Nothing has been pushed.
 
 OpticOS v1.1 is the first release with two editions that share the same 16K main ROM.
 
@@ -54,7 +52,7 @@ Demo tapes: `flags128` (the flag in modes 0, 2 and 3), `circles128` (`CIRCLE` in
 
 ## Files for the release
 
-These are the assets to attach when the release is published. The Sinclair `48.rom`, the Sinclair 128K ROMs, snapshots and memory dumps must **not** be included.
+The Sinclair `48.rom`, the Sinclair 128K ROMs, snapshots and memory dumps are **not** included.
 
 | File | Edition | Notes |
 |---|---|---|
@@ -65,7 +63,7 @@ These are the assets to attach when the release is published. The Sinclair `48.r
 | `circles128.tap` / `.tzx` | 128K | Circles in modes 0–3 |
 | `udg128.tap` / `.tzx` | 128K | UDG demo in mode 1 |
 
-The user manual (`docs/manual/OpticOS_User_Manual.pdf`) and specification (`docs/spec.pdf`) already live in the repository. Rebuild and attach them if you want the PDF copies in the GitHub release to show v1.1 on the title lines.
+The user manual (`OpticOS_User_Manual.pdf`) and the specification (`spec.pdf`) have been rebuilt so their title lines show v1.1, and both are attached to this release.
 
 ## Tests run on this branch
 
