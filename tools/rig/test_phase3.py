@@ -53,6 +53,7 @@ case('NEXT without FOR', [], 'NEXT', ['NEXT but no FOR'])
 case('no such PROC', [], 'frob 1', ['No such PROC or FN'])
 case('END and STOP', ['PRINT 1', 'STOP', 'PRINT 2'], 'RUN', ['1', 'Stopped, line 2'])
 case('vars cleared by RUN', ['PRINT q'], 'q=5: RUN', ['No such variable, line 1'])
+case('LIST shows line numbers', ['10 PRINT "Hello"', '20 PRINT "World"'], 'LIST', ['10 PRINT "Hello"', '>20 PRINT "World"'])
 PROG = ['REM structured demo', 'DEF fib(n)', 'IF n<2 THEN RETURN n', 'RETURN fib(n-1)+fib(n-2)', 'ENDFN',
         'DEF show(a$,n)', 'LOCAL i', 'FOR i=1 TO n', 'PRINT a$;" ";i;" ";fib(i)', 'NEXT', 'ENDPROC',
         'x=&10+%11', 'WHILE x>17', 'x=x-1', 'WEND', 'TRY', 'show "fib",x-12', 'CATCH', 'PRINT "err ";ERR', 'ENDTRY']
