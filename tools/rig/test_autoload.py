@@ -30,7 +30,7 @@ for mode, states, want in (('Keyword', STATES, ['j', 'sym+p', 'sym+p', 'enter'])
     line = bytes(s.peek(LINEBUF + i) for i in range(s.peek(CON_LEN))).decode('latin1')
     check('%s: the typist typed all its keys' % mode, [x[2] for x in t.log] == want, t.log)
     check('%s: nothing typed, a clean ] prompt, no error' % mode,
-          rows == ['OpticOS (c) 2026 Optica Technology Design', 'OpticBASIC v1.0.4', ']'] and line == '', (rows, line))
+          rows == ['OpticOS (c) 2026 Optica Technology Design', 'OpticBASIC v1.1', ']'] and line == '', (rows, line))
     check('%s: not loading (border black, at the prompt)' % mode,
           s.border() == 0 and not (0x0556 <= s.regs()['PC'] < 0x0605), '%04X' % s.regs()['PC'])
 # LOAD "" typed by hand after the prompt still loads

@@ -8,9 +8,9 @@ OpticOS itself (ROM slot 0, `build/opticos.rom`) gains only small hooks.
 
 | ROM | Before | After |
 |---|---|---|
-| OpticOS (slot 0), main v1.0.4 | 116 bytes free | – |
+| OpticOS (slot 0), main v1.1 | 102 bytes free | – |
 | OpticOS (slot 0), opticos128-say branch | 113 | 81 (32 bytes of hooks, below) |
-| SAY extension ROM (opticos128-say) | about 5.3K free | unchanged (not merged) |
+| Merged 128K extension ROM (`opticos128ext.rom`) | 1,204 bytes free | SAY, SCREEN, UDGs and G-mode |
 | Screen extension ROM (new) | – | code $1000–$14B3 plus tables at $3E00/$3F00: 10,813 bytes free |
 
 ROM 0 hooks (32 bytes, packed into existing gaps):
@@ -78,7 +78,7 @@ fuse-sdl --machine 128 --rom-128-0 build/opticos.rom --rom-128-1 build/opticos12
 
 ## Phase 2 (RC-6)
 
-SCREEN and SAY now share one extension ROM (`build/opticos128ext.rom`, built by `ext128/build.py` from the SAY source plus `ext128/screen.asm`). Push is not approved; the work is on the local branch `opticos128-ext`.
+SCREEN and SAY now share one extension ROM (`build/opticos128ext.rom`, built by `ext128/build.py` from the SAY source plus `ext128/screen.asm`). The SCREEN, graphics, UDG and SAY work is in the v1.1 main ROM and the merged extension `build/opticos128ext.rom`.
 
 ### New statements
 
