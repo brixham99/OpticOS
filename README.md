@@ -14,7 +14,7 @@ The boot message reads:
 OpticOS (c) 2026 Optica Technology Design
 ```
 
-**Status: Phases 0–5 complete.** The planned feature list (after the cuts in spec §12) is built and fits the 16K ROM with 116 bytes to spare (v1.0.3; 116 is now the accepted margin). The ROM boots, loads ordinary game tapes, runs structured OpticBASIC programs, and has a Sinclair-style line editor. The **[user manual (PDF)](docs/manual/OpticOS_User_Manual.pdf)** covers the whole system, with worked examples ([source](docs/manual)). The **[example tape](examples)** (`.tap` and `.tzx`) holds the manual's examples and three more, verified in Fuse. OpticOS has been run on real hardware, a Cobra (see [Running OpticOS](#running-opticos)), but not yet on an original Sinclair Spectrum. The design is in the [specification (PDF)](docs/spec.pdf) ([Markdown](docs/spec.md)); §4.8 lists what is built.
+**Status: Phases 0–5 complete.** The planned feature list (after the cuts in spec §12) is built and fits the 16K ROM with 116 bytes to spare (v1.0.4; 116 is now the accepted margin). The ROM boots, loads ordinary game tapes, runs structured OpticBASIC programs, and has a Sinclair-style line editor. The **[user manual (PDF)](docs/manual/OpticOS_User_Manual.pdf)** covers the whole system, with worked examples ([source](docs/manual)). The **[example tape](examples)** (`.tap` and `.tzx`) holds the manual's examples and three more, verified in Fuse. OpticOS has been run on real hardware, a Cobra (see [Running OpticOS](#running-opticos)), but not yet on an original Sinclair Spectrum. The design is in the [specification (PDF)](docs/spec.pdf) ([Markdown](docs/spec.md)); §4.8 lists what is built.
 
 | Phase | What it delivered | Report |
 |---|---|---|
@@ -145,7 +145,7 @@ There are no dates for any of these.
 
 ## ROM byte usage (Phase 5 complete)
 
-16,268 of 16,384 bytes are placed, leaving **116 free** in v1.0.3. 116 bytes is now the accepted margin, agreed by Nathan in place of the earlier rule of at least 221 spare (256 until v1.0.1; v1.0.2 had 227 free). v1.0.3's new tape stripe colours cost 10 bytes and the LIST `cont?` pause 101; the shorter chime cost nothing. By module, as `tools/check_layout.py` reports them:
+16,268 of 16,384 bytes are placed, leaving **116 free** in v1.0.4. 116 bytes is now the accepted margin, agreed by Nathan in place of the earlier rule of at least 221 spare (256 until v1.0.1; v1.0.2 had 227 free). v1.0.3's new tape stripe colours cost 10 bytes and the LIST `cont?` pause 101; the shorter chime cost nothing. By module, as `tools/check_layout.py` reports them:
 
 | Part | Bytes |
 |---|---:|
@@ -182,7 +182,7 @@ The free bytes are spread over about eleven gaps between the ROM's fixed address
 
 The mock-up above matches the ROM's real boot screen pixel for pixel (the rig checks this). It is a faithful ZX Spectrum frame: 256×192 pixels of bitmap, with a 32-pixel black border, giving a 320×256 image (and a 3× nearest-neighbour upscale here so the text is readable). Paper is black, ink is white, bright is off.
 
-Row 0 is a colour bar made from attribute cells only: 16 swatches, each two cells wide, showing black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Row 1 is blank. Row 2 holds the banner, `OpticOS (c) 2026 Optica Technology Design`, and row 3 the BASIC's name and version, `OpticBASIC v1.0.3`. Row 4 is blank. Row 5 shows the OpticOS prompt `] ` with the cursor block (character 127) at column 2. `]` is the direct-mode prompt everywhere. Everything below the bar is white on black. The font has no copyright glyph — a © is illegible at 3 pixels wide — so the banner uses ASCII `(c)`, as the specification requires.
+Row 0 is a colour bar made from attribute cells only: 16 swatches, each two cells wide, showing black, blue, red, magenta, green, cyan, yellow and white, first normal and then BRIGHT. Row 1 is blank. Row 2 holds the banner, `OpticOS (c) 2026 Optica Technology Design`, and row 3 the BASIC's name and version, `OpticBASIC v1.0.4`. Row 4 is blank. Row 5 shows the OpticOS prompt `] ` with the cursor block (character 127) at column 2. `]` is the direct-mode prompt everywhere. Everything below the bar is white on black. The font has no copyright glyph — a © is illegible at 3 pixels wide — so the banner uses ASCII `(c)`, as the specification requires.
 
 The native 1× frame is [`assets/opticos_boot.png`](assets/opticos_boot.png).
 
@@ -199,6 +199,12 @@ The artwork is original. The idea of a 64-column Spectrum display comes from Tas
 | [`font/font4x8.bin`](font/font4x8.bin) | Packed font, ready to assemble at `$3E80` |
 | [`font/make_font.py`](font/make_font.py) | Regenerates the font files and the boot mock-up |
 | [`assets/font_sheet.png`](assets/font_sheet.png) | A labelled sheet of all 96 glyphs |
+
+Lower-case `m` has a short middle stem under its top bar, so it no longer looks like `n` (rows 2–5: `###`, `###`, `#.#`, `#.#`; it was `###`, `#.#`, `#.#`, `#.#`). Fuse, before and after:
+
+| Before | After |
+|---|---|
+| ![m before](docs/font/font_m_before.png) | ![m after](docs/font/font_m_after.png) |
 
 ## What is not in this repository
 
