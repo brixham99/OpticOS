@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-"""Unit tests for SCREEN 1/2 DRAW (Bresenham), BOX and CIRCLE, plus a
+"""Unit tests for SCREEN 2/3 DRAW (Bresenham), BOX and CIRCLE, plus a
 framebuffer comparison of the Union Flag against a Python-rendered reference.
+Hi-res CIRCLE (SCREEN 0/1) is checked against the same midpoint reference
+on the 256x192 display file.
 
 These call the extension ROM's lineto / boxfill / circ / plot_cl / render0 in
 the 48K rig: bank 7's framebuffer and lists sit at the same addresses, and the
@@ -44,13 +46,16 @@ def pal(c):
 # framebuffer helpers
 # ---------------------------------------------------------------------------
 def limits(md):
-    return (64, 48) if md == 1 else (32, 24)
+    if md == 0:
+        return (256, 192)
+    return (64, 48) if md == 2 else (32, 24)
 
 def ytotop(md, y):
-    return (47 if md == 1 else 23) - y
+    maxy = 191 if md == 0 else (47 if md == 2 else 23)
+    return maxy - y
 
 def pix_addr(md, x, row):
-    if md == 2:
+    if md == 3:
         return ((0xDC + 4 * (row >> 3)) << 8) | (((row & 7) << 5) | x)
     low = (((row >> 1) & 7) << 5) | (x >> 1)
     page = 0xDC + 4 * (row >> 4) + 2 * (row & 1) + (x & 1)
@@ -107,7 +112,7 @@ def bresenham(x0, y0, x1, y1, md):
     return pts
 
 def box_pts(x, y, wdt, hgt, md):
-    maxx, maxy = (63, 47) if md == 1 else (31, 23)
+    maxx, maxy = (63, 47) if md == 2 else (31, 23)
     if x > maxx:
         return []
     if y > maxy:
@@ -132,7 +137,7 @@ def dband_pts(w, h, top, i0, i1, d0, d1, md):
     """Both saltire arms, rows i0..i1 from the top, span [xa+d0, xa+d1].
 
     If xa is odd the run is shifted left one pixel so mode-1 edges sit on
-    the 2x2 attribute grid.
+    the 2x2 attribute grid (SCREEN 2).
     """
     pts = []
     for i in range(i0, i1 + 1):
@@ -328,7 +333,7 @@ def painted(s, md):
 # tests
 # ---------------------------------------------------------------------------
 OCTANTS = [
-    # name, x0, y0, x1, y1  (bottom-left origin, mode 1: 64x48)
+    # name, x0, y0, x1, y1  (bottom-left origin, mode 2: 64x48)
     ('E  horizontal +dx',      10, 20, 40, 20),
     ('W  horizontal -dx',      40, 20, 10, 20),
     ('N  vertical +dy',        20, 5,  20, 30),
@@ -347,12 +352,12 @@ OCTANTS = [
 
 def t_draw_octants():
     s = machine()
-    for md in (1, 2):
+    for md in (2, 3):
         for name, x0, y0, x1, y1 in OCTANTS:
-            # skip points that are off-mode-2
+            # skip points that are off-mode-3
             w, h = limits(md)
             if max(x0, x1) >= w or max(y0, y1) >= h or min(x0, y0, x1, y1) < 0:
-                if md == 2:
+                if md == 3:
                     continue
             setup(s, md, 7)
             zline(s, x0, y0, x1, y1, 7)
@@ -373,17 +378,17 @@ def t_draw_clip():
     # Negative coordinates never reach lineto.
     s = machine()
     cases = [
-        ('end off right',        50, 20, 80, 20, 1),
-        ('start off right, -dx', 80, 20, 50, 20, 1),
-        ('end off top',          20, 40, 20, 60, 1),
-        ('start off top, -dy',   20, 60, 20, 40, 1),
-        ('diagonal off right',   50, 10, 80, 25, 1),
-        ('diagonal off top',     10, 40, 25, 60, 1),
-        ('fully off to the right', 70, 10, 90, 20, 1),
-        ('fully off above',      10, 50, 20, 70, 1),
-        ('md2 end off right',    20, 10, 40, 10, 2),
-        ('md2 end off top',      10, 20, 10, 30, 2),
-        ('md2 diagonal clip',    24, 18, 40, 28, 2),
+        ('end off right',        50, 20, 80, 20, 2),
+        ('start off right, -dx', 80, 20, 50, 20, 2),
+        ('end off top',          20, 40, 20, 60, 2),
+        ('start off top, -dy',   20, 60, 20, 40, 2),
+        ('diagonal off right',   50, 10, 80, 25, 2),
+        ('diagonal off top',     10, 40, 25, 60, 2),
+        ('fully off to the right', 70, 10, 90, 20, 2),
+        ('fully off above',      10, 50, 20, 70, 2),
+        ('md3 end off right',    20, 10, 40, 10, 3),
+        ('md3 end off top',      10, 20, 10, 30, 3),
+        ('md3 diagonal clip',    24, 18, 40, 28, 3),
     ]
     for name, x0, y0, x1, y1, md in cases:
         setup(s, md, 7)
@@ -399,17 +404,17 @@ def t_draw_clip():
 def t_box_edges():
     s = machine()
     cases = [
-        ('md1 full width',     1, 0, 16, 64, 32),
-        ('md1 1x1 at origin',  1, 0, 0, 1, 1),
-        ('md1 top-right cell', 1, 63, 47, 1, 1),
-        ('md1 clips right',    1, 60, 20, 10, 4),
-        ('md1 clips top',      1, 10, 44, 4, 10),
-        ('md1 left column',    1, 0, 10, 1, 8),
-        ('md1 bottom row',     1, 5, 0, 10, 1),
-        ('md2 full width',     2, 0, 8, 32, 16),
-        ('md2 clips right',    2, 28, 8, 8, 4),
-        ('md2 1x1 top-right',  2, 31, 23, 1, 1),
-        ('md2 off to the right', 2, 40, 8, 4, 4),
+        ('md2 full width',     2, 0, 16, 64, 32),
+        ('md2 1x1 at origin',  2, 0, 0, 1, 1),
+        ('md2 top-right cell', 2, 63, 47, 1, 1),
+        ('md2 clips right',    2, 60, 20, 10, 4),
+        ('md2 clips top',      2, 10, 44, 4, 10),
+        ('md2 left column',    2, 0, 10, 1, 8),
+        ('md2 bottom row',     2, 5, 0, 10, 1),
+        ('md3 full width',     3, 0, 8, 32, 16),
+        ('md3 clips right',    3, 28, 8, 8, 4),
+        ('md3 1x1 top-right',  3, 31, 23, 1, 1),
+        ('md3 off to the right', 3, 40, 8, 4, 4),
     ]
     for name, md, x, y, wdt, hgt in cases:
         setup(s, md, 2)
@@ -425,26 +430,26 @@ def t_box_edges():
 def t_box_no_wrap():
     """A full-width BOX must not spill a wrapped pixel at x=0 of another row."""
     s = machine()
-    setup(s, 1, 1)
+    setup(s, 2, 1)
     zbox(s, 0, 16, 64, 32, 1)
-    fb = fb_get(s, 1)
+    fb = fb_get(s, 2)
     spill = [(x, r) for r in range(48) for x in range(64)
              if fb[r][x] and not (0 <= x < 64 and 0 <= r < 32)]
     # flag sits at top=47, h=32 -> rows 0..31.  Anything in rows 32-47 is spill.
-    check('BOX md1 full width stays in rows 0-31', spill == [],
+    check('BOX md2 full width stays in rows 0-31', spill == [],
           'spill %s' % spill[:8])
     n = sum(fb[r][x] == 1 for r in range(32) for x in range(64))
-    check('BOX md1 full width is exactly 64x32', n == 64 * 32, 'n=%d' % n)
+    check('BOX md2 full width is exactly 64x32', n == 64 * 32, 'n=%d' % n)
 
-    setup(s, 2, 1)
+    setup(s, 3, 1)
     zbox(s, 0, 8, 32, 16, 1)
-    fb = fb_get(s, 2)
+    fb = fb_get(s, 3)
     spill = [(x, r) for r in range(24) for x in range(32)
              if fb[r][x] and not (0 <= r < 16)]
-    check('BOX md2 full width stays in rows 0-15', spill == [],
+    check('BOX md3 full width stays in rows 0-15', spill == [],
           'spill %s' % spill[:8])
     n = sum(fb[r][x] == 1 for r in range(16) for x in range(32))
-    check('BOX md2 full width is exactly 32x16', n == 32 * 16, 'n=%d' % n)
+    check('BOX md3 full width is exactly 32x16', n == 32 * 16, 'n=%d' % n)
 
 def zflag(s, w, h, top, md):
     """Drive flag() through the Z80 primitives (integer endpoints)."""
@@ -544,8 +549,8 @@ def t_flag_reference():
     os.makedirs(SHOTS, exist_ok=True)
     s = machine()
     specs = [
-        (1, 64, 32, 47, 'flag_ref_mode1.png', 'flag_got_mode1.png'),
-        (2, 32, 16, 23, 'flag_ref_mode2.png', 'flag_got_mode2.png'),
+        (2, 64, 32, 47, 'flag_ref_mode2.png', 'flag_got_mode2.png'),
+        (3, 32, 16, 23, 'flag_ref_mode3.png', 'flag_got_mode3.png'),
     ]
     for md, w, h, top, refn, gotn in specs:
         want = flag_fb(w, h, top, md)
@@ -582,10 +587,10 @@ def t_flag_reference():
                     y+=1
         if ths:
             med=sorted(ths)[len(ths)//2]
-            expect=6 if md==1 else 3
+            expect=6 if md==2 else 3
             check('flag md%d saltire vertical thickness ~%d' % (md, expect),
                   med>=expect, 'median %d samples %s' % (med, ths[:8]))
-        if md==1:
+        if md==2:
             n3=0
             for cy in range(0, h, 2):
                 for cx in range(0, w, 2):
@@ -593,9 +598,9 @@ def t_flag_reference():
                     cols.discard(0)
                     if len(cols)>=3:
                         n3+=1
-            check('flag md1 no 3-colour 2x2 attribute cells', n3==0, 'n3=%d' % n3)
+            check('flag md2 no 3-colour 2x2 attribute cells', n3==0, 'n3=%d' % n3)
         # downsampled hi-res reference, same band widths as this mode
-        # (mode 2 uses a 1-cell red in a 3-cell white band).
+        # (mode 3 uses a 1-cell red in a 3-cell white band).
         if h < 24:
             # 8-cell white, 2-cell red, scaled 32 -> 256 (*8)
             hi_m = hi_res_flag(256, 128, wd0=-24, wd1=32, rt0=-8, rt1=0, rb0=8, rb1=16, align=8)
@@ -608,23 +613,23 @@ def t_flag_reference():
         nd = diffs(got, ds)
         # not required to be pixel-identical (low-res scanlines vs majority
         # of a hi-res raster), but should be close — used as a sanity bound.
-        # mode 1 is 64x32 (1/4 of 256x128); mode 2 is 32x16, where majority
+        # mode 2 is 64x32 (1/4 of 256x128); mode 3 is 32x16, where majority
         # sampling of the diagonals naturally diverges more from a scanline
         # raster, so allow a quarter of the canvas.
-        bound = (dw * dh) // (8 if md == 1 else 4)
+        bound = (dw * dh) // (8 if md == 2 else 4)
         check('flag md%d close to downsampled hi-res Union Flag' % md,
               nd <= bound, '%d / %d pixels differ (bound %d)' % (nd, dw * dh, bound))
-        fb_to_image(want, cell=8 if md == 1 else 16).save(os.path.join(SHOTS, refn))
-        fb_to_image(got,  cell=8 if md == 1 else 16).save(os.path.join(SHOTS, gotn))
-        fb_to_image(ds,   cell=8 if md == 1 else 16).save(
+        fb_to_image(want, cell=8 if md == 2 else 16).save(os.path.join(SHOTS, refn))
+        fb_to_image(got,  cell=8 if md == 2 else 16).save(os.path.join(SHOTS, gotn))
+        fb_to_image(ds,   cell=8 if md == 2 else 16).save(
             os.path.join(SHOTS, 'flag_downsample_mode%d.png' % md))
 
         # also render onto the Spectrum display and confirm it is a clean
-        # 8x8 (md2) / 4x4 (md1, two pixels per 8x8 cell) grid: every cell's
+        # 8x8 (md3) / 4x4 (md2, two pixels per 8x8 cell) grid: every cell's
         # 8 bitmap rows, where they have ink, are identical, and attributes
         # are consistent across the cell.
         s.poke(modev, md)
-        s.load(0x4000, bytes(0x1800))   # CLS bitmap; SCREEN 2 is attr-only
+        s.load(0x4000, bytes(0x1800))   # CLS bitmap; SCREEN 3 is attr-only
         try:
             s.call(SYM['render0'], IFF1=0, IFF2=0, limit=20_000_000)
             grid_ok, detail = screen_is_cell_grid(s, md, h)
@@ -647,16 +652,16 @@ def screen_saltire_red(s, md, w, h):
     with an explicit colour, so it cannot catch that by itself.
     """
     cw = max(1, h // 6)
-    # display file: mode 1 is 4x4 screen pixels per chunky pixel; mode 2 is 8x8
+    # display file: mode 2 is 4x4 screen pixels per chunky pixel; mode 3 is 8x8
     red = 0
     mem = s.mem
-    for sy in range(h * (4 if md == 1 else 8)):
+    for sy in range(h * (4 if md == 2 else 8)):
         a = 0x4000 | ((sy & 0xC0) << 5) | ((sy & 7) << 8) | ((sy & 0x38) << 2)
         cy = sy >> 3
-        for sx in range(w * (4 if md == 1 else 8)):
+        for sx in range(w * (4 if md == 2 else 8)):
             cx = sx >> 3
             # skip the cross
-            if md == 1:
+            if md == 2:
                 if abs((sx // 4) - w // 2) < cw: continue
                 if abs((sy // 4) - h // 2) < cw: continue
             else:
@@ -677,7 +682,7 @@ def screen_is_cell_grid(s, md, flag_h):
     mem = s.mem
     # attributes
     spill_cells = []
-    flag_rows = flag_h if md == 2 else (flag_h + 1) // 2  # 16 or 16 cells
+    flag_rows = flag_h if md == 3 else (flag_h + 1) // 2  # 16 or 16 cells
     for cy in range(24):
         for cx in range(32):
             at = mem[0x5800 + cy * 32 + cx]
@@ -687,14 +692,14 @@ def screen_is_cell_grid(s, md, flag_h):
                     spill_cells.append((cx, cy, at))
     if spill_cells:
         return False, 'attr spill below flag: %s' % spill_cells[:8]
-    if md == 2:
+    if md == 3:
         # bitmap in the flag area should be clear (attribute-only mode)
         ink = 0
         for y in range(flag_h * 8):
             a = 0x4000 | ((y & 0xC0) << 5) | ((y & 7) << 8) | ((y & 0x38) << 2)
             ink += sum(1 for x in range(32) if mem[a + x])
         if ink:
-            return False, 'mode 2 has %d ink bytes; expected attribute-only' % ink
+            return False, 'mode 3 has %d ink bytes; expected attribute-only' % ink
         # every on-flag cell is one of paper 0/1/2/7 (blue/red/white), 8x8
         bad = []
         for cy in range(flag_h):
@@ -706,9 +711,9 @@ def screen_is_cell_grid(s, md, flag_h):
                 if inkc != paper:
                     bad.append((cx, cy, at))
         if bad:
-            return False, 'mode 2 attr ink!=paper: %s' % bad[:6]
+            return False, 'mode 3 attr ink!=paper: %s' % bad[:6]
         return True, '32x%d cells, attribute-only, no spill' % flag_h
-    # mode 1: 2x2 chunky — in each cell, the four 4x4 corners may differ,
+    # mode 2: 2x2 chunky — in each cell, the four 4x4 corners may differ,
     # but within a 4x4 corner all pixels share a colour (pattern is $00,$0F,
     # $F0,$FF per 4-pixel nibble group, and all 8 bit-rows come in two
     # identical groups of 4).  A "smaller than 4x4" block would show as a
@@ -733,23 +738,23 @@ def t_circle():
     s = machine()
     cases = [
         # name, md, cx, cy, r
-        ('md1 r=0 at centre',          1, 32, 24, 0),
-        ('md1 r=1',                    1, 32, 24, 1),
-        ('md1 r=5',                    1, 32, 24, 5),
-        ('md1 r=10',                   1, 32, 24, 10),
-        ('md1 r=23 near full height',  1, 32, 24, 23),
-        ('md2 r=0 at centre',          2, 16, 12, 0),
-        ('md2 r=1',                    2, 16, 12, 1),
-        ('md2 r=6',                    2, 16, 12, 6),
-        ('md2 r=11 near full height',  2, 16, 12, 11),
-        ('md1 r=0 off the top-right',  1, 80, 60, 0),
-        ('md1 clipped at origin',      1, 0,  0,  8),
-        ('md1 clipped at top-right',   1, 63, 47, 8),
-        ('md1 clipped at bottom-left', 1, 0,  0,  1),
-        ('md2 clipped at origin',      2, 0,  0,  5),
-        ('md2 clipped at top-right',   2, 31, 23, 5),
-        ('md1 centre off, arc visible',1, 70, 24, 20),
-        ('md2 centre off, arc visible',2, 40, 12, 16),
+        ('md2 r=0 at centre',          2, 32, 24, 0),
+        ('md2 r=1',                    2, 32, 24, 1),
+        ('md2 r=5',                    2, 32, 24, 5),
+        ('md2 r=10',                   2, 32, 24, 10),
+        ('md2 r=23 near full height',  2, 32, 24, 23),
+        ('md3 r=0 at centre',          3, 16, 12, 0),
+        ('md3 r=1',                    3, 16, 12, 1),
+        ('md3 r=6',                    3, 16, 12, 6),
+        ('md3 r=11 near full height',  3, 16, 12, 11),
+        ('md2 r=0 off the top-right',  2, 80, 60, 0),
+        ('md2 clipped at origin',      2, 0,  0,  8),
+        ('md2 clipped at top-right',   2, 63, 47, 8),
+        ('md2 clipped at bottom-left', 2, 0,  0,  1),
+        ('md3 clipped at origin',      3, 0,  0,  5),
+        ('md3 clipped at top-right',   3, 31, 23, 5),
+        ('md2 centre off, arc visible',2, 70, 24, 20),
+        ('md3 centre off, arc visible',3, 40, 12, 16),
     ]
     for name, md, cx, cy, r in cases:
         setup(s, md, 7)
@@ -762,23 +767,23 @@ def t_circle():
               'extra %s missing %s n=%d want=%d' % (
                   list(extra)[:6], list(missing)[:6], len(got), len(want)))
     # r=0 on-screen is exactly one pixel
-    setup(s, 1, 2)
+    setup(s, 2, 2)
     zcirc(s, 10, 10, 0, 2)
-    fb = fb_get(s, 1)
+    fb = fb_get(s, 2)
     n = sum(1 for row in fb for v in row if v)
     check('CIRCLE r=0 paints exactly one pixel',
-          n == 1 and fb[ytotop(1, 10)][10] == 2, 'n=%d' % n)
+          n == 1 and fb[ytotop(2, 10)][10] == 2, 'n=%d' % n)
     # a clipped circle must not write outside the framebuffer
-    setup(s, 1, 7)
+    setup(s, 2, 7)
     zcirc(s, 0, 0, 20, 7)
-    w, h = limits(1)
-    spill = [(x, r) for r, row in enumerate(fb_get(s, 1))
+    w, h = limits(2)
+    spill = [(x, r) for r, row in enumerate(fb_get(s, 2))
              for x, v in enumerate(row) if v and not (0 <= x < w and 0 <= r < h)]
     check('CIRCLE clipped at origin has no spill', spill == [], 'spill %s' % spill[:6])
     # eight-way symmetry for an in-bounds circle
-    setup(s, 1, 7)
+    setup(s, 2, 7)
     zcirc(s, 32, 24, 12, 7)
-    pts = painted(s, 1)
+    pts = painted(s, 2)
     def bl(x, row):
         return x, 47 - row
     bad = []
@@ -787,11 +792,69 @@ def t_circle():
         for sx, sy in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
             ox, oy = cx - 32, cy - 24
             tx, ty = 32 + sx * ox, 24 + sy * oy
-            tr = ytotop(1, ty)
+            tr = ytotop(2, ty)
             if (tx, tr) not in pts:
                 bad.append((cx, cy, tx, ty))
-    check('CIRCLE md1 r=12 is 4-way symmetric about the centre',
+    check('CIRCLE md2 r=12 is 4-way symmetric about the centre',
           bad == [], 'missing images %s' % bad[:6])
+
+
+CEXPL = 0x5CA7
+P_FLAG, ATTR_T, MASK_T = 0x5C91, 0x5C8F, 0x5C90
+
+def pix_hi(s, x, row):
+    a = (0x4000
+         | ((row & 0xC0) << 5)
+         | ((row & 7) << 8)
+         | ((row & 0x38) << 2)
+         | (x >> 3))
+    return bool(s.peek(a) & (0x80 >> (x & 7)))
+
+def painted_hi(s):
+    return {(x, r) for r in range(192) for x in range(256) if pix_hi(s, x, r)}
+
+def t_circle_hires():
+    """CIRCLE in SCREEN 0/1 (SMODE=0) plots the 256x192 bitmap."""
+    s = machine()
+    cases = [
+        ('hi r=0 at centre',          128, 96, 0),
+        ('hi r=1',                    128, 96, 1),
+        ('hi r=10',                   128, 96, 10),
+        ('hi r=40',                   128, 96, 40),
+        ('hi clipped at origin',      0,   0,  20),
+        ('hi clipped at top-right',   255, 191, 20),
+        ('hi centre near right, arc clipped', 250, 96, 20),
+    ]
+    for name, cx, cy, r in cases:
+        setup(s, 0, 7)
+        s.load(0x4000, bytes(0x1B00))
+        s.poke(CEXPL, 1)          # explicit colour: set ink pixels
+        s.poke(P_FLAG, 0)
+        zcirc(s, cx, cy, r, 7)
+        got = painted_hi(s)
+        want = midcircle(cx, cy, r, 0)
+        extra, missing = got - want, want - got
+        check('CIRCLE %s matches midpoint reference' % name,
+              got == want,
+              'extra %s missing %s n=%d want=%d' % (
+                  list(extra)[:6], list(missing)[:6], len(got), len(want)))
+    # r=0 is exactly one pixel
+    setup(s, 0, 2)
+    s.load(0x4000, bytes(0x1B00))
+    s.poke(CEXPL, 1)
+    s.poke(P_FLAG, 0)
+    zcirc(s, 10, 10, 0, 2)
+    got = painted_hi(s)
+    check('CIRCLE hi r=0 paints exactly one pixel',
+          got == {(10, ytotop(0, 10))}, 'got %s' % list(got)[:6])
+    # INVERSE with explicit c clears the pixel
+    setup(s, 0, 7)
+    s.load(0x4000, bytes([0xFF])*0x1800 + bytes(0x300))
+    s.poke(CEXPL, 1)
+    s.poke(P_FLAG, 4)            # INVERSE
+    zcirc(s, 128, 96, 0, 7)
+    check('CIRCLE hi INVERSE clears the centre pixel',
+          not pix_hi(s, 128, ytotop(0, 96)), 'pixel still set')
 
 def main():
     t_draw_octants()
@@ -799,6 +862,7 @@ def main():
     t_box_edges()
     t_box_no_wrap()
     t_circle()
+    t_circle_hires()
     t_flag_reference()
     nfail = sum(1 for _, ok, _ in results if not ok)
     print('\n%d tests, %d failed' % (len(results), nfail))

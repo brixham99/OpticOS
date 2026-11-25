@@ -36,8 +36,9 @@ ATTR_T   equ $5C8F
 MASK_T   equ $5C90
 P_FLAG   equ $5C91      ; bit 0 OVER, bit 2 INVERSE
 ; MEMBOT ($5C92-$5CAF) is reused for OpticOS internals
-OMODE    equ $5C92      ; text mode: 64
-SMODE    equ $5CA0      ; SCREEN mode (128K extension ROM): bits 0-1 mode 0-2,
+OMODE    equ $5C92      ; last text mode width: 64 or 32
+SMODE    equ $5CA0      ; SCREEN: 0 = hi-res (OMODE 64 or 32), 2 = chunky, 3 = attr; bits 3,7 FLIP
+                        ; (0=64-col hi-res, 1=32-col hi-res, 2=64x48 chunky, 3=32x24 attr),
                         ; bit 3 = bank 7's screen on show, bit 7 = SCREEN FLIP (manual) mode
 GLYPHBUF equ $5C98      ; 8 bytes, must not cross a page
 NMIADD   equ $5CB0

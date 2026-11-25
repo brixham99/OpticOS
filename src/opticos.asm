@@ -22,7 +22,7 @@ RESET:  di
 RST8:   jp err_rst
 ; ---------------------------------------------------------------- $0010
         org $0010
-RST16:  jp x_txt                ; SCREEN 1/2: any text output returns to SCREEN 0 first
+RST16:  jp x_txt                ; SCREEN 1-3: 32-col print, or return to last text mode
 xt_jp:  jp print_a
 err_brk: rst 8                  ; the extension ROM far-calls this for BREAK
         defb ERR_BREAK
@@ -53,19 +53,18 @@ m_rst_e:
 ; ---------------------------------------------------------------- $0038
         org $0038
         include "isr.asm"
-; scr128: if SMODE is set, show screen 5 and clear it, then the usual RST 16.
-; 21 bytes, exactly filling the gap up to NMI.  The final JR reaches xt_jp.
-x_txt:  push af
-        push bc
+; scr128: mode 0 -> print_a; modes 1-3 -> xt_far (32-col, or last text mode).
+; This stub must stay within the 21 bytes up to NMI.
+x_txt:  push af                 ; 21 bytes: mode 0 -> print_a; else xt_far
         ld a,(SMODE)
         or a
+        jr nz,xt_m
+        ld a,(OMODE)
+        and 32
         jr z,xt_ok
-        xor a
-        ld (SMODE),a
-        ld bc,$7FFD
-        out (c),a
-xt_ok:  pop bc
-        pop af
+xt_m:   pop af
+        jp xt_far
+xt_ok:  pop af
         jr xt_jp
 ; ---------------------------------------------------------------- $0066
         org $0066
@@ -87,15 +86,15 @@ secB:
         include "keyboard.asm"
         include "misc.asm"
 secB_end:
-; scr128 (5 bytes): DRAW in SCREEN 1/2 goes to the extension ROM
+; scr128 (5 bytes): DRAW in SCREEN 2/3 goes to the extension ROM
 st_draw: ld e,3
         jp st_drx
 ; ---------------------------------------------------------------- $03B5
         org $03B5
         include "sound.asm"
         include "strfn.asm"
-; scr128 (part, 19 bytes): xchk - in SCREEN 1/2 hand the statement to the
-; 128K extension ROM, dropping the caller's own code; in SCREEN 0 return.
+; scr128 (part, 19 bytes): xchk - in SCREEN 2/3 hand the statement to the
+; 128K extension ROM, dropping the caller's own code; in SCREEN 0/1 return.
 ; xgo pages the extension ROM, keeping the screen on show; E = what to do
 ; (0 PLOT, 1 CLS, 2 a name used as a function, 3 DRAW).  The extension answers at
 ; xgo+12; without one (48K, or OpticOS in both slots) the RET runs.
@@ -148,7 +147,7 @@ secH_end:
 
 ; ---------------------------------------------------------------- $0DAF
         org $0DAF
-CL_ALL: jp CLS
+CL_ALL: jr CLS
         include "console.asm"
         include "legacy.asm"
         include "list.asm"

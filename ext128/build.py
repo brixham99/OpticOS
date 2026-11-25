@@ -23,6 +23,7 @@ NEED = [
     'boot', 'ext_back', 'id_skip', 'ev_expr', 'ev_pop', 'ev_int',
     'err_type', 'err_syn', 'err_arg', 'err_nomem', 'LD_BYTES', 'T_LOAD',
     'xgo', 'x_rst', 'pop_int', 'push_u', 'err_rng', 'CLS', 'err_brk',
+    'print_a', 'scroll', 'set_colour', 'po_oos',
 ]
 missing = [k for k in NEED if k not in sym]
 if missing:
@@ -108,7 +109,7 @@ if needle not in src:
     sys.exit('ext_back gadget not found')
 src = src.replace(needle, needle + hooks, 1)
 
-# Dispatch SCREEN, BOX and CIRCLE (modes 1/2) before SAY.
+# Dispatch SCREEN, BOX and CIRCLE (all modes) before SAY.
 old_disp = """ext_main:
         ld hl,(CH_ADD)          ; $01 type hash length name
         inc hl
@@ -129,9 +130,6 @@ new_disp = """ext_main:
         ld de,n_box
         call namecmp
         jp z,es_box
-        ld a,(SMODE)
-        and 3
-        jr z,em_saychk          ; mode 0: CIRCLE is not a statement
         ld de,n_circle
         call namecmp
         jp z,es_circ

@@ -1,8 +1,7 @@
 ' The Union Flag in each screen mode of OpticOS 128 (needs the merged
-' SAY+SCREEN extension ROM in slot 1).  SCREEN 0 uses the original flag
-' listing (colour cells and DRAW).  SCREEN 1 (64x48) and SCREEN 2 (32x24)
-' draw the same flag with BOX and DRAW, which write the framebuffer in
-' machine code.
+' SAY+SCREEN extension ROM in slot 1).  SCREEN 0 (64-col) and SCREEN 1
+' (32-col) use the same 256x192 bitmap.  SCREEN 2 (64x48 chunky) and
+' SCREEN 3 (32x24 attribute) draw the flag with BOX and DRAW.
 ' The Union Flag, drawn by colour cells and lines
 ' The flag fills the top 16 character rows (y 64-191); the rows below stay black.
 ' Colours are laid out by 8x8 colour cell: blue PAPER for the field, white INK
@@ -64,12 +63,31 @@ DEF PROC cross
     IF r >= 5 AND r <= 10 THEN PRINT AT r, 28; PAPER 2; "        ";
   NEXT r
 ENDPROC
+DEF PROC field32
+  ' the blue field in 32-column mode: 16 rows of blue paper
+  PAPER 1: INK 7: BRIGHT 0
+  FOR r = 0 TO 15
+    PRINT AT r, 0; STRING$(32, " ");
+  NEXT r
+ENDPROC
+DEF PROC cross32
+  ' the same 8x8-cell cross, with 32-column PRINT coordinates
+  PRINT AT 5, 0; PAPER 7; STRING$(32, " ");
+  PRINT AT 10, 0; PAPER 7; STRING$(32, " ");
+  FOR r = 6 TO 9
+    PRINT AT r, 0; PAPER 2; STRING$(32, " ");
+  NEXT r
+  FOR r = 0 TO 15
+    IF r < 5 OR r > 10 THEN PRINT AT r, 13; PAPER 7; " "; PAPER 2; "    "; PAPER 7; " ";
+    IF r >= 5 AND r <= 10 THEN PRINT AT r, 14; PAPER 2; "    ";
+  NEXT r
+ENDPROC
 
 DEF PROC dband(w, h, top, i0, i1, d0, d1, c)
   ' both saltire arms: a horizontal run [xa+d0, xa+d1] in colour c
   ' on every row i from the top (i0..i1).  xa is 2*i (\) or w-1-2*i (/).
   ' If xa is odd the run is shifted left one pixel so mode 1 edges sit
-  ' on the 2x2 attribute grid (no three colours in one cell).
+  ' on the 2x2 attribute grid in SCREEN 2 (no three colours in one cell).
   FOR i = i0 TO i1
     y = top - i
     xa = 2 * i
@@ -91,7 +109,7 @@ ENDPROC
 DEF PROC flag(w, h, top)
   ' Union Flag, w by h, top row at y = top (origin bottom left).
   ' White-band thickness matches the earlier centred listing
-  ' (mode 1 ~6 chunky px vertical, mode 2 ~3-4 cells). The red saltire
+  ' (mode 2 ~6 chunky px vertical, mode 3 ~3-4 cells). The red saltire
   ' is offset as in SCREEN 0: to the left in the top half, to the right
   ' in the bottom half, with white remaining on both sides of the red.
   bot = top - h + 1
@@ -129,13 +147,26 @@ PRINT AT 22, 0; "SCREEN 0 in "; INT((FRAMES - t) / 5) / 10; " seconds";
 WAIT 250
 t = FRAMES
 SCREEN 1: CLS
-flag 64, 32, 47
+field32
+diagonals
+edges 36, 39
+edges 88, 91
+red_diagonals
+cross32
+PAPER 0: INK 7
+PRINT AT 22, 0; "SCREEN 1 in "; INT((FRAMES - t) / 5) / 10; " s";
 s1 = INT((FRAMES - t) / 5) / 10
 WAIT 250
 t = FRAMES
 SCREEN 2: CLS
-flag 32, 16, 23
+flag 64, 32, 47
 s2 = INT((FRAMES - t) / 5) / 10
 WAIT 250
+t = FRAMES
+SCREEN 3: CLS
+flag 32, 16, 23
+s3 = INT((FRAMES - t) / 5) / 10
+WAIT 250
 SCREEN 0
-PRINT "SCREEN 1 in "; s1; " s, SCREEN 2 in "; s2; " s"
+PRINT "SCREEN 1 in "; s1; " s"
+PRINT "SCREEN 2 in "; s2; " s, SCREEN 3 in "; s3; " s"

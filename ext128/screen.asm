@@ -3,22 +3,21 @@
 ; (c) 2026 Optica Technology Design.  Clean-room, for a 128K Spectrum with
 ; OpticOS (branch opticos128-screen) in ROM slot 0 and this ROM in slot 1.
 ;
-;   SCREEN 0        the ordinary display (cleared, as CLS)
-;   SCREEN 1        64 x 48 chunky pixels: 2 x 2 chunky pixels share one
-;                   attribute cell (two colours per cell)
-;   SCREEN 2        32 x 24 cells, each one colour (attribute only, no clash)
-;   SCREEN FLIP     double buffering: draw the changes on the hidden screen,
-;                   wait for the frame, show it.  The first FLIP turns it on;
-;                   SCREEN n turns it off (every PLOT / CLS then shows at once)
-;   PLOT x,y[,c]    in SCREEN 1/2: colour c 0-15, or INK + 8 * BRIGHT
+;   SCREEN 0        64-column hi-res (256 x 192); OMODE = 64
+;   SCREEN 1        32-column hi-res, same bitmap; OMODE = 32
+;   SCREEN 2        64 x 48 chunky pixels (old SCREEN 1)
+;   SCREEN 3        32 x 24 attribute cells (old SCREEN 2)
+;   SCREEN FLIP     double buffering in modes 2/3 only
+;   PLOT x,y[,c]    in SCREEN 2/3: colour c 0-15, or INK + 8 * BRIGHT
 ;   DRAW [TO] x,y[,c]
 ;   BOX x,y,w,h[,c] filled rectangle, (x,y) the bottom-left
-;   CIRCLE x,y,r[,c] midpoint circle, clipped (SCREEN 1/2 only; mode 0
-;                   has no CIRCLE — OpticOS dropped it in v0.7)
-;   CLS             in SCREEN 1/2: every pixel PAPER + 8 * BRIGHT
-;   POINT(x,y)      colour 0-15 in SCREEN 1/2; 1/0 (ink pixel) in SCREEN 0
-; Origin bottom left, as PLOT.  Any return to the console (end of a program,
-; an error, BREAK) gives back SCREEN 0 (OpticOS's console entry).
+;   CIRCLE x,y,r[,c] midpoint circle, clipped, in SCREEN 0-3 (hi-res
+;                   backend in 0/1; chunky/attr in 2/3)
+;   CLS             in SCREEN 2/3: every pixel PAPER + 8 * BRIGHT
+;   POINT(x,y)      colour 0-15 in SCREEN 2/3; 1/0 (ink pixel) in 0/1
+; Origin bottom left, as PLOT.  Text in modes 2/3 returns to the last
+; text mode (OMODE 64 or 32).  SMODE is 0 for both hi-res modes (so the
+; main-ROM xchk stays "or a" and xgo stays at $04B5); 2 and 3 as named.
 ;
 ; How OpticOS gets here: ext_hook (a statement name that is not a PROC),
 ; xgo with E = 0 PLOT / 1 CLS / 2 a name used as a function.  Calls into
@@ -38,7 +37,16 @@
 ; =====================================================================
 
 ATTR_P  equ $5C8D
+OMODE   equ $5C92
 SMODE   equ $5CA0
+CEXPL   equ $5CA7              ; 1 if CIRCLE colour was given (hi-res)
+S_POSN  equ $5C88
+PR_CTRL equ $5C0E
+PR_P1   equ $5C0F
+ATTR_T  equ $5C8F
+MASK_T  equ $5C90
+P_FLAG  equ $5C91
+NLCT    equ $5C8C
 COORDS  equ $5C7D
 T_TO    equ $BD
 VID     equ $5BE0
@@ -104,25 +112,31 @@ es_n:   call sfar                ; SCREEN n
         or a
         jp nz,os_rng
         ld a,e
-        cp 3
+        cp 4
         jp nc,os_rng
+        cp 2
+        jr nc,es_23
+        ld b,64                 ; SCREEN 0 / 1: hi-res, OMODE 64 or 32
         or a
-        jr nz,es_12
-        xor a                   ; SCREEN 0: screen 5, then OpticOS's CLS
+        jr z,es_hi
+        ld b,32
+es_hi:  ld a,b
+        ld (OMODE),a
+        xor a
         ld (SMODE),a
         call tr_set
         call sfar
         dw OS_CLS
         jp back_ok
-es_12:  ld (SMODE),a            ; SCREEN 1 / 2: screen 5 on show, PLOT shows at once
+es_23:  ld (SMODE),a            ; SCREEN 2 / 3: chunky or attribute
         call tr_set
         call paper_col
         ld d,a
         call b7_in
         ld a,(SMODE)
         ld (mode),a
-        cp 2
-        call z,clr_bits         ; SCREEN 2: blank bitmaps on both screens
+        cp 3
+        call z,clr_bits         ; SCREEN 3: blank bitmaps on both screens
         call fill
         call render0
         call b7_out
@@ -132,12 +146,17 @@ back:   ld a,(SMODE)            ; ROM 0, RAM bank 0, the screen on show
         ld bc,$7FFD
         jp OS_ext_back-2
 
-; ext_x: E = 0 PLOT, 1 CLS (SCREEN 1/2 only), 2 a name used as a function
+; ext_x: E = 0 PLOT, 1 CLS (SCREEN 2/3 only), 2 a name used as a function,
+;        3 DRAW, 4 32-col / last-text-mode print (D = char), 5 editor width
 ext_x:  ld a,e
         cp 2
         jp z,x_fn
         cp 3
         jp z,x_draw
+        cp 4
+        jp z,x_txt32
+        cp 5
+        jp z,x_ed
         call tr_set
         ld a,e
         or a
@@ -339,7 +358,7 @@ xy_chk: ld a,b
         jp nz,os_rng
         ld a,(SMODE)
         and 3
-        cp 1
+        cp 2
         ld a,64
         ld h,48
         jr z,xy_1
@@ -392,9 +411,9 @@ p0_l:   rrca
 pix_addr:
         ld a,(SMODE)
         and 3
-        cp 1
+        cp 2
         jr z,pa_1
-        ld a,c                  ; SCREEN 2: page FBP + 4 (cy >> 3), low (cy & 7) << 5 | cx
+        ld a,c                  ; SCREEN 3: page FBP + 4 (cy >> 3), low (cy & 7) << 5 | cx
         and $18
         rrca
         add a,FBP
@@ -407,7 +426,7 @@ pix_addr:
         or b
         ld l,a
         ret
-pa_1:   ld a,c                  ; SCREEN 1: low ((y >> 1) & 7) << 5 | x >> 1
+pa_1:   ld a,c                  ; SCREEN 2: low ((y >> 1) & 7) << 5 | x >> 1
         and $0E
         rlca
         rlca
@@ -597,7 +616,7 @@ rd_lp:  ld hl,(rd_end)
         ld (hl),a
         ex de,hl
         ld a,(mode)
-        cp 2
+        cp 3
         jp z,rd_m2
         ld d,(hl)               ; p0 TL
         inc h
@@ -713,7 +732,7 @@ s_at:   ld a,h                  ; C = TA[ink << 4 | paper]
         ld (hl),c
         pop de
         jp rd_lp
-rd_m2:  ld e,(hl)               ; SCREEN 2: one colour per cell, attribute only
+rd_m2:  ld e,(hl)               ; SCREEN 3: one colour per cell, attribute only
         ld d,TA2/256
         ld a,(de)
         ld c,a
@@ -930,7 +949,7 @@ xb_c:   pop bc
         jp back_ok
 
 ; CIRCLE x, y, r [,c]: midpoint circle, centre (x,y) bottom-left, radius r.
-; SCREEN 1/2 only (the dispatcher does not claim the name in mode 0).
+; Modes 0/1 use the hi-res backend; 2/3 the chunky/attr framebuffer.
 es_circ: call tr_set
         call sfar
         dw OS_id_skip
@@ -955,6 +974,8 @@ es_circ: call tr_set
         push de                 ; r
         call ink_col
         ld e,a
+        xor a
+        ld (CEXPL),a
         ld hl,(CH_ADD)
         ld a,(hl)
         cp ','
@@ -972,6 +993,8 @@ es_circ: call tr_set
         cp 16
         jp nc,os_rng
         ld e,a
+        ld a,1
+        ld (CEXPL),a
 xc_c:   pop bc                  ; r (0 is a single pixel at the centre)
         ld a,b
         or a
@@ -992,7 +1015,9 @@ xc_c:   pop bc                  ; r (0 is a single pixel at the centre)
         ld d,e
         call b7_in
         call circ
-        call auto_show
+        ld a,(SMODE)
+        and 3
+        call nz,auto_show       ; hi-res already wrote screen 5
         call b7_out
         call chkbrk
         jp back_ok
@@ -1142,7 +1167,7 @@ ln_add: push af
 boxfill:
         ld a,(SMODE)
         and 3
-        cp 1
+        cp 2
         ld d,63
         ld h,47
         jr z,bf_lim
@@ -1206,10 +1231,13 @@ bf_col: push bc
 ; -> B = x, C = row low, A = row high (signed 16-bit: maxy - y)
 ytotop: ld a,(SMODE)
         and 3
-        cp 1
+        jr z,yt_hi              ; modes 0/1: 191 - y
+        cp 2
         ld a,47
         jr z,yt_1
         ld a,23
+        jr yt_1
+yt_hi:  ld a,191
 yt_1:   sub e
         ld c,a
         sbc a,a
@@ -1222,7 +1250,8 @@ plot_cl:
         ret nz
         ld a,(SMODE)
         and 3
-        cp 1
+        jr z,pc_hi              ; modes 0/1: 256 x 192 onto screen 5
+        cp 2
         ld d,64
         ld e,48
         jr z,pc_m
@@ -1235,6 +1264,10 @@ pc_m:   ld a,b
         cp e
         ret nc
         jp plot
+pc_hi:  ld a,c
+        cp 192
+        ret nc
+        jp plot_hi
 
 ; circ: midpoint circle, centre (LN_X0, LN_X0+1), radius BX_W, colour pcol.
 ; Off-screen pixels are skipped.  r = 0 plots the centre.
@@ -1397,9 +1430,11 @@ n_point: db 5, "point"
 n_box:  db 3, "box"
 n_circle: db 6, "circle"
 
+        include "print32.asm"
+
         org $3B00
-TA2:    ; SCREEN 2: colour -> attribute (ink = paper, BRIGHT)
+TA2:    ; SCREEN 3: colour -> attribute (ink = paper, BRIGHT)
         include "ta2.inc"
         org $3C00
-TA:     ; SCREEN 1: [ink << 4 | paper] -> attribute (BRIGHT from the ink unless black)
+TA:     ; SCREEN 2: [ink << 4 | paper] -> attribute (BRIGHT from the ink unless black)
         include "ta.inc"

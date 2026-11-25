@@ -17,8 +17,9 @@ con_new:
         ld a,(S_POSN)
         or a
         ld a,13
-        call nz,pr_out
-        xor a
+        jr z,cn_ncr
+        rst 16
+cn_ncr: xor a
         ld (CON_LEN),a
         ld (EIDX),a
 con_pr: ld a,(EMODE)            ; prompt: ] direct, + AUTO, * EDIT
@@ -212,7 +213,7 @@ cg_lp:  ld a,(FRAMES)
 cg_got: res 5,(hl)
         ld a,(CUR_VIS)
         or a
-        ld a,0
+        xor a
         call nz,cur_set
         ld a,(LAST_K)
         ret

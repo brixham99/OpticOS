@@ -102,7 +102,8 @@ rd_s:   ld (DATAP),hl
 st_restore:                     ; RESTORE [name]: from the start, or from
         rst $18                 ; the line after that PROC's DEF
         cp 1
-        ld hl,0
+        ld h,0
+        ld l,h
         jr nz,sr_s
         call pfind
         call nxl
@@ -120,15 +121,20 @@ m_chm_s:
 chime:  ld de,78                ; 523.25 Hz x 0.15 s
         ld hl,806
         call BEEPER
-        halt                    ; a short gap, as between the BBC's tones
-        halt
-        ld de,55                ; 122.2 Hz x 0.45 s
-        ld hl,3550
-        call BEEPER
         ld b,40                 ; 0.8 s more before the prompt: keys typed
 ch_sw:  halt                    ; until then are dropped, such as an
         djnz ch_sw              ; emulator's auto-load typing (J"" ENTER)
         res 5,(iy+FLAGS-ERR_NR) ; and the last key read
         ret
 m_chm_e:
+; xt_far (11 bytes): A=char, E=4 far-call.  BC and DE saved here.
+; The second chime beep was dropped so this and the 0.8 s wait both fit.
+xt_far: push de
+        push bc
+        ld d,a
+        ld e,4
+        call xgo
+        pop bc
+        pop de
+        ret
 
